@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NZ Address & Site Parameter Tool</title>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+
+    #map {
+      height: 400px;
+      width: 100%;
+      margin-bottom: 14px;
+      border: 1px solid #ccc;
+    }
+
+    .option-block {
+      margin-bottom: 14px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+
+    .option-block h3 { margin-top: 0; }
+
+    .row { margin-bottom: 12px; }
+
+    .row label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .option-buttons button {
+      padding: 8px 12px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      background-color: #fff;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .option-buttons button.selected {
+      background-color: #007bff;
+      color: #fff;
+      border-color: #007bff;
+    }
+
+    #coords { font-weight: bold; margin: 10px 0; }
+
+    .status {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      margin-top: 10px;
+    }
+
+    .status small { color: #555; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: #fff;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #f3f3f3; }
+    .muted { color: #666; }
+  </style>
+</head>
+
+<body>
+
+  <h2>NZ Address & Site Parameter Tool</h2>
+
+  <!-- MAP -->
+  <div id="map"></div>
+  <div id="coords">Click on the map to select a location</div>
+
+  <!-- USER OPTIONS -->
+  <div class="option-block">
+    <h3>Design Parameters</h3>
+
+    <!-- ROW 1: IMPORTANCE LEVEL (I-VI) -->
+    <div class="row">
+      <label>Importance Level</label>
+      <div class="option-buttons" id="importanceOptions">
+        <button type="button" data-value="I">I</button>
+        <button type="button" data-value="II">II</button>
+        <button type="button" data-value="III">III</button>
+        <button type="button" data-value="IV">IV</button>
+        <button type="button" data-value="V">V</button>
+        <button type="button" data-value="VI">VI</button>
+      </div>
+    </div>
+
+    <!-- ROW 2: WORKING LIFE -->
+    <div class="row">
+      <label>Design Working Life</label>
+      <div class="option-buttons" id="workingLifeOptions">
+        <button type="button" data-value="construction">Construction equipment</button>
+        <button type="button" data-value="lt6months">Less than 6 months</button>
+        <button type="button" data-value="5">5 years</button>
+        <button type="button" data-value="25">25 years</button>
+        <button type="button" data-value="50">50 years</button>
+        <button type="button" data-value="100">100 years or more</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS / RESULTS -->
+  <div class="status" id="statusBox">
+    <div><strong>Status:</strong> <span id="statusText">Waiting for a map click…</span></div>
+    <div class="muted" id="matchInfo"></div>
+    <div id="results"></div>
+  </div>
+
+  <!-- GOOGLE MAPS -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"
+    async defer></script>
+
+  <script>
+    /**************************************************************
+     * 1) CONFIG (EDIT THESE)
+     **************************************************************/
+    const SHEET_ID = "YOUR_GOOGLE_SHEET_ID";
+
+    // Sheet/tab names:
+    const SHEET1_NAME = "Sheet1";
+    const SHEET2_NAME = "Sheet2";
+
+    // ✅ Reverted: normal order for coordinates (no swap)
+    // Sheet1 Columns:
+    //   A = LNG, B = LAT  (or whatever your original was)
+    // If your original is A=LAT, B=LNG, set these accordingly.
+    const SHEET1_LNG_COL_INDEX = 0; // Column A
+    const SHEET1_LAT_COL_INDEX = 1; // Column B
+
+    // Which column in Sheet1 contains "APOE"
+    // CHANGE if your APOE is in another column.
+    const SHEET1_APOE_COL_INDEX = 2; // Column C
+
+    // Sheet2 expected columns A..E (0..4)
+    // If your Sheet2 stores WorkingLife/Importance in different columns,
+    // update these two indices:
+    const SHEET2_WORKINGLIFE_COL_INDEX = 0; // Column A (CHANGE IF NEEDED)
+    const SHEET2_IMPORTANCE_COL_INDEX  = 1; // Column B (CHANGE IF NEEDED)
+
+    // APOE match columns (C then D/E if value exists)
+    const SHEET2_APOE_COLS = [2, 3, 4]; // Columns C, D, E
+
+    // Range in Sheet2 (for your reference)
+    const SHEET2_RANGE_A1 = "A1:E22";
+
+    /**************************************************************
+     * 2) STATE
+     **************************************************************/
+    let map, marker;
+    let selectedLat = null;
+    let selectedLng = null;
+
+    let selectedImportance = "";
+    let selectedWorkingLife = "";
+
+    // From Sheet1 nearest match:
+    let matchedSheet1 = null; // {lat,lng,apoe,row,distKm}
+
+    /**************************************************************
+     * 3) GOOGLE SHEETS FETCH (GVIZ)
+     **************************************************************/
+    function gvizUrl(sheetName, query) {
+      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
+      const params = new URLSearchParams();
+      params.set("sheet", sheetName);
+      params.set("tq", query);
+      return `${base}?${params.toString()}`;
+    }
+
+    async function fetchSheetAs2DArray(sheetName, query) {
+      const url = gvizUrl(sheetName, query);
+      const res = await fetch(url);
+      const text = await res.text();
+
+      // GVIZ wraps JSON like: google.visualization.Query.setResponse({...});
+      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+      const data = JSON.parse(jsonText);
+
+      const cols = data.table.cols.length;
+      const rows = data.table.rows || [];
+
+      // Convert to 2D array of cell values (string/number/null)
+      return rows.map(r => {
+        const arr = new Array(cols).fill(null);
+        (r.c || []).forEach((cell, i) => {
+          arr[i] = cell ? cell.v : null;
+        });
+        return arr;
+      });
+    }
+
+    /**************************************************************
+     * 4) MATCHING LOGIC
+     **************************************************************/
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    async function matchNearestFromSheet1() {
+      setStatus("Looking up nearest coordinate in Sheet1…");
+
+      const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
+
+      if (!rows.length) {
+        matchedSheet1 = null;
+        setStatus("No rows found in Sheet1. Check sharing / tab name.");
+        return;
+      }
+
+      let best = null;
+      for (const row of rows) {
+        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
+        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+        const d = haversineKm(selectedLat, selectedLng, lat, lng);
+        if (!best || d < best.distKm) {
+          best = {
+            distKm: d,
+            lat,
+            lng,
+            apoe: row[SHEET1_APOE_COL_INDEX],
+            row
+          };
+        }
+      }
+
+      matchedSheet1 = best;
+
+      if (!matchedSheet1) {
+        setStatus("Could not find valid lat/lng rows in Sheet1.");
+        return;
+      }
+
+      setStatus("Sheet1 match found.");
+      document.getElementById("matchInfo").innerHTML =
+        `Nearest Sheet1 point: <strong>${matchedSheet1.lat.toFixed(5)}, ${matchedSheet1.lng.toFixed(5)}</strong>
+         <small>(~${matchedSheet1.distKm.toFixed(2)} km away)</small><br>
+         Sheet1 APOE: <strong>${matchedSheet1.apoe ?? "(blank)"}</strong>`;
+    }
+
+    function normalize(v) {
+      if (v === null || v === undefined) return "";
+      return String(v).trim();
+    }
+
+    function apoeRowMatches(sheet2Row, apoeValue) {
+      const apoeNorm = normalize(apoeValue);
+      if (!apoeNorm) return false;
+
+      for (const idx of SHEET2_APOE_COLS) {
+        const cell = normalize(sheet2Row[idx]);
+        if (!cell) continue;               // only match if value exists
+        if (cell === apoeNorm) return true; // exact match
+      }
+      return false;
+    }
+
+    async function filterSheet2RowsAndRender() {
+      const resultsEl = document.getElementById("results");
+
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
+        resultsEl.innerHTML = `<div class="muted">Click the map first to choose a location.</div>`;
+        return;
+      }
+      if (!selectedWorkingLife || !selectedImportance) {
+        resultsEl.innerHTML = `<div class="muted">Select both Working Life and Importance Level.</div>`;
+        return;
+      }
+      if (!matchedSheet1) {
+        resultsEl.innerHTML = `<div class="muted">No Sheet1 match yet.</div>`;
+        return;
+      }
+
+      setStatus("Fetching Sheet2 and filtering rows…");
+
+      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
+
+      if (!sheet2.length) {
+        resultsEl.innerHTML = `<div class="muted">No rows found in Sheet2. Check sharing / tab name.</div>`;
+        setStatus("Sheet2 empty / not accessible.");
+        return;
+      }
+
+      // If first row is headers, use: const dataRows = sheet2.slice(1);
+      const dataRows = sheet2;
+
+      const wl = normalize(selectedWorkingLife);
+      const imp = normalize(selectedImportance);
+
+      const matches = dataRows.filter(r => {
+        const rWl  = normalize(r[SHEET2_WORKINGLIFE_COL_INDEX]);
+        const rImp = normalize(r[SHEET2_IMPORTANCE_COL_INDEX]);
+
+        if (rWl !== wl) return false;
+        if (rImp !== imp) return false;
+
+        return apoeRowMatches(r, matchedSheet1.apoe);
+      });
+
+      if (!matches.length) {
+        resultsEl.innerHTML =
+          `<div><strong>No matches found.</strong></div>
+           <div class="muted">
+             Checked: WorkingLife=<strong>${wl}</strong>, Importance=<strong>${imp}</strong>,
+             Sheet1 APOE=<strong>${normalize(matchedSheet1.apoe) || "(blank)"}</strong>
+           </div>`;
+        setStatus("No matching rows in Sheet2 for current selections.");
+        return;
+      }
+
+      const header = ["A", "B", "C", "D", "E"];
+      const html =
+        `<div><strong>Matching rows from Sheet2 (${SHEET2_RANGE_A1}):</strong></div>
+         <table>
+           <thead><tr>${header.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+           <tbody>
+             ${matches.map(r => `
+               <tr>
+                 ${[0,1,2,3,4].map(i => `<td>${normalize(r[i])}</td>`).join("")}
+               </tr>
+             `).join("")}
+           </tbody>
+         </table>`;
+
+      resultsEl.innerHTML = html;
+      setStatus(`Found ${matches.length} matching row(s) in Sheet2.`);
+    }
+
+    /**************************************************************
+     * 5) UI HELPERS
+     **************************************************************/
+    function setStatus(msg) {
+      document.getElementById("statusText").textContent = msg;
+    }
+
+    function wireSingleSelectButtons(containerId, onPick) {
+      const buttons = document.querySelectorAll(`#${containerId} button`);
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          buttons.forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          onPick(btn.dataset.value);
+        });
+      });
+    }
+
+    function logCurrentSelections() {
+      console.log({
+        latitude: selectedLat,
+        longitude: selectedLng,
+        importance: selectedImportance,
+        workingLife: selectedWorkingLife,
+        sheet1Match: matchedSheet1
+      });
+    }
+
+    /**************************************************************
+     * 6) MAP
+     **************************************************************/
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: -41.2865, lng: 174.7762 }, // Wellington
+        zoom: 6,
+      });
+
+      map.addListener("click", async (e) => {
+        selectedLat = e.latLng.lat();
+        selectedLng = e.latLng.lng();
+
+        if (marker) marker.setMap(null);
+        marker = new google.maps.Marker({ position: e.latLng, map });
+
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+        try {
+          await matchNearestFromSheet1();
+        } catch (err) {
+          console.error(err);
+          matchedSheet1 = null;
+          setStatus("Error reading Sheet1. Check sheet sharing and ID.");
+          document.getElementById("matchInfo").textContent = "";
+        }
+
+        try {
+          await filterSheet2RowsAndRender();
+        } catch (err) {
+          console.error(err);
+          setStatus("Error reading Sheet2. Check sheet sharing and tab names.");
+          document.getElementById("results").innerHTML = "";
+        }
+
+        logCurrentSelections();
+      });
+
+      wireSingleSelectButtons("importanceOptions", async (val) => {
+        selectedImportance = val;
+        await safeRecalc();
+      });
+
+      wireSingleSelectButtons("workingLifeOptions", async (val) => {
+        selectedWorkingLife = val;
+        await safeRecalc();
+      });
+
+      setStatus("Ready. Click the map, then choose options (or choose options first).");
+    }
+
+    async function safeRecalc() {
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
+        setStatus("Pick a map location to start matching.");
+        return;
+      }
+      if (!matchedSheet1) {
+        try { await matchNearestFromSheet1(); }
+        catch (err) {
+          console.error(err);
+          setStatus("Error reading Sheet1. Check sheet sharing and ID.");
+          return;
+        }
+      }
+      try { await filterSheet2RowsAndRender(); }
+      catch (err) {
+        console.error(err);
+        setStatus("Error reading Sheet2. Check sheet sharing and tab names.");
+      }
+      logCurrentSelections();
+    }
+  </script>
+
+</body>
+</html>
