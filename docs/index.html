@@ -108,24 +108,24 @@
 
   <h2>NZ Address & Site Parameter Tool</h2>
 
+    <!-- MAP -->
+  <div id="map"></div>
+  <div id="coords">Select a location by searching or clicking the map</div>
+  
   <!-- ✅ Address search (Autocomplete) -->
   <div class="search-wrap">
     <input id="addressInput" type="text" placeholder="Search an address in New Zealand…" />
     <button id="useMyLocationBtn" type="button">Use my location</button>
   </div>
 
-  <!-- MAP -->
-  <div id="map"></div>
-  <div id="coords">Select a location by searching or clicking the map</div>
-
   <!-- USER OPTIONS -->
   <div class="option-block">
     <h3>Design Parameters</h3>
 
-    <!-- ✅ Importance Level -->
+    <!-- Site Class -->
     <div class="row">
-      <label>Importance Level</label>
-      <div class="option-buttons" id="importanceOptions">
+      <label>Site Class</label>
+      <div class="option-buttons" id="SiteClassOptions">
         <button type="button" data-value="I">I</button>
         <button type="button" data-value="II">II</button>
         <button type="button" data-value="III">III</button>
@@ -148,6 +148,17 @@
       </div>
     </div>
   </div>
+
+  <!-- Site Class -->
+    <div class="row">
+      <label>Importance Level Class</label>
+      <div class="option-buttons" id="importanceOptions">
+        <button type="button" data-value="1">1</button>
+        <button type="button" data-value="2">2</button>
+        <button type="button" data-value="3">3</button>
+        <button type="button" data-value="4">4</button>
+      </div>
+    </div>
 
   <!-- STATUS / RESULTS -->
   <div class="status" id="statusBox">
