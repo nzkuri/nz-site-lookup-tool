@@ -7,12 +7,38 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
 
+    /* Address search */
+    .search-wrap{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    #addressInput{
+      width: min(650px, 100%);
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    #useMyLocationBtn{
+      padding: 10px 12px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      background:#fff;
+      cursor:pointer;
+    }
+
     #map {
-      height: 400px;
+      height: 420px;
       width: 100%;
       margin-bottom: 14px;
       border: 1px solid #ccc;
+      border-radius: 6px;
     }
+
+    #coords { font-weight: bold; margin: 10px 0; }
 
     .option-block {
       margin-bottom: 14px;
@@ -49,8 +75,6 @@
       border-color: #007bff;
     }
 
-    #coords { font-weight: bold; margin: 10px 0; }
-
     .status {
       padding: 10px;
       border: 1px solid #ddd;
@@ -59,6 +83,7 @@
       margin-top: 10px;
     }
 
+    .muted { color: #666; }
     .status small { color: #555; }
 
     table {
@@ -76,7 +101,6 @@
     }
 
     th { background: #f3f3f3; }
-    .muted { color: #666; }
   </style>
 </head>
 
@@ -84,15 +108,21 @@
 
   <h2>NZ Address & Site Parameter Tool</h2>
 
+  <!-- ✅ Address search (Autocomplete) -->
+  <div class="search-wrap">
+    <input id="addressInput" type="text" placeholder="Search an address in New Zealand…" />
+    <button id="useMyLocationBtn" type="button">Use my location</button>
+  </div>
+
   <!-- MAP -->
   <div id="map"></div>
-  <div id="coords">Click on the map to select a location</div>
+  <div id="coords">Select a location by searching or clicking the map</div>
 
   <!-- USER OPTIONS -->
   <div class="option-block">
     <h3>Design Parameters</h3>
 
-    <!-- ROW 1: IMPORTANCE LEVEL -->
+    <!-- ✅ Importance Level -->
     <div class="row">
       <label>Importance Level</label>
       <div class="option-buttons" id="importanceOptions">
@@ -105,7 +135,7 @@
       </div>
     </div>
 
-    <!-- ROW 2: WORKING LIFE -->
+    <!-- Working Life -->
     <div class="row">
       <label>Design Working Life</label>
       <div class="option-buttons" id="workingLifeOptions">
@@ -121,7 +151,7 @@
 
   <!-- STATUS / RESULTS -->
   <div class="status" id="statusBox">
-    <div><strong>Status:</strong> <span id="statusText">Waiting for a map click…</span></div>
+    <div><strong>Status:</strong> <span id="statusText">Waiting for a location…</span></div>
     <div class="muted" id="matchInfo"></div>
     <div id="results"></div>
   </div>
@@ -131,32 +161,25 @@
      * 1) CONFIG (EDIT THESE)
      **************************************************************/
     const SHEET_ID = "YOUR_GOOGLE_SHEET_ID";
-
     const SHEET1_NAME = "Sheet1";
     const SHEET2_NAME = "Sheet2";
 
-    // ✅ Normal order (no swapping):
-    // Sheet1: Column A = LAT, Column B = LNG  (common setup)
-    // If yours is different, swap the indices below.
+    // Sheet1 coordinates (NORMAL order, no swapping)
+    // A = LAT, B = LNG (adjust if your sheet differs)
     const SHEET1_LAT_COL_INDEX = 0; // Column A
     const SHEET1_LNG_COL_INDEX = 1; // Column B
+    const SHEET1_APOE_COL_INDEX = 2; // Column C (change if needed)
 
-    // APOE column in Sheet1 (change if needed)
-    const SHEET1_APOE_COL_INDEX = 2; // Column C
-
-    // Sheet2: WorkingLife + Importance columns (change if needed)
+    // Sheet2 columns (adjust if needed)
     const SHEET2_WORKINGLIFE_COL_INDEX = 0; // Column A
     const SHEET2_IMPORTANCE_COL_INDEX  = 1; // Column B
-
-    // APOE match columns in Sheet2: C, D, E
-    const SHEET2_APOE_COLS = [2, 3, 4];
-
+    const SHEET2_APOE_COLS = [2, 3, 4];     // C, D, E
     const SHEET2_RANGE_A1 = "A1:E22";
 
     /**************************************************************
      * 2) STATE
      **************************************************************/
-    let map, marker;
+    let map, marker, autocomplete;
     let selectedLat = null;
     let selectedLng = null;
 
@@ -189,9 +212,7 @@
 
       return rows.map(r => {
         const arr = new Array(cols).fill(null);
-        (r.c || []).forEach((cell, i) => {
-          arr[i] = cell ? cell.v : null;
-        });
+        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
         return arr;
       });
     }
@@ -217,11 +238,26 @@
       return String(v).trim();
     }
 
+    function setStatus(msg) {
+      document.getElementById("statusText").textContent = msg;
+    }
+
+    function setMarker(lat, lng) {
+      const pos = { lat, lng };
+      if (marker) marker.setMap(null);
+      marker = new google.maps.Marker({ position: pos, map });
+      map.panTo(pos);
+    }
+
+    function updateCoordsText() {
+      document.getElementById("coords").textContent =
+        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+    }
+
     async function matchNearestFromSheet1() {
       setStatus("Looking up nearest coordinate in Sheet1…");
 
       const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
-
       if (!rows.length) {
         matchedSheet1 = null;
         setStatus("No rows found in Sheet1. Check sharing / tab name.");
@@ -236,13 +272,7 @@
 
         const d = haversineKm(selectedLat, selectedLng, lat, lng);
         if (!best || d < best.distKm) {
-          best = {
-            distKm: d,
-            lat,
-            lng,
-            apoe: row[SHEET1_APOE_COL_INDEX],
-            row
-          };
+          best = { distKm: d, lat, lng, apoe: row[SHEET1_APOE_COL_INDEX], row };
         }
       }
 
@@ -253,11 +283,12 @@
         return;
       }
 
-      setStatus("Sheet1 match found.");
       document.getElementById("matchInfo").innerHTML =
         `Nearest Sheet1 point: <strong>${matchedSheet1.lat.toFixed(5)}, ${matchedSheet1.lng.toFixed(5)}</strong>
          <small>(~${matchedSheet1.distKm.toFixed(2)} km away)</small><br>
          Sheet1 APOE: <strong>${matchedSheet1.apoe ?? "(blank)"}</strong>`;
+
+      setStatus("Sheet1 match found.");
     }
 
     function apoeRowMatches(sheet2Row, apoeValue) {
@@ -266,7 +297,7 @@
 
       for (const idx of SHEET2_APOE_COLS) {
         const cell = normalize(sheet2Row[idx]);
-        if (!cell) continue;                // only match if value exists
+        if (!cell) continue;               // only match if value exists
         if (cell === apoeNorm) return true; // exact match
       }
       return false;
@@ -276,7 +307,7 @@
       const resultsEl = document.getElementById("results");
 
       if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-        resultsEl.innerHTML = `<div class="muted">Click the map first to choose a location.</div>`;
+        resultsEl.innerHTML = `<div class="muted">Choose a location (search or click the map).</div>`;
         return;
       }
       if (!selectedWorkingLife || !selectedImportance) {
@@ -291,14 +322,13 @@
       setStatus("Fetching Sheet2 and filtering rows…");
 
       const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-
       if (!sheet2.length) {
         resultsEl.innerHTML = `<div class="muted">No rows found in Sheet2. Check sharing / tab name.</div>`;
         setStatus("Sheet2 empty / not accessible.");
         return;
       }
 
-      // If your first row is headers, change to: const dataRows = sheet2.slice(1);
+      // If Sheet2 row 1 is headers, use: const dataRows = sheet2.slice(1);
       const dataRows = sheet2;
 
       const wl = normalize(selectedWorkingLife);
@@ -307,10 +337,8 @@
       const matches = dataRows.filter(r => {
         const rWl  = normalize(r[SHEET2_WORKINGLIFE_COL_INDEX]);
         const rImp = normalize(r[SHEET2_IMPORTANCE_COL_INDEX]);
-
         if (rWl !== wl) return false;
         if (rImp !== imp) return false;
-
         return apoeRowMatches(r, matchedSheet1.apoe);
       });
 
@@ -326,77 +354,56 @@
       }
 
       const header = ["A", "B", "C", "D", "E"];
-      const html =
+      resultsEl.innerHTML =
         `<div><strong>Matching rows from Sheet2 (${SHEET2_RANGE_A1}):</strong></div>
          <table>
            <thead><tr>${header.map(h => `<th>${h}</th>`).join("")}</tr></thead>
            <tbody>
              ${matches.map(r => `
-               <tr>
-                 ${[0,1,2,3,4].map(i => `<td>${normalize(r[i])}</td>`).join("")}
-               </tr>
+               <tr>${[0,1,2,3,4].map(i => `<td>${normalize(r[i])}</td>`).join("")}</tr>
              `).join("")}
            </tbody>
          </table>`;
 
-      resultsEl.innerHTML = html;
       setStatus(`Found ${matches.length} matching row(s) in Sheet2.`);
     }
 
-    /**************************************************************
-     * 5) UI HELPERS
-     **************************************************************/
-    function setStatus(msg) {
-      document.getElementById("statusText").textContent = msg;
+    async function recalcAll() {
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+
+      try {
+        await matchNearestFromSheet1();
+      } catch (e) {
+        console.error(e);
+        matchedSheet1 = null;
+        setStatus("Error reading Sheet1. Check sheet sharing / ID.");
+        document.getElementById("matchInfo").textContent = "";
+        return;
+      }
+
+      try {
+        await filterSheet2RowsAndRender();
+      } catch (e) {
+        console.error(e);
+        setStatus("Error reading Sheet2. Check sharing / tab name.");
+        document.getElementById("results").innerHTML = "";
+      }
     }
 
     function wireSingleSelectButtons(containerId, onPick) {
       const buttons = document.querySelectorAll(`#${containerId} button`);
       buttons.forEach(btn => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", async () => {
           buttons.forEach(b => b.classList.remove("selected"));
           btn.classList.add("selected");
           onPick(btn.dataset.value);
+          await recalcAll();
         });
       });
     }
 
-    function logCurrentSelections() {
-      console.log({
-        latitude: selectedLat,
-        longitude: selectedLng,
-        importance: selectedImportance,
-        workingLife: selectedWorkingLife,
-        sheet1Match: matchedSheet1
-      });
-    }
-
-    async function safeRecalc() {
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-        setStatus("Pick a map location to start matching.");
-        return;
-      }
-
-      if (!matchedSheet1) {
-        try { await matchNearestFromSheet1(); }
-        catch (err) {
-          console.error(err);
-          setStatus("Error reading Sheet1. Check sheet sharing and ID.");
-          return;
-        }
-      }
-
-      try { await filterSheet2RowsAndRender(); }
-      catch (err) {
-        console.error(err);
-        setStatus("Error reading Sheet2. Check sheet sharing and tab names.");
-      }
-
-      logCurrentSelections();
-    }
-
     /**************************************************************
-     * 6) MAP INIT (GLOBAL CALLBACK)
+     * 5) MAP + AUTOCOMPLETE INIT (GLOBAL CALLBACK)
      **************************************************************/
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
@@ -404,54 +411,71 @@
         zoom: 6,
       });
 
+      // Map click sets location
       map.addListener("click", async (e) => {
         selectedLat = e.latLng.lat();
         selectedLng = e.latLng.lng();
+        setMarker(selectedLat, selectedLng);
+        updateCoordsText();
+        await recalcAll();
+      });
 
-        if (marker) marker.setMap(null);
-        marker = new google.maps.Marker({ position: e.latLng, map });
+      // ✅ Address autocomplete restricted to NZ
+      const input = document.getElementById("addressInput");
+      autocomplete = new google.maps.places.Autocomplete(input, {
+        componentRestrictions: { country: "nz" },
+        fields: ["geometry", "formatted_address", "name"]
+      });
+
+      autocomplete.addListener("place_changed", async () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) {
+          setStatus("No geometry found for that address. Try another.");
+          return;
+        }
+
+        selectedLat = place.geometry.location.lat();
+        selectedLng = place.geometry.location.lng();
+
+        setMarker(selectedLat, selectedLng);
+        map.setZoom(14);
 
         document.getElementById("coords").textContent =
-          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
-        try { await matchNearestFromSheet1(); }
-        catch (err) {
-          console.error(err);
-          matchedSheet1 = null;
-          setStatus("Error reading Sheet1. Check sheet sharing and ID.");
-          document.getElementById("matchInfo").textContent = "";
+        await recalcAll();
+      });
+
+      // Optional: "Use my location"
+      document.getElementById("useMyLocationBtn").addEventListener("click", () => {
+        if (!navigator.geolocation) {
+          setStatus("Geolocation not supported by your browser.");
+          return;
         }
-
-        try { await filterSheet2RowsAndRender(); }
-        catch (err) {
-          console.error(err);
-          setStatus("Error reading Sheet2. Check sheet sharing and tab names.");
-          document.getElementById("results").innerHTML = "";
-        }
-
-        logCurrentSelections();
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          selectedLat = pos.coords.latitude;
+          selectedLng = pos.coords.longitude;
+          setMarker(selectedLat, selectedLng);
+          map.setZoom(14);
+          updateCoordsText();
+          await recalcAll();
+        }, () => setStatus("Could not get your location (permission denied?)."));
       });
 
-      wireSingleSelectButtons("importanceOptions", async (val) => {
-        selectedImportance = val;
-        await safeRecalc();
-      });
+      // Wire option buttons
+      wireSingleSelectButtons("importanceOptions", (val) => { selectedImportance = val; });
+      wireSingleSelectButtons("workingLifeOptions", (val) => { selectedWorkingLife = val; });
 
-      wireSingleSelectButtons("workingLifeOptions", async (val) => {
-        selectedWorkingLife = val;
-        await safeRecalc();
-      });
-
-      setStatus("Ready. Click the map, then choose options (or choose options first).");
+      setStatus("Ready. Search an address or click the map, then choose options.");
     }
 
-    // ✅ CRITICAL: make callback visible to Google Maps loader
+    // ✅ Ensure callback is visible globally
     window.initMap = initMap;
   </script>
 
-  <!-- GOOGLE MAPS (callback must exist on window) -->
+  <!-- ✅ IMPORTANT: include libraries=places for address search -->
   <script
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap"
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap&libraries=places"
     async defer></script>
 
 </body>
