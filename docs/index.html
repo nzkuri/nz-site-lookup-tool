@@ -7,50 +7,47 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
 
-    /* Address search */
-    .search-wrap{
-      display:flex;
-      gap:10px;
-      align-items:center;
+    .search-wrap {
+      display: flex;
+      gap: 10px;
       margin-bottom: 12px;
       flex-wrap: wrap;
     }
-    #addressInput{
+
+    #addressInput {
       width: min(650px, 100%);
-      padding: 10px 12px;
+      padding: 10px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
     }
-    #useMyLocationBtn{
-      padding: 10px 12px;
-      border: 1px solid #aaa;
+
+    #useMyLocationBtn {
+      padding: 10px;
       border-radius: 6px;
-      background:#fff;
-      cursor:pointer;
+      border: 1px solid #aaa;
+      background: #fff;
+      cursor: pointer;
     }
 
     #map {
       height: 420px;
       width: 100%;
-      margin-bottom: 14px;
       border: 1px solid #ccc;
       border-radius: 6px;
+      margin-bottom: 12px;
     }
 
-    #coords { font-weight: bold; margin: 10px 0; }
+    #coords { font-weight: bold; margin-bottom: 12px; }
 
     .option-block {
-      margin-bottom: 14px;
       padding: 15px;
       border: 1px solid #ddd;
       border-radius: 6px;
       background: #fafafa;
+      margin-bottom: 14px;
     }
 
-    .option-block h3 { margin-top: 0; }
-
-    .row { margin-bottom: 12px; }
+    .row { margin-bottom: 14px; }
 
     .row label {
       font-weight: bold;
@@ -60,17 +57,15 @@
 
     .option-buttons button {
       padding: 8px 12px;
-      margin-right: 6px;
-      margin-bottom: 6px;
-      border: 1px solid #aaa;
+      margin: 4px;
       border-radius: 4px;
-      background-color: #fff;
+      border: 1px solid #aaa;
+      background: #fff;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s, border-color 0.2s;
     }
 
     .option-buttons button.selected {
-      background-color: #007bff;
+      background: #007bff;
       color: #fff;
       border-color: #007bff;
     }
@@ -80,414 +75,224 @@
       border: 1px solid #ddd;
       border-radius: 6px;
       background: #fff;
-      margin-top: 10px;
     }
-
-    .muted { color: #666; }
-    .status small { color: #555; }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
-      background: #fff;
     }
 
     th, td {
       border: 1px solid #ddd;
       padding: 8px;
-      text-align: left;
-      vertical-align: top;
     }
 
     th { background: #f3f3f3; }
+    .muted { color: #666; }
   </style>
 </head>
 
 <body>
 
-  <h2>NZ Address & Site Parameter Tool</h2>
+<h2>NZ Address & Site Parameter Tool</h2>
 
-    <!-- MAP -->
-  <div id="map"></div>
-  <div id="coords">Select a location by searching or clicking the map</div>
-  
-  <!-- ✅ Address search (Autocomplete) -->
-  <div class="search-wrap">
-    <input id="addressInput" type="text" placeholder="Search an address in New Zealand…" />
-    <button id="useMyLocationBtn" type="button">Use my location</button>
-  </div>
+<!-- Address Search -->
+<div class="search-wrap">
+  <input id="addressInput" placeholder="Search address (NZ only)" />
+  <button id="useMyLocationBtn">Use my location</button>
+</div>
 
-  <!-- USER OPTIONS -->
-  <div class="option-block">
-    <h3>Design Parameters</h3>
+<div id="map"></div>
+<div id="coords">Choose a location</div>
 
-    <!-- Site Class -->
-    <div class="row">
-      <label>Site Class</label>
-      <div class="option-buttons" id="SiteClassOptions">
-        <button type="button" data-value="I">I</button>
-        <button type="button" data-value="II">II</button>
-        <button type="button" data-value="III">III</button>
-        <button type="button" data-value="IV">IV</button>
-        <button type="button" data-value="V">V</button>
-        <button type="button" data-value="VI">VI</button>
-      </div>
-    </div>
+<!-- OPTIONS -->
+<div class="option-block">
+  <h3>Design Parameters</h3>
 
-    <!-- Working Life -->
-    <div class="row">
-      <label>Design Working Life</label>
-      <div class="option-buttons" id="workingLifeOptions">
-        <button type="button" data-value="construction">Construction equipment</button>
-        <button type="button" data-value="lt6months">Less than 6 months</button>
-        <button type="button" data-value="5">5 years</button>
-        <button type="button" data-value="25">25 years</button>
-        <button type="button" data-value="50">50 years</button>
-        <button type="button" data-value="100">100 years or more</button>
-      </div>
+  <!-- SITE CLASS -->
+  <div class="row">
+    <label>Site Class</label>
+    <div class="option-buttons" id="siteClassOptions">
+      <button data-value="I">I</button>
+      <button data-value="II">II</button>
+      <button data-value="III">III</button>
+      <button data-value="IV">IV</button>
+      <button data-value="V">V</button>
+      <button data-value="VI">VI</button>
     </div>
   </div>
 
-  <!-- Site Class -->
-    <div class="row">
-      <label>Importance Level Class</label>
-      <div class="option-buttons" id="importanceOptions">
-        <button type="button" data-value="1">1</button>
-        <button type="button" data-value="2">2</button>
-        <button type="button" data-value="3">3</button>
-        <button type="button" data-value="4">4</button>
-      </div>
+  <!-- IMPORTANCE LEVEL -->
+  <div class="row">
+    <label>Importance Level</label>
+    <div class="option-buttons" id="importanceLevelOptions">
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button data-value="4">4</button>
     </div>
-
-  <!-- STATUS / RESULTS -->
-  <div class="status" id="statusBox">
-    <div><strong>Status:</strong> <span id="statusText">Waiting for a location…</span></div>
-    <div class="muted" id="matchInfo"></div>
-    <div id="results"></div>
   </div>
 
-  <script>
-    /**************************************************************
-     * 1) CONFIG (EDIT THESE)
-     **************************************************************/
-    const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
-    const SHEET1_NAME = "Sheet1";
-    const SHEET2_NAME = "Sheet2";
+  <!-- WORKING LIFE -->
+  <div class="row">
+    <label>Design Working Life</label>
+    <div class="option-buttons" id="workingLifeOptions">
+      <button data-value="construction">Construction equipment</button>
+      <button data-value="lt6months">Less than 6 months</button>
+      <button data-value="5">5 years</button>
+      <button data-value="25">25 years</button>
+      <button data-value="50">50 years</button>
+      <button data-value="100">100 years or more</button>
+    </div>
+  </div>
+</div>
 
-    // Sheet1 coordinates (NORMAL order, no swapping)
-    // A = LAT, B = LNG (adjust if your sheet differs)
-    const SHEET1_LAT_COL_INDEX = 0; // Column A
-    const SHEET1_LNG_COL_INDEX = 1; // Column B
-    const SHEET1_APOE_COL_INDEX = 2; // Column C (change if needed)
+<div class="status">
+  <strong>Status:</strong> <span id="statusText">Waiting for input…</span>
+  <div id="matchInfo" class="muted"></div>
+  <div id="results"></div>
+</div>
 
-    // Sheet2 columns (adjust if needed)
-    const SHEET2_WORKINGLIFE_COL_INDEX = 0; // Column A
-    const SHEET2_IMPORTANCE_COL_INDEX  = 1; // Column B
-    const SHEET2_APOE_COLS = [2, 3, 4];     // C, D, E
-    const SHEET2_RANGE_A1 = "A1:E22";
+<script>
+/* ================= CONFIG ================= */
+const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
+const SHEET1_NAME = "Sheet1";
+const SHEET2_NAME = "Sheet2";
 
-    /**************************************************************
-     * 2) STATE
-     **************************************************************/
-    let map, marker, autocomplete;
-    let selectedLat = null;
-    let selectedLng = null;
+// Sheet1: A = LAT, B = LNG
+const SHEET1_LAT_COL_INDEX = 0;
+const SHEET1_LNG_COL_INDEX = 1;
+const SHEET1_APOE_COL_INDEX = 2;
 
-    let selectedImportance = "";
-    let selectedWorkingLife = "";
+// Sheet2 column mapping (CHANGE IF NEEDED)
+const SHEET2_WORKINGLIFE_COL_INDEX   = 0; // Column A
+const SHEET2_SITECLASS_COL_INDEX     = 1; // Column B
+const SHEET2_IMPORTANCELEVEL_COL_INDEX = 2; // Column C
+const SHEET2_APOE_COLS = [3,4]; // Columns D, E
 
-    let matchedSheet1 = null; // {lat,lng,apoe,row,distKm}
+/* ================= STATE ================= */
+let map, marker, autocomplete;
+let selectedLat = null;
+let selectedLng = null;
+let selectedSiteClass = "";
+let selectedImportanceLevel = "";
+let selectedWorkingLife = "";
+let matchedSheet1 = null;
 
-    /**************************************************************
-     * 3) GOOGLE SHEETS FETCH (GVIZ)
-     **************************************************************/
-    function gvizUrl(sheetName, query) {
-      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
-      const params = new URLSearchParams();
-      params.set("sheet", sheetName);
-      params.set("tq", query);
-      return `${base}?${params.toString()}`;
-    }
+/* ================= HELPERS ================= */
+function normalize(v){ return v==null?"":String(v).trim(); }
 
-    async function fetchSheetAs2DArray(sheetName, query) {
-      const url = gvizUrl(sheetName, query);
-      const res = await fetch(url);
-      const text = await res.text();
+function haversineKm(lat1,lng1,lat2,lng2){
+  const R=6371,toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+
+          Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*
+          Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 
-      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-      const data = JSON.parse(jsonText);
+/* ================= SHEETS ================= */
+function gviz(sheet,query){
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${sheet}&tq=${encodeURIComponent(query)}`;
+}
 
-      const cols = data.table.cols.length;
-      const rows = data.table.rows || [];
+async function fetchSheet(sheet){
+  const res=await fetch(gviz(sheet,"select *"));
+  const text=await res.text();
+  const json=JSON.parse(text.substring(text.indexOf("{"),text.lastIndexOf("}")+1));
+  return (json.table.rows||[]).map(r=>r.c.map(c=>c?c.v:null));
+}
 
-      return rows.map(r => {
-        const arr = new Array(cols).fill(null);
-        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
-        return arr;
-      });
-    }
+/* ================= LOGIC ================= */
+async function matchSheet1(){
+  const rows=await fetchSheet(SHEET1_NAME);
+  let best=null;
 
-    /**************************************************************
-     * 4) MATCHING LOGIC
-     **************************************************************/
-    function haversineKm(lat1, lng1, lat2, lng2) {
-      const R = 6371;
-      const toRad = d => d * Math.PI / 180;
-      const dLat = toRad(lat2 - lat1);
-      const dLng = toRad(lng2 - lng1);
-      const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLng/2) * Math.sin(dLng/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
+  for(const r of rows){
+    const lat=parseFloat(r[SHEET1_LAT_COL_INDEX]);
+    const lng=parseFloat(r[SHEET1_LNG_COL_INDEX]);
+    if(!isFinite(lat)||!isFinite(lng)) continue;
+    const d=haversineKm(selectedLat,selectedLng,lat,lng);
+    if(!best||d<best.d) best={d,lat,lng,apoe:r[SHEET1_APOE_COL_INDEX]};
+  }
+  matchedSheet1=best;
+}
 
-    function normalize(v) {
-      if (v === null || v === undefined) return "";
-      return String(v).trim();
-    }
+async function filterSheet2(){
+  if(!matchedSheet1||!selectedSiteClass||!selectedImportanceLevel||!selectedWorkingLife) return;
 
-    function setStatus(msg) {
-      document.getElementById("statusText").textContent = msg;
-    }
+  const rows=await fetchSheet(SHEET2_NAME);
+  const matches=rows.filter(r=>{
+    if(normalize(r[SHEET2_SITECLASS_COL_INDEX])!==selectedSiteClass) return false;
+    if(normalize(r[SHEET2_IMPORTANCELEVEL_COL_INDEX])!==selectedImportanceLevel) return false;
+    if(normalize(r[SHEET2_WORKINGLIFE_COL_INDEX])!==selectedWorkingLife) return false;
+    return SHEET2_APOE_COLS.some(i=>normalize(r[i])===normalize(matchedSheet1.apoe));
+  });
 
-    function setMarker(lat, lng) {
-      const pos = { lat, lng };
-      if (marker) marker.setMap(null);
-      marker = new google.maps.Marker({ position: pos, map });
-      map.panTo(pos);
-    }
+  document.getElementById("results").innerHTML =
+    matches.length
+    ? `<pre>${JSON.stringify(matches,null,2)}</pre>`
+    : `<div class="muted">No matches found</div>`;
+}
 
-    function updateCoordsText() {
-      document.getElementById("coords").textContent =
-        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-    }
+/* ================= UI ================= */
+function wireButtons(id,setter){
+  document.querySelectorAll(`#${id} button`).forEach(b=>{
+    b.onclick=async()=>{
+      document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.remove("selected"));
+      b.classList.add("selected");
+      setter(b.dataset.value);
+      await matchSheet1();
+      await filterSheet2();
+    };
+  });
+}
 
-    async function matchNearestFromSheet1() {
-      setStatus("Looking up nearest coordinate in Sheet1…");
+/* ================= MAP ================= */
+function initMap(){
+  map=new google.maps.Map(document.getElementById("map"),{
+    center:{lat:-41.2865,lng:174.7762},zoom:6
+  });
 
-      const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
-      if (!rows.length) {
-        matchedSheet1 = null;
-        setStatus("No rows found in Sheet1. Check sharing / tab name.");
-        return;
-      }
+  map.addListener("click",async e=>{
+    selectedLat=e.latLng.lat();
+    selectedLng=e.latLng.lng();
+    marker?.setMap(null);
+    marker=new google.maps.Marker({map,position:e.latLng});
+    await matchSheet1();
+    await filterSheet2();
+  });
 
-      let best = null;
-      for (const row of rows) {
-        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
-        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+  autocomplete=new google.maps.places.Autocomplete(
+    document.getElementById("addressInput"),
+    {componentRestrictions:{country:"nz"}}
+  );
 
-        const d = haversineKm(selectedLat, selectedLng, lat, lng);
-        if (!best || d < best.distKm) {
-          best = { distKm: d, lat, lng, apoe: row[SHEET1_APOE_COL_INDEX], row };
-        }
-      }
+  autocomplete.addListener("place_changed",async()=>{
+    const p=autocomplete.getPlace();
+    if(!p.geometry) return;
+    selectedLat=p.geometry.location.lat();
+    selectedLng=p.geometry.location.lng();
+    marker?.setMap(null);
+    marker=new google.maps.Marker({map,position:p.geometry.location});
+    map.setZoom(14);
+    await matchSheet1();
+    await filterSheet2();
+  });
 
-      matchedSheet1 = best;
+  wireButtons("siteClassOptions",v=>selectedSiteClass=v);
+  wireButtons("importanceLevelOptions",v=>selectedImportanceLevel=v);
+  wireButtons("workingLifeOptions",v=>selectedWorkingLife=v);
+}
 
-      if (!matchedSheet1) {
-        setStatus("Could not find valid lat/lng rows in Sheet1.");
-        return;
-      }
+window.initMap=initMap;
+</script>
 
-      document.getElementById("matchInfo").innerHTML =
-        `Nearest Sheet1 point: <strong>${matchedSheet1.lat.toFixed(5)}, ${matchedSheet1.lng.toFixed(5)}</strong>
-         <small>(~${matchedSheet1.distKm.toFixed(2)} km away)</small><br>
-         Sheet1 APOE: <strong>${matchedSheet1.apoe ?? "(blank)"}</strong>`;
-
-      setStatus("Sheet1 match found.");
-    }
-
-    function apoeRowMatches(sheet2Row, apoeValue) {
-      const apoeNorm = normalize(apoeValue);
-      if (!apoeNorm) return false;
-
-      for (const idx of SHEET2_APOE_COLS) {
-        const cell = normalize(sheet2Row[idx]);
-        if (!cell) continue;               // only match if value exists
-        if (cell === apoeNorm) return true; // exact match
-      }
-      return false;
-    }
-
-    async function filterSheet2RowsAndRender() {
-      const resultsEl = document.getElementById("results");
-
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-        resultsEl.innerHTML = `<div class="muted">Choose a location (search or click the map).</div>`;
-        return;
-      }
-      if (!selectedWorkingLife || !selectedImportance) {
-        resultsEl.innerHTML = `<div class="muted">Select both Working Life and Importance Level.</div>`;
-        return;
-      }
-      if (!matchedSheet1) {
-        resultsEl.innerHTML = `<div class="muted">No Sheet1 match yet.</div>`;
-        return;
-      }
-
-      setStatus("Fetching Sheet2 and filtering rows…");
-
-      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-      if (!sheet2.length) {
-        resultsEl.innerHTML = `<div class="muted">No rows found in Sheet2. Check sharing / tab name.</div>`;
-        setStatus("Sheet2 empty / not accessible.");
-        return;
-      }
-
-      // If Sheet2 row 1 is headers, use: const dataRows = sheet2.slice(1);
-      const dataRows = sheet2;
-
-      const wl = normalize(selectedWorkingLife);
-      const imp = normalize(selectedImportance);
-
-      const matches = dataRows.filter(r => {
-        const rWl  = normalize(r[SHEET2_WORKINGLIFE_COL_INDEX]);
-        const rImp = normalize(r[SHEET2_IMPORTANCE_COL_INDEX]);
-        if (rWl !== wl) return false;
-        if (rImp !== imp) return false;
-        return apoeRowMatches(r, matchedSheet1.apoe);
-      });
-
-      if (!matches.length) {
-        resultsEl.innerHTML =
-          `<div><strong>No matches found.</strong></div>
-           <div class="muted">
-             Checked: WorkingLife=<strong>${wl}</strong>, Importance=<strong>${imp}</strong>,
-             Sheet1 APOE=<strong>${normalize(matchedSheet1.apoe) || "(blank)"}</strong>
-           </div>`;
-        setStatus("No matching rows in Sheet2 for current selections.");
-        return;
-      }
-
-      const header = ["A", "B", "C", "D", "E"];
-      resultsEl.innerHTML =
-        `<div><strong>Matching rows from Sheet2 (${SHEET2_RANGE_A1}):</strong></div>
-         <table>
-           <thead><tr>${header.map(h => `<th>${h}</th>`).join("")}</tr></thead>
-           <tbody>
-             ${matches.map(r => `
-               <tr>${[0,1,2,3,4].map(i => `<td>${normalize(r[i])}</td>`).join("")}</tr>
-             `).join("")}
-           </tbody>
-         </table>`;
-
-      setStatus(`Found ${matches.length} matching row(s) in Sheet2.`);
-    }
-
-    async function recalcAll() {
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
-
-      try {
-        await matchNearestFromSheet1();
-      } catch (e) {
-        console.error(e);
-        matchedSheet1 = null;
-        setStatus("Error reading Sheet1. Check sheet sharing / ID.");
-        document.getElementById("matchInfo").textContent = "";
-        return;
-      }
-
-      try {
-        await filterSheet2RowsAndRender();
-      } catch (e) {
-        console.error(e);
-        setStatus("Error reading Sheet2. Check sharing / tab name.");
-        document.getElementById("results").innerHTML = "";
-      }
-    }
-
-    function wireSingleSelectButtons(containerId, onPick) {
-      const buttons = document.querySelectorAll(`#${containerId} button`);
-      buttons.forEach(btn => {
-        btn.addEventListener("click", async () => {
-          buttons.forEach(b => b.classList.remove("selected"));
-          btn.classList.add("selected");
-          onPick(btn.dataset.value);
-          await recalcAll();
-        });
-      });
-    }
-
-    /**************************************************************
-     * 5) MAP + AUTOCOMPLETE INIT (GLOBAL CALLBACK)
-     **************************************************************/
-    function initMap() {
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: -41.2865, lng: 174.7762 }, // Wellington
-        zoom: 6,
-      });
-
-      // Map click sets location
-      map.addListener("click", async (e) => {
-        selectedLat = e.latLng.lat();
-        selectedLng = e.latLng.lng();
-        setMarker(selectedLat, selectedLng);
-        updateCoordsText();
-        await recalcAll();
-      });
-
-      // ✅ Address autocomplete restricted to NZ
-      const input = document.getElementById("addressInput");
-      autocomplete = new google.maps.places.Autocomplete(input, {
-        componentRestrictions: { country: "nz" },
-        fields: ["geometry", "formatted_address", "name"]
-      });
-
-      autocomplete.addListener("place_changed", async () => {
-        const place = autocomplete.getPlace();
-        if (!place.geometry || !place.geometry.location) {
-          setStatus("No geometry found for that address. Try another.");
-          return;
-        }
-
-        selectedLat = place.geometry.location.lat();
-        selectedLng = place.geometry.location.lng();
-
-        setMarker(selectedLat, selectedLng);
-        map.setZoom(14);
-
-        document.getElementById("coords").textContent =
-          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
-
-        await recalcAll();
-      });
-
-      // Optional: "Use my location"
-      document.getElementById("useMyLocationBtn").addEventListener("click", () => {
-        if (!navigator.geolocation) {
-          setStatus("Geolocation not supported by your browser.");
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          selectedLat = pos.coords.latitude;
-          selectedLng = pos.coords.longitude;
-          setMarker(selectedLat, selectedLng);
-          map.setZoom(14);
-          updateCoordsText();
-          await recalcAll();
-        }, () => setStatus("Could not get your location (permission denied?)."));
-      });
-
-      // Wire option buttons
-      wireSingleSelectButtons("importanceOptions", (val) => { selectedImportance = val; });
-      wireSingleSelectButtons("workingLifeOptions", (val) => { selectedWorkingLife = val; });
-
-      setStatus("Ready. Search an address or click the map, then choose options.");
-    }
-
-    // ✅ Ensure callback is visible globally
-    window.initMap = initMap;
-  </script>
-
-  <!-- ✅ IMPORTANT: include libraries=places for address search -->
-  <script
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap&libraries=places"
-    async defer></script>
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap&libraries=places"
+  async defer>
+</script>
 
 </body>
 </html>
