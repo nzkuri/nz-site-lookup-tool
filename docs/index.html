@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>TS1170.5 NZ Address & Site Parameter Tool</title>
+  <title>NZ Address & Site Parameter Tool</title>
 
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
@@ -92,7 +92,7 @@
   <div class="option-block">
     <h3>Design Parameters</h3>
 
-    <!-- ROW 1: IMPORTANCE LEVEL (I-VI) -->
+    <!-- ROW 1: IMPORTANCE LEVEL -->
     <div class="row">
       <label>Importance Level</label>
       <div class="option-buttons" id="importanceOptions">
@@ -126,42 +126,31 @@
     <div id="results"></div>
   </div>
 
-  <!-- GOOGLE MAPS -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap"
-    async defer>
-    
-  </script>
-
+  <script>
     /**************************************************************
      * 1) CONFIG (EDIT THESE)
      **************************************************************/
     const SHEET_ID = "YOUR_GOOGLE_SHEET_ID";
 
-    // Sheet/tab names:
     const SHEET1_NAME = "Sheet1";
     const SHEET2_NAME = "Sheet2";
 
-    // ✅ Reverted: normal order for coordinates (no swap)
-    // Sheet1 Columns:
-    //   A = LNG, B = LAT  (or whatever your original was)
-    // If your original is A=LAT, B=LNG, set these accordingly.
-    const SHEET1_LNG_COL_INDEX = 0; // Column A
-    const SHEET1_LAT_COL_INDEX = 1; // Column B
+    // ✅ Normal order (no swapping):
+    // Sheet1: Column A = LAT, Column B = LNG  (common setup)
+    // If yours is different, swap the indices below.
+    const SHEET1_LAT_COL_INDEX = 0; // Column A
+    const SHEET1_LNG_COL_INDEX = 1; // Column B
 
-    // Which column in Sheet1 contains "APOE"
-    // CHANGE if your APOE is in another column.
+    // APOE column in Sheet1 (change if needed)
     const SHEET1_APOE_COL_INDEX = 2; // Column C
 
-    // Sheet2 expected columns A..E (0..4)
-    // If your Sheet2 stores WorkingLife/Importance in different columns,
-    // update these two indices:
-    const SHEET2_WORKINGLIFE_COL_INDEX = 0; // Column A (CHANGE IF NEEDED)
-    const SHEET2_IMPORTANCE_COL_INDEX  = 1; // Column B (CHANGE IF NEEDED)
+    // Sheet2: WorkingLife + Importance columns (change if needed)
+    const SHEET2_WORKINGLIFE_COL_INDEX = 0; // Column A
+    const SHEET2_IMPORTANCE_COL_INDEX  = 1; // Column B
 
-    // APOE match columns (C then D/E if value exists)
-    const SHEET2_APOE_COLS = [2, 3, 4]; // Columns C, D, E
+    // APOE match columns in Sheet2: C, D, E
+    const SHEET2_APOE_COLS = [2, 3, 4];
 
-    // Range in Sheet2 (for your reference)
     const SHEET2_RANGE_A1 = "A1:E22";
 
     /**************************************************************
@@ -174,7 +163,6 @@
     let selectedImportance = "";
     let selectedWorkingLife = "";
 
-    // From Sheet1 nearest match:
     let matchedSheet1 = null; // {lat,lng,apoe,row,distKm}
 
     /**************************************************************
@@ -193,14 +181,12 @@
       const res = await fetch(url);
       const text = await res.text();
 
-      // GVIZ wraps JSON like: google.visualization.Query.setResponse({...});
       const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
       const data = JSON.parse(jsonText);
 
       const cols = data.table.cols.length;
       const rows = data.table.rows || [];
 
-      // Convert to 2D array of cell values (string/number/null)
       return rows.map(r => {
         const arr = new Array(cols).fill(null);
         (r.c || []).forEach((cell, i) => {
@@ -226,6 +212,11 @@
       return R * c;
     }
 
+    function normalize(v) {
+      if (v === null || v === undefined) return "";
+      return String(v).trim();
+    }
+
     async function matchNearestFromSheet1() {
       setStatus("Looking up nearest coordinate in Sheet1…");
 
@@ -239,8 +230,8 @@
 
       let best = null;
       for (const row of rows) {
-        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
         const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
+        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
         const d = haversineKm(selectedLat, selectedLng, lat, lng);
@@ -269,18 +260,13 @@
          Sheet1 APOE: <strong>${matchedSheet1.apoe ?? "(blank)"}</strong>`;
     }
 
-    function normalize(v) {
-      if (v === null || v === undefined) return "";
-      return String(v).trim();
-    }
-
     function apoeRowMatches(sheet2Row, apoeValue) {
       const apoeNorm = normalize(apoeValue);
       if (!apoeNorm) return false;
 
       for (const idx of SHEET2_APOE_COLS) {
         const cell = normalize(sheet2Row[idx]);
-        if (!cell) continue;               // only match if value exists
+        if (!cell) continue;                // only match if value exists
         if (cell === apoeNorm) return true; // exact match
       }
       return false;
@@ -312,7 +298,7 @@
         return;
       }
 
-      // If first row is headers, use: const dataRows = sheet2.slice(1);
+      // If your first row is headers, change to: const dataRows = sheet2.slice(1);
       const dataRows = sheet2;
 
       const wl = normalize(selectedWorkingLife);
@@ -385,8 +371,32 @@
       });
     }
 
+    async function safeRecalc() {
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
+        setStatus("Pick a map location to start matching.");
+        return;
+      }
+
+      if (!matchedSheet1) {
+        try { await matchNearestFromSheet1(); }
+        catch (err) {
+          console.error(err);
+          setStatus("Error reading Sheet1. Check sheet sharing and ID.");
+          return;
+        }
+      }
+
+      try { await filterSheet2RowsAndRender(); }
+      catch (err) {
+        console.error(err);
+        setStatus("Error reading Sheet2. Check sheet sharing and tab names.");
+      }
+
+      logCurrentSelections();
+    }
+
     /**************************************************************
-     * 6) MAP
+     * 6) MAP INIT (GLOBAL CALLBACK)
      **************************************************************/
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
@@ -404,18 +414,16 @@
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
-        try {
-          await matchNearestFromSheet1();
-        } catch (err) {
+        try { await matchNearestFromSheet1(); }
+        catch (err) {
           console.error(err);
           matchedSheet1 = null;
           setStatus("Error reading Sheet1. Check sheet sharing and ID.");
           document.getElementById("matchInfo").textContent = "";
         }
 
-        try {
-          await filterSheet2RowsAndRender();
-        } catch (err) {
+        try { await filterSheet2RowsAndRender(); }
+        catch (err) {
           console.error(err);
           setStatus("Error reading Sheet2. Check sheet sharing and tab names.");
           document.getElementById("results").innerHTML = "";
@@ -437,27 +445,14 @@
       setStatus("Ready. Click the map, then choose options (or choose options first).");
     }
 
-    async function safeRecalc() {
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-        setStatus("Pick a map location to start matching.");
-        return;
-      }
-      if (!matchedSheet1) {
-        try { await matchNearestFromSheet1(); }
-        catch (err) {
-          console.error(err);
-          setStatus("Error reading Sheet1. Check sheet sharing and ID.");
-          return;
-        }
-      }
-      try { await filterSheet2RowsAndRender(); }
-      catch (err) {
-        console.error(err);
-        setStatus("Error reading Sheet2. Check sheet sharing and tab names.");
-      }
-      logCurrentSelections();
-    }
+    // ✅ CRITICAL: make callback visible to Google Maps loader
+    window.initMap = initMap;
   </script>
+
+  <!-- GOOGLE MAPS (callback must exist on window) -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap"
+    async defer></script>
 
 </body>
 </html>
