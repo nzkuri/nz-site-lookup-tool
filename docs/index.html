@@ -18,20 +18,37 @@
     .row { margin-bottom:14px; }
     .row label { font-weight:bold; display:block; margin-bottom:6px; }
 
-    .option-buttons button {
+    .option-buttons button{
       padding:8px 12px; margin:4px;
       border:1px solid #aaa; border-radius:4px;
       background:#fff; cursor:pointer;
+      transition: background .15s, color .15s, border-color .15s;
     }
-    .option-buttons button.selected { background:#007bff; color:#fff; border-color:#007bff; }
+    .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
     .status { padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; }
     .muted { color:#666; }
 
-    table { width:100%; border-collapse:collapse; margin-top:10px; background:#fff; }
-    th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top; }
-    th { background:#f3f3f3; }
     .pill { display:inline-block; padding:3px 8px; border:1px solid #ddd; border-radius:999px; margin:2px; background:#f8f8f8; }
+
+    /* --- Table formatting like your screenshot --- */
+    .sc-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      background: #fff;
+      font-size: 14px;
+    }
+    .sc-table th, .sc-table td {
+      border: 2px solid #000;
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .sc-table thead th { font-weight: 700; }
+    .sc-table .left-head { width: 180px; }
+    .sc-table .subhead { font-weight: 700; }
   </style>
 </head>
 
@@ -50,7 +67,7 @@
 <div class="option-block">
   <h3>Design Parameters</h3>
 
-  <!-- Site Class kept (not used in this workflow filtering) -->
+  <!-- Site Class (I..VI) -->
   <div class="row">
     <label>Site Class</label>
     <div class="option-buttons" id="siteClassOptions">
@@ -63,6 +80,7 @@
     </div>
   </div>
 
+  <!-- Importance level (1..4) -->
   <div class="row">
     <label>Importance Level</label>
     <div class="option-buttons" id="importanceLevelOptions">
@@ -73,6 +91,7 @@
     </div>
   </div>
 
+  <!-- Working life -->
   <div class="row">
     <label>Design Working Life</label>
     <div class="option-buttons" id="workingLifeOptions">
@@ -94,27 +113,50 @@
 
 <script>
   /**************************************************************
-   * CONFIG
+   * CONFIG (EDIT THESE)
    **************************************************************/
   const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
   const SHEET1_NAME = "Sheet1";
   const SHEET2_NAME = "Sheet2";
 
-  // Sheet1: Column A = Lat, Column B = Lng
+  // Sheet1: Column A = Lat, Column B = Lng, Column C = APOE (as you said)
   const SHEET1_LAT_COL_INDEX = 0; // A
   const SHEET1_LNG_COL_INDEX = 1; // B
+  const SHEET1_APOE_COL_INDEX = 2; // C
 
-  // ✅ IMPORTANT: Set this to the column index in Sheet1 that contains APOE
-  // If APOE is column C, keep 2. If APOE is column D, set 3, etc.
-  const SHEET1_APOE_COL_INDEX = 2;
+  /**
+   * Sheet1 site-class value mapping:
+   * Update these indices to match where your Sheet1 stores:
+   * Site Class I:  PGA, Sa,s, Tc
+   * Site Class II: PGA, Sa,s, Tc
+   * ...
+   *
+   * Example layout assumption (common):
+   *   D..F  = Site Class I (PGA,Sa,Tc)
+   *   G..I  = Site Class II
+   *   J..L  = Site Class III
+   *   M..O  = Site Class IV
+   *   P..R  = Site Class V
+   *   S..U  = Site Class VI
+   *
+   * If your Sheet1 is different, change these indices.
+   */
+  const SHEET1_SITECLASS_COLS = {
+    I:   { PGA: 3,  Sa: 4,  Tc: 5  },
+    II:  { PGA: 6,  Sa: 7,  Tc: 8  },
+    III: { PGA: 9,  Sa: 10, Tc: 11 },
+    IV:  { PGA: 12, Sa: 13, Tc: 14 },
+    V:   { PGA: 15, Sa: 16, Tc: 17 },
+    VI:  { PGA: 18, Sa: 19, Tc: 20 },
+  };
 
-  // Sheet2 mapping per your workflow:
-  // A = WorkingLife, B = ImportanceLevel, C/D/E = APOE strings to use for filtering
-  const SHEET2_WORKINGLIFE_COL_INDEX = 0;     // A
-  const SHEET2_IMPORTANCE_COL_INDEX  = 1;     // B
-  const SHEET2_STRING_COLS = [2, 3, 4];       // C, D, E
+  // Sheet2 per your workflow:
+  // A = WorkingLife, B = ImportanceLevel, C/D/E = strings to use for filtering Sheet1 APOE
+  const SHEET2_WORKINGLIFE_COL_INDEX = 0; // A
+  const SHEET2_IMPORTANCE_COL_INDEX  = 1; // B
+  const SHEET2_STRING_COLS = [2, 3, 4];   // C, D, E
 
-  // How many nearest Sheet1 rows to keep before filtering by strings
+  // How many nearest Sheet1 rows to consider before filtering
   const SHEET1_NEAREST_COUNT = 25;
 
   /**************************************************************
@@ -123,15 +165,12 @@
   let map, marker, autocomplete;
   let selectedLat = null, selectedLng = null;
 
-  let selectedSiteClass = "";          // not used in filtering per your workflow
+  let selectedSiteClass = "";        // user UI selection (not used for filtering by your workflow)
   let selectedImportanceLevel = "";
   let selectedWorkingLife = "";
 
-  // Step 1 result: nearest rows from Sheet1
-  let nearestSheet1Rows = []; // array of {distKm, row, lat, lng, apoe}
-
-  // Step 2 result: strings from Sheet2 C/D/E for chosen inputs
-  let sheet2Strings = []; // array of strings
+  let nearestSheet1Rows = [];        // [{distKm,lat,lng,apoe,row}]
+  let sheet2Strings = [];            // ["...","...","..."]
 
   /**************************************************************
    * HELPERS
@@ -145,13 +184,18 @@
   }
 
   function eqLoose(a, b){
-    // Handles "1" vs 1 and case differences.
     const sa = normalize(a);
     const sb = normalize(b);
     if (sa === sb) return true;
     const na = Number(sa), nb = Number(sb);
     if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
     return sa.toLowerCase() === sb.toLowerCase();
+  }
+
+  function safeCell(v) {
+    if (v === null || v === undefined || String(v).trim() === "") return "";
+    const n = Number(v);
+    return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
   }
 
   function haversineKm(lat1,lng1,lat2,lng2){
@@ -200,17 +244,17 @@
   }
 
   /**************************************************************
-   * STEP 1:
-   * user picks location -> match nearest rows in Sheet1 (A,B)
+   * STEP 1: nearest rows in Sheet1 (A,B)
    **************************************************************/
   async function step1_findNearestSheet1Rows(){
+    nearestSheet1Rows = [];
+
     if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
 
     setStatus("Step 1: Finding nearest rows in Sheet1…");
 
     const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
     if (!rows.length) {
-      nearestSheet1Rows = [];
       setStatus("No rows found in Sheet1 (check sharing/tab name).");
       return;
     }
@@ -238,9 +282,7 @@
   }
 
   /**************************************************************
-   * STEP 2:
-   * user selects importance + working life -> match Sheet2 A & B
-   * -> store strings from Sheet2 C/D/E
+   * STEP 2: match Sheet2 A&B, collect strings from C/D/E
    **************************************************************/
   async function step2_getStringsFromSheet2(){
     sheet2Strings = [];
@@ -255,13 +297,11 @@
       return;
     }
 
-    // Skip header row if it looks like headers
     const headerish =
       normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase().includes("working") ||
       normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase().includes("importance");
     const dataRows = headerish ? sheet2.slice(1) : sheet2;
 
-    // Find matching row in Sheet2 where A=WorkingLife AND B=Importance
     const matchRow = dataRows.find(r =>
       eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], selectedWorkingLife) &&
       eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
@@ -273,7 +313,6 @@
       return;
     }
 
-    // Collect strings from C/D/E (ignore blanks)
     sheet2Strings = SHEET2_STRING_COLS
       .map(i => normalize(matchRow[i]))
       .filter(v => v.length > 0);
@@ -282,26 +321,62 @@
   }
 
   /**************************************************************
-   * STEP 3:
-   * Filter the nearest Sheet1 rows to only those whose APOE matches
-   * ANY of the strings from Sheet2 C/D/E.
+   * STEP 3: filter nearest Sheet1 rows by APOE ∈ Sheet2 strings
    **************************************************************/
   function step3_filterNearestSheet1Rows(){
     if (!nearestSheet1Rows.length) return [];
     if (!sheet2Strings.length) return [];
 
-    const stringSet = new Set(sheet2Strings.map(s => s.toLowerCase()));
-
+    const set = new Set(sheet2Strings.map(s => s.toLowerCase()));
     return nearestSheet1Rows.filter(item => {
       const apoe = normalize(item.apoe).toLowerCase();
-      return apoe && stringSet.has(apoe);
+      return apoe && set.has(apoe);
     });
   }
 
   /**************************************************************
-   * RENDER
+   * TABLE RENDER: format like picture
+   * - Left header cell is APOE (Sheet1 column C)
+   * - "Location" text is NOT shown; replaced by APOE
+   * - Shows all Site Class columns I..VI (PGA, Sa,s, Tc)
    **************************************************************/
-  function render(filteredRows){
+  function buildSiteClassTableFromSheet1Row(sheet1Row){
+    const apoe = safeCell(sheet1Row[SHEET1_APOE_COL_INDEX]) || "(APOE blank)";
+    const order = ["I","II","III","IV","V","VI"];
+
+    return `
+      <table class="sc-table">
+        <thead>
+          <tr>
+            <th class="left-head">${apoe}</th>
+            ${order.map(sc => `<th colspan="3">Site Class ${sc}</th>`).join("")}
+          </tr>
+          <tr>
+            <th class="subhead"></th>
+            ${order.map(() => `<th class="subhead">PGA</th><th class="subhead">Sa,s</th><th class="subhead">Tc</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td></td>
+            ${order.map(sc => {
+              const idx = SHEET1_SITECLASS_COLS[sc];
+              return `
+                <td>${safeCell(sheet1Row[idx.PGA])}</td>
+                <td>${safeCell(sheet1Row[idx.Sa])}</td>
+                <td>${safeCell(sheet1Row[idx.Tc])}</td>
+              `;
+            }).join("")}
+          </tr>
+        </tbody>
+      </table>
+    `;
+  }
+
+  /**************************************************************
+   * RENDER OUTPUT
+   **************************************************************/
+  function render(filtered){
     const resultsEl = document.getElementById("results");
 
     const infoBits = [];
@@ -316,7 +391,6 @@
       infoBits.push(`<span class="muted">Sheet2 strings: (none found)</span>`);
     }
     infoBits.push(`<span class="muted">Nearest Sheet1 rows considered: ${nearestSheet1Rows.length}</span>`);
-
     setInfo(infoBits.join("<br>"));
 
     if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
@@ -328,52 +402,23 @@
       return;
     }
     if (!sheet2Strings.length) {
-      resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B values match your button values).</div>`;
+      resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B match your button values).</div>`;
       return;
     }
-    if (!filteredRows.length) {
+    if (!filtered.length) {
       resultsEl.innerHTML = `<div><strong>No matches found</strong></div>
-      <div class="muted">None of the nearest Sheet1 rows had APOE matching Sheet2 C/D/E strings.</div>`;
+        <div class="muted">None of the nearest Sheet1 rows had APOE matching the Sheet2 C/D/E strings.</div>`;
       return;
     }
 
-    // Render a simple table. Columns shown: distance, lat, lng, apoe.
-    resultsEl.innerHTML =
-      `<div><strong>Filtered Sheet1 rows (APOE matches Sheet2 C/D/E):</strong></div>
-       <table>
-         <thead>
-           <tr>
-             <th>Dist (km)</th>
-             <th>Lat</th>
-             <th>Lng</th>
-             <th>APOE</th>
-           </tr>
-         </thead>
-         <tbody>
-           ${filteredRows.map(r => `
-             <tr>
-               <td>${r.distKm.toFixed(3)}</td>
-               <td>${r.lat.toFixed(5)}</td>
-               <td>${r.lng.toFixed(5)}</td>
-               <td>${normalize(r.apoe)}</td>
-             </tr>
-           `).join("")}
-         </tbody>
-       </table>`;
+    // Render a stacked table for each matching Sheet1 row (like your screenshot)
+    resultsEl.innerHTML = filtered.map(item => buildSiteClassTableFromSheet1Row(item.row)).join("");
   }
 
-  /**************************************************************
-   * RECALC PIPELINE
-   **************************************************************/
   async function recalc(){
     try {
-      // Step 1 needs location
       await step1_findNearestSheet1Rows();
-
-      // Step 2 needs user selections
       await step2_getStringsFromSheet2();
-
-      // Step 3 filters
       const filtered = step3_filterNearestSheet1Rows();
 
       setStatus("Done.");
@@ -461,7 +506,6 @@
       }, () => setStatus("Could not get your location (permission denied?)."));
     });
 
-    // Buttons (Site Class is not used in the filtering but kept for future calcs)
     wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
     wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
     wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
@@ -472,6 +516,7 @@
   window.initMap = initMap;
 </script>
 
+<!-- Google Maps (IMPORTANT: includes Places for address search) -->
 <script
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap&libraries=places"
   async defer></script>
