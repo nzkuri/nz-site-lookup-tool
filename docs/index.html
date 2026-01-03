@@ -141,12 +141,8 @@
   const SHEET2_IMPORTANCE_COL_INDEX  = 1;
   const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
 
-  // Force these titles (so you get ULS/SLS1/SLS2, not C/D/E)
-  const SHEET2_FALLBACK_TITLES = {
-    2: "ULS",
-    3: "SLS1",
-    4: "SLS2"
-  };
+  // Force these titles (ULS/SLS1/SLS2)
+  const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
 
   // Option B mapping (UI codes -> Sheet2 labels)
   const WORKING_LIFE_LABEL = {
@@ -219,6 +215,12 @@
     if(marker) marker.setMap(null);
     marker = new google.maps.Marker({ map, position: pos });
     map.panTo(pos);
+  }
+
+  // Matches "1/500" robustly (handles small variations)
+  function isOneOver500(apoe){
+    const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
+    return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
   }
 
   /**************************************************************
@@ -321,11 +323,8 @@
     // Build {title,value} for C/D/E
     sheet2MatchOptions = SHEET2_STRING_COLS
       .map((colIdx) => {
-        // Prefer headerRow title if it looks meaningful; otherwise force fallback (ULS/SLS1/SLS2)
         const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
-        const fallbackTitle = SHEET2_FALLBACK_TITLES[colIdx] || rawTitle || "";
-        const title = rawTitle && rawTitle.length > 0 ? rawTitle : fallbackTitle;
-
+        const title = rawTitle && rawTitle.length > 0 ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
         const value = normalize(matchRow[colIdx]);
         return { title, value };
       })
@@ -336,15 +335,17 @@
 
   /**************************************************************
    * STEP 3: Filter Sheet1 rows where APOE matches any Sheet2 C/D/E value,
-   * attach the matching Sheet2 title, AND DEDUPE duplicates.
+   * attach the matching Sheet2 title, DEDUPE duplicates,
+   * AND ALSO include the "1/500" APOE under ULS (if present) unless already shown.
    **************************************************************/
   function step3_filterMatchedSheet1Rows(){
     if (!matchedSheet1Rows.length) return [];
     if (!sheet2MatchOptions.length) return [];
 
     const out = [];
-    const seen = new Set(); // dedupe key: apoe + title + siteclass (so you don't get doubles)
+    const seen = new Set(); // dedupe key: apoe + title + siteclass
 
+    // 3a) Normal matches
     for (const item of matchedSheet1Rows) {
       const sheet1Row = item.row;
       const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
@@ -358,6 +359,20 @@
       seen.add(key);
 
       out.push({ sheet1Row, apoe, matchTitle: match.title });
+    }
+
+    // 3b) Add 1/500 for ULS (if ULS exists in Sheet2 options) unless already displayed
+    const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
+    if (hasULS) {
+      const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
+      if (oneOver500Item && oneOver500Item.row) {
+        const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
+        const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
+        }
+      }
     }
 
     return out;
@@ -377,9 +392,7 @@
     const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
     const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
 
-    // Force to ULS/SLS1/SLS2 if anything odd slips through
-    const cleanTitle = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "";
-    const topLeft = cleanTitle || "ULS";
+    const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
 
     return `
       <table class="sc-table">
