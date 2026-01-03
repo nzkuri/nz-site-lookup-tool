@@ -141,6 +141,13 @@
   const SHEET2_IMPORTANCE_COL_INDEX  = 1;
   const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
 
+  // Force these titles (so you get ULS/SLS1/SLS2, not C/D/E)
+  const SHEET2_FALLBACK_TITLES = {
+    2: "ULS",
+    3: "SLS1",
+    4: "SLS2"
+  };
+
   // Option B mapping (UI codes -> Sheet2 labels)
   const WORKING_LIFE_LABEL = {
     construction: "Construction equipment",
@@ -275,9 +282,7 @@
   }
 
   /**************************************************************
-   * STEP 2: Find matching Sheet2 row and capture:
-   * - titles from header row C/D/E (if present)
-   * - values from matched row C/D/E
+   * STEP 2: Find matching Sheet2 row and capture titles+values C/D/E
    **************************************************************/
   async function step2_getTitlesAndStringsFromSheet2(){
     sheet2MatchOptions = [];
@@ -292,6 +297,7 @@
       return;
     }
 
+    // Detect header row
     const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
     const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
     const headerish = firstA.includes("working") || firstB.includes("importance");
@@ -312,11 +318,16 @@
       return;
     }
 
+    // Build {title,value} for C/D/E
     sheet2MatchOptions = SHEET2_STRING_COLS
-      .map((colIdx, k) => {
-        const title = headerRow ? normalize(headerRow[colIdx]) : ["C","D","E"][k];
+      .map((colIdx) => {
+        // Prefer headerRow title if it looks meaningful; otherwise force fallback (ULS/SLS1/SLS2)
+        const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
+        const fallbackTitle = SHEET2_FALLBACK_TITLES[colIdx] || rawTitle || "";
+        const title = rawTitle && rawTitle.length > 0 ? rawTitle : fallbackTitle;
+
         const value = normalize(matchRow[colIdx]);
-        return { title: title || ["C","D","E"][k], value };
+        return { title, value };
       })
       .filter(x => x.value.length > 0);
 
@@ -325,29 +336,36 @@
 
   /**************************************************************
    * STEP 3: Filter Sheet1 rows where APOE matches any Sheet2 C/D/E value,
-   * and attach the corresponding Sheet2 header title.
+   * attach the matching Sheet2 title, AND DEDUPE duplicates.
    **************************************************************/
   function step3_filterMatchedSheet1Rows(){
     if (!matchedSheet1Rows.length) return [];
     if (!sheet2MatchOptions.length) return [];
 
-    return matchedSheet1Rows
-      .map(item => {
-        const sheet1Row = item.row;
-        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
-        if (!apoe) return null;
+    const out = [];
+    const seen = new Set(); // dedupe key: apoe + title + siteclass (so you don't get doubles)
 
-        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
-        if (!match) return null;
+    for (const item of matchedSheet1Rows) {
+      const sheet1Row = item.row;
+      const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
+      if (!apoe) continue;
 
-        return { sheet1Row, apoe, matchTitle: match.title };
-      })
-      .filter(Boolean);
+      const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
+      if (!match) continue;
+
+      const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      out.push({ sheet1Row, apoe, matchTitle: match.title });
+    }
+
+    return out;
   }
 
   /**************************************************************
    * TABLE: 3 rows, selected site class only
-   * Row1: [Sheet2 header title] [Site Class X (colspan 3)]
+   * Row1: [ULS/SLS1/SLS2] [Site Class X (colspan 3)]
    * Row2: [apoe] [PGA] [Sa,s] [Tc]
    * Row3: [APOE value] [PGA value] [Sa,s value] [Tc value]
    **************************************************************/
@@ -359,7 +377,9 @@
     const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
     const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
 
-    const topLeft = matchTitle || "(Sheet2 title blank)";
+    // Force to ULS/SLS1/SLS2 if anything odd slips through
+    const cleanTitle = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "";
+    const topLeft = cleanTitle || "ULS";
 
     return `
       <table class="sc-table">
