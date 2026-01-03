@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -283,4 +282,284 @@
   async function step2_getTitlesAndStringsFromSheet2(){
     sheet2MatchOptions = [];
 
-    i
+    if (!selectedWorkingLife || !selectedImportanceLevel) return;
+
+    setStatus("Step 2: Looking up selected options in Sheet2…");
+
+    const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
+    if (!sheet2.length) {
+      setStatus("Sheet2 empty / not accessible.");
+      return;
+    }
+
+    const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
+    const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
+    const headerish = firstA.includes("working") || firstB.includes("importance");
+
+    const headerRow = headerish ? sheet2[0] : null;
+    const dataRows = headerish ? sheet2.slice(1) : sheet2;
+
+    const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+
+    const matchRow = dataRows.find(r =>
+      eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
+      eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
+    );
+
+    if (!matchRow) {
+      sheet2MatchOptions = [];
+      setStatus("No matching row in Sheet2 for selected options.");
+      return;
+    }
+
+    sheet2MatchOptions = SHEET2_STRING_COLS
+      .map((colIdx, k) => {
+        const title = headerRow ? normalize(headerRow[colIdx]) : ["C","D","E"][k];
+        const value = normalize(matchRow[colIdx]);
+        return { title: title || ["C","D","E"][k], value };
+      })
+      .filter(x => x.value.length > 0);
+
+    setStatus("Step 2 complete.");
+  }
+
+  /**************************************************************
+   * STEP 3: Filter Sheet1 rows where APOE matches any Sheet2 C/D/E value,
+   * and attach the corresponding Sheet2 header title.
+   **************************************************************/
+  function step3_filterMatchedSheet1Rows(){
+    if (!matchedSheet1Rows.length) return [];
+    if (!sheet2MatchOptions.length) return [];
+
+    return matchedSheet1Rows
+      .map(item => {
+        const sheet1Row = item.row;
+        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
+        if (!apoe) return null;
+
+        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
+        if (!match) return null;
+
+        return { sheet1Row, apoe, matchTitle: match.title };
+      })
+      .filter(Boolean);
+  }
+
+  /**************************************************************
+   * TABLE: 3 rows, selected site class only
+   * Row1: [Sheet2 header title] [Site Class X (colspan 3)]
+   * Row2: [apoe] [PGA] [Sa,s] [Tc]
+   * Row3: [APOE value] [PGA value] [Sa,s value] [Tc value]
+   **************************************************************/
+  function buildThreeRowTable(sheet1Row, apoe, matchTitle){
+    const sc = selectedSiteClass;
+    const idx = SHEET1_SITECLASS_COLS[sc];
+
+    const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
+    const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
+    const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+
+    const topLeft = matchTitle || "(Sheet2 title blank)";
+
+    return `
+      <table class="sc-table">
+        <thead>
+          <tr>
+            <th class="left-head">${topLeft}</th>
+            <th colspan="3">Site Class ${sc}</th>
+          </tr>
+          <tr>
+            <th class="subhead left-head">apoe</th>
+            <th class="subhead">PGA</th>
+            <th class="subhead">Sa,s</th>
+            <th class="subhead">Tc</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="left-cell">${apoe || "(APOE blank)"}</td>
+            <td>${pga}</td>
+            <td>${sa}</td>
+            <td>${tc}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+  }
+
+  /**************************************************************
+   * RENDER
+   **************************************************************/
+  function render(filtered){
+    const resultsEl = document.getElementById("results");
+
+    const infoBits = [];
+    if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+      const tLat1 = round1(selectedLat);
+      const tLng1 = round1(selectedLng);
+      infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
+      infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
+    }
+
+    if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
+    if (selectedWorkingLife) {
+      const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+      infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
+    }
+    if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
+
+    if (sheet2MatchOptions.length) {
+      infoBits.push(`Sheet2 candidates (C/D/E): ` + sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join(""));
+    } else if (selectedWorkingLife && selectedImportanceLevel) {
+      infoBits.push(`<span class="muted">Sheet2 candidates (C/D/E): (none found)</span>`);
+    }
+
+    infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
+    setInfo(infoBits.join("<br>"));
+
+    if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
+      resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`;
+      return;
+    }
+    if (!selectedSiteClass) {
+      resultsEl.innerHTML = `<div class="muted">Select Site Class.</div>`;
+      return;
+    }
+    if (!selectedWorkingLife || !selectedImportanceLevel) {
+      resultsEl.innerHTML = `<div class="muted">Select Working Life and Importance Level.</div>`;
+      return;
+    }
+    if (!sheet2MatchOptions.length) {
+      resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B values and the working-life mapping).</div>`;
+      return;
+    }
+    if (!matchedSheet1Rows.length) {
+      resultsEl.innerHTML = `<div><strong>No Sheet1 rows matched</strong></div>
+        <div class="muted">No rows in Sheet1 had lat/lng matching your selected location rounded to 1 decimal point.</div>`;
+      return;
+    }
+    if (!filtered.length) {
+      resultsEl.innerHTML = `<div><strong>No matches found</strong></div>
+        <div class="muted">Rows matched the 1dp lat/lng bucket, but none had APOE matching Sheet2 C/D/E strings.</div>`;
+      return;
+    }
+
+    resultsEl.innerHTML = filtered
+      .map(x => buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle))
+      .join("");
+  }
+
+  async function recalc(){
+    try {
+      setRoundedBar();
+
+      await step1_findAllSheet1RowsMatching1dp();
+      await step2_getTitlesAndStringsFromSheet2();
+
+      const filtered = step3_filterMatchedSheet1Rows();
+
+      setStatus("Done.");
+      render(filtered);
+    } catch (err) {
+      console.error(err);
+      setStatus("Error (check console).");
+      document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
+    }
+  }
+
+  /**************************************************************
+   * BUTTON WIRING
+   **************************************************************/
+  function wireSingleSelectButtons(containerId, setter){
+    const buttons = document.querySelectorAll(`#${containerId} button`);
+    buttons.forEach(btn => {
+      btn.addEventListener("click", async () => {
+        buttons.forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        setter(btn.dataset.value);
+        await recalc();
+      });
+    });
+  }
+
+  /**************************************************************
+   * MAP + AUTOCOMPLETE
+   **************************************************************/
+  function initMap(){
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: { lat: -41.2865, lng: 174.7762 },
+      zoom: 6
+    });
+
+    map.addListener("click", async (e) => {
+      selectedLat = e.latLng.lat();
+      selectedLng = e.latLng.lng();
+      setMarker(selectedLat, selectedLng);
+
+      document.getElementById("coords").textContent =
+        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+      setRoundedBar();
+      await recalc();
+    });
+
+    autocomplete = new google.maps.places.Autocomplete(
+      document.getElementById("addressInput"),
+      { componentRestrictions: { country: "nz" } }
+    );
+
+    autocomplete.addListener("place_changed", async () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        setStatus("No geometry for that address. Try another.");
+        return;
+      }
+
+      selectedLat = place.geometry.location.lat();
+      selectedLng = place.geometry.location.lng();
+      setMarker(selectedLat, selectedLng);
+      map.setZoom(14);
+
+      document.getElementById("coords").textContent =
+        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
+
+      setRoundedBar();
+      await recalc();
+    });
+
+    document.getElementById("useMyLocationBtn").addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        setStatus("Geolocation not supported.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        selectedLat = pos.coords.latitude;
+        selectedLng = pos.coords.longitude;
+        setMarker(selectedLat, selectedLng);
+        map.setZoom(14);
+
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+        setRoundedBar();
+        await recalc();
+      }, () => setStatus("Could not get your location (permission denied?)."));
+    });
+
+    wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
+    wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
+    wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
+
+    setStatus("Ready. Choose location + options.");
+    setRoundedBar();
+  }
+
+  window.initMap = initMap;
+</script>
+
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap&libraries=places"
+  async defer></script>
+
+</body>
+</html>
