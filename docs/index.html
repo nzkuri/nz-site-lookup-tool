@@ -119,28 +119,11 @@
   const SHEET1_NAME = "Sheet1";
   const SHEET2_NAME = "Sheet2";
 
-  // Sheet1: Column A = Lat, Column B = Lng, Column C = APOE (as you said)
+  // Sheet1: Column A = Lat, Column B = Lng, Column C = APOE
   const SHEET1_LAT_COL_INDEX = 0; // A
   const SHEET1_LNG_COL_INDEX = 1; // B
   const SHEET1_APOE_COL_INDEX = 2; // C
 
-  /**
-   * Sheet1 site-class value mapping:
-   * Update these indices to match where your Sheet1 stores:
-   * Site Class I:  PGA, Sa,s, Tc
-   * Site Class II: PGA, Sa,s, Tc
-   * ...
-   *
-   * Example layout assumption (common):
-   *   D..F  = Site Class I (PGA,Sa,Tc)
-   *   G..I  = Site Class II
-   *   J..L  = Site Class III
-   *   M..O  = Site Class IV
-   *   P..R  = Site Class V
-   *   S..U  = Site Class VI
-   *
-   * If your Sheet1 is different, change these indices.
-   */
   const SHEET1_SITECLASS_COLS = {
     I:   { PGA: 3,  Sa: 4,  Tc: 5  },
     II:  { PGA: 6,  Sa: 7,  Tc: 8  },
@@ -150,14 +133,11 @@
     VI:  { PGA: 18, Sa: 19, Tc: 20 },
   };
 
-  // Sheet2 per your workflow:
-  // A = WorkingLife, B = ImportanceLevel, C/D/E = strings to use for filtering Sheet1 APOE
+  // Sheet2:
+  // A = WorkingLife, B = ImportanceLevel, C/D/E = strings for filtering Sheet1 APOE
   const SHEET2_WORKINGLIFE_COL_INDEX = 0; // A
   const SHEET2_IMPORTANCE_COL_INDEX  = 1; // B
   const SHEET2_STRING_COLS = [2, 3, 4];   // C, D, E
-
-  // How many nearest Sheet1 rows to consider before filtering
-  const SHEET1_NEAREST_COUNT = 25;
 
   /**************************************************************
    * STATE
@@ -165,11 +145,12 @@
   let map, marker, autocomplete;
   let selectedLat = null, selectedLng = null;
 
-  let selectedSiteClass = "";        // user UI selection (not used for filtering by your workflow)
+  let selectedSiteClass = "";
   let selectedImportanceLevel = "";
   let selectedWorkingLife = "";
 
-  let nearestSheet1Rows = [];        // [{distKm,lat,lng,apoe,row}]
+  // Now holds ALL rows that match (lat,lng) rounded to 1dp
+  let matchedSheet1Rows = [];        // [{lat,lng,apoe,row}]
   let sheet2Strings = [];            // ["...","...","..."]
 
   /**************************************************************
@@ -198,13 +179,11 @@
     return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
   }
 
-  function haversineKm(lat1,lng1,lat2,lng2){
-    const R=6371, toRad=d=>d*Math.PI/180;
-    const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
-    const a=Math.sin(dLat/2)**2 +
-            Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) *
-            Math.sin(dLng/2)**2;
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  // Round to 1dp in a consistent way
+  function round1(n){
+    const num = Number(n);
+    if (!Number.isFinite(num)) return null;
+    return Math.round(num * 10) / 10;
   }
 
   function setMarker(lat,lng){
@@ -244,14 +223,14 @@
   }
 
   /**************************************************************
-   * STEP 1: nearest rows in Sheet1 (A,B)
+   * STEP 1: Match ALL rows in Sheet1 where (lat,lng) match to 1dp
    **************************************************************/
-  async function step1_findNearestSheet1Rows(){
-    nearestSheet1Rows = [];
+  async function step1_findAllSheet1RowsMatching1dp(){
+    matchedSheet1Rows = [];
 
     if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
 
-    setStatus("Step 1: Finding nearest rows in Sheet1…");
+    setStatus("Step 1: Matching Sheet1 rows by lat/lng to 1 decimal point…");
 
     const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
     if (!rows.length) {
@@ -259,26 +238,33 @@
       return;
     }
 
-    const scored = [];
+    const targetLat1 = round1(selectedLat);
+    const targetLng1 = round1(selectedLng);
+
+    if (targetLat1 === null || targetLng1 === null) {
+      setStatus("Invalid selected coordinates.");
+      return;
+    }
+
     for (const row of rows) {
       const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
       const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
-      const distKm = haversineKm(selectedLat, selectedLng, lat, lng);
-      scored.push({
-        distKm,
-        lat,
-        lng,
-        apoe: row[SHEET1_APOE_COL_INDEX],
-        row
-      });
+      const lat1 = round1(lat);
+      const lng1 = round1(lng);
+
+      if (lat1 === targetLat1 && lng1 === targetLng1) {
+        matchedSheet1Rows.push({
+          lat,
+          lng,
+          apoe: row[SHEET1_APOE_COL_INDEX],
+          row
+        });
+      }
     }
 
-    scored.sort((a,b) => a.distKm - b.distKm);
-    nearestSheet1Rows = scored.slice(0, SHEET1_NEAREST_COUNT);
-
-    setStatus("Step 1 complete.");
+    setStatus(`Step 1 complete. Found ${matchedSheet1Rows.length} Sheet1 row(s) matching ${targetLat1.toFixed(1)}, ${targetLng1.toFixed(1)}.`);
   }
 
   /**************************************************************
@@ -321,24 +307,21 @@
   }
 
   /**************************************************************
-   * STEP 3: filter nearest Sheet1 rows by APOE ∈ Sheet2 strings
+   * STEP 3: filter matched Sheet1 rows by APOE ∈ Sheet2 strings
    **************************************************************/
-  function step3_filterNearestSheet1Rows(){
-    if (!nearestSheet1Rows.length) return [];
+  function step3_filterMatchedSheet1Rows(){
+    if (!matchedSheet1Rows.length) return [];
     if (!sheet2Strings.length) return [];
 
     const set = new Set(sheet2Strings.map(s => s.toLowerCase()));
-    return nearestSheet1Rows.filter(item => {
+    return matchedSheet1Rows.filter(item => {
       const apoe = normalize(item.apoe).toLowerCase();
       return apoe && set.has(apoe);
     });
   }
 
   /**************************************************************
-   * TABLE RENDER: format like picture
-   * - Left header cell is APOE (Sheet1 column C)
-   * - "Location" text is NOT shown; replaced by APOE
-   * - Shows all Site Class columns I..VI (PGA, Sa,s, Tc)
+   * TABLE RENDER
    **************************************************************/
   function buildSiteClassTableFromSheet1Row(sheet1Row){
     const apoe = safeCell(sheet1Row[SHEET1_APOE_COL_INDEX]) || "(APOE blank)";
@@ -381,7 +364,10 @@
 
     const infoBits = [];
     if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+      const tLat1 = round1(selectedLat);
+      const tLng1 = round1(selectedLng);
       infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
+      infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
     }
     if (selectedWorkingLife) infoBits.push(`Working Life: <b>${selectedWorkingLife}</b>`);
     if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
@@ -390,7 +376,7 @@
     } else if (selectedWorkingLife && selectedImportanceLevel) {
       infoBits.push(`<span class="muted">Sheet2 strings: (none found)</span>`);
     }
-    infoBits.push(`<span class="muted">Nearest Sheet1 rows considered: ${nearestSheet1Rows.length}</span>`);
+    infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
     setInfo(infoBits.join("<br>"));
 
     if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
@@ -405,21 +391,25 @@
       resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B match your button values).</div>`;
       return;
     }
+    if (!matchedSheet1Rows.length) {
+      resultsEl.innerHTML = `<div><strong>No Sheet1 rows matched</strong></div>
+        <div class="muted">No rows in Sheet1 had lat/lng matching your selected location rounded to 1 decimal point.</div>`;
+      return;
+    }
     if (!filtered.length) {
       resultsEl.innerHTML = `<div><strong>No matches found</strong></div>
-        <div class="muted">None of the nearest Sheet1 rows had APOE matching the Sheet2 C/D/E strings.</div>`;
+        <div class="muted">Rows matched the 1dp lat/lng bucket, but none had APOE matching the Sheet2 C/D/E strings.</div>`;
       return;
     }
 
-    // Render a stacked table for each matching Sheet1 row (like your screenshot)
     resultsEl.innerHTML = filtered.map(item => buildSiteClassTableFromSheet1Row(item.row)).join("");
   }
 
   async function recalc(){
     try {
-      await step1_findNearestSheet1Rows();
+      await step1_findAllSheet1RowsMatching1dp();
       await step2_getStringsFromSheet2();
-      const filtered = step3_filterNearestSheet1Rows();
+      const filtered = step3_filterMatchedSheet1Rows();
 
       setStatus("Done.");
       render(filtered);
