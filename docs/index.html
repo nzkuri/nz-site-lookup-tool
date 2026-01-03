@@ -140,6 +140,19 @@
   const SHEET2_STRING_COLS = [2, 3, 4];   // C, D, E
 
   /**************************************************************
+   * OPTION B: Map UI codes -> Sheet2 labels
+   * (Keeps your button values as-is, but matches Sheet2 human labels)
+   **************************************************************/
+  const WORKING_LIFE_LABEL = {
+    construction: "Construction equipment",
+    lt6months: "Less than 6 months",
+    "5": "5 years",
+    "25": "25 years",
+    "50": "50 years",
+    "100": "100 years or more"
+  };
+
+  /**************************************************************
    * STATE
    **************************************************************/
   let map, marker, autocomplete;
@@ -149,7 +162,7 @@
   let selectedImportanceLevel = "";
   let selectedWorkingLife = "";
 
-  // Now holds ALL rows that match (lat,lng) rounded to 1dp
+  // ALL rows that match (lat,lng) rounded to 1dp
   let matchedSheet1Rows = [];        // [{lat,lng,apoe,row}]
   let sheet2Strings = [];            // ["...","...","..."]
 
@@ -179,7 +192,6 @@
     return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
   }
 
-  // Round to 1dp in a consistent way
   function round1(n){
     const num = Number(n);
     if (!Number.isFinite(num)) return null;
@@ -269,6 +281,7 @@
 
   /**************************************************************
    * STEP 2: match Sheet2 A&B, collect strings from C/D/E
+   * Option B: translate selectedWorkingLife code -> Sheet2 label
    **************************************************************/
   async function step2_getStringsFromSheet2(){
     sheet2Strings = [];
@@ -283,13 +296,17 @@
       return;
     }
 
-    const headerish =
-      normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase().includes("working") ||
-      normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase().includes("importance");
+    // Try to detect a header row
+    const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
+    const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
+    const headerish = firstA.includes("working") || firstB.includes("importance");
     const dataRows = headerish ? sheet2.slice(1) : sheet2;
 
+    // Translate UI code -> label used in Sheet2 column A
+    const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+
     const matchRow = dataRows.find(r =>
-      eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], selectedWorkingLife) &&
+      eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
       eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
     );
 
@@ -369,13 +386,20 @@
       infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
       infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
     }
-    if (selectedWorkingLife) infoBits.push(`Working Life: <b>${selectedWorkingLife}</b>`);
+
+    // Show both the UI code and the label we match in Sheet2
+    if (selectedWorkingLife) {
+      const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+      infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
+    }
+
     if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
     if (sheet2Strings.length) {
       infoBits.push(`Sheet2 strings (C/D/E): ${sheet2Strings.map(s => `<span class="pill">${s}</span>`).join("")}`);
     } else if (selectedWorkingLife && selectedImportanceLevel) {
       infoBits.push(`<span class="muted">Sheet2 strings: (none found)</span>`);
     }
+
     infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
     setInfo(infoBits.join("<br>"));
 
@@ -388,7 +412,7 @@
       return;
     }
     if (!sheet2Strings.length) {
-      resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B match your button values).</div>`;
+      resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B values and the working-life mapping).</div>`;
       return;
     }
     if (!matchedSheet1Rows.length) {
