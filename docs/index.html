@@ -31,7 +31,7 @@
 
     .pill { display:inline-block; padding:3px 8px; border:1px solid #ddd; border-radius:999px; margin:2px; background:#f8f8f8; }
 
-    /* --- Table formatting like your screenshot --- */
+    /* --- Table formatting --- */
     .sc-table {
       width: 100%;
       border-collapse: collapse;
@@ -48,9 +48,8 @@
     }
     .sc-table thead th { font-weight: 700; }
     .sc-table .left-head { width: 220px; text-align:left; }
-    .sc-table .subhead { font-weight: 700; }
     .sc-table .left-cell { text-align:left; font-weight:700; }
-    .sc-table .left-cell.muted-left { font-weight:700; text-transform:lowercase; }
+    .sc-table .subhead { font-weight: 700; }
   </style>
 </head>
 
@@ -116,18 +115,18 @@
 
 <script>
   /**************************************************************
-   * CONFIG (EDIT THESE)
+   * CONFIG
    **************************************************************/
   const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
   const SHEET1_NAME = "Sheet1";
   const SHEET2_NAME = "Sheet2";
 
-  // Sheet1: Column A = Lat, Column B = Lng, Column C = APOE
-  const SHEET1_LAT_COL_INDEX = 0; // A
-  const SHEET1_LNG_COL_INDEX = 1; // B
-  const SHEET1_APOE_COL_INDEX = 2; // C
+  // Sheet1: A=Lat, B=Lng, C=APOE
+  const SHEET1_LAT_COL_INDEX = 0;
+  const SHEET1_LNG_COL_INDEX = 1;
+  const SHEET1_APOE_COL_INDEX = 2;
 
-  // Update these indices if your Sheet1 changes
+  // Site class column indices in Sheet1
   const SHEET1_SITECLASS_COLS = {
     I:   { PGA: 3,  Sa: 4,  Tc: 5  },
     II:  { PGA: 6,  Sa: 7,  Tc: 8  },
@@ -137,15 +136,12 @@
     VI:  { PGA: 18, Sa: 19, Tc: 20 },
   };
 
-  // Sheet2:
-  // A = WorkingLife, B = ImportanceLevel, C/D/E = strings used to filter Sheet1 APOE
-  const SHEET2_WORKINGLIFE_COL_INDEX = 0; // A
-  const SHEET2_IMPORTANCE_COL_INDEX  = 1; // B
-  const SHEET2_STRING_COLS = [2, 3, 4];   // C, D, E
+  // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
+  const SHEET2_WORKINGLIFE_COL_INDEX = 0;
+  const SHEET2_IMPORTANCE_COL_INDEX  = 1;
+  const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
 
-  /**************************************************************
-   * OPTION B: Map UI codes -> Sheet2 labels
-   **************************************************************/
+  // Option B mapping (UI codes -> Sheet2 labels)
   const WORKING_LIFE_LABEL = {
     construction: "Construction equipment",
     lt6months: "Less than 6 months",
@@ -165,11 +161,8 @@
   let selectedImportanceLevel = "";
   let selectedWorkingLife = "";
 
-  // ALL Sheet1 rows matching rounded lat/lng (1dp)
-  let matchedSheet1Rows = []; // [{lat,lng,apoe,row}]
-
-  // From the matched Sheet2 row: array like [{colIndex, title, value}]
-  let sheet2MatchOptions = []; // titles from header row (C/D/E) + values from matched row
+  let matchedSheet1Rows = [];     // rows matching 1dp lat/lng
+  let sheet2MatchOptions = [];    // [{title,value}] from matched Sheet2 row
 
   /**************************************************************
    * HELPERS
@@ -267,10 +260,6 @@
 
     const targetLat1 = round1(selectedLat);
     const targetLng1 = round1(selectedLng);
-    if (targetLat1 === null || targetLng1 === null) {
-      setStatus("Invalid selected coordinates.");
-      return;
-    }
 
     for (const row of rows) {
       const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
@@ -278,11 +267,7 @@
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
       if (round1(lat) === targetLat1 && round1(lng) === targetLng1) {
-        matchedSheet1Rows.push({
-          lat, lng,
-          apoe: row[SHEET1_APOE_COL_INDEX],
-          row
-        });
+        matchedSheet1Rows.push({ row });
       }
     }
 
@@ -290,308 +275,11 @@
   }
 
   /**************************************************************
-   * STEP 2: match Sheet2 A&B, collect titles+strings from C/D/E
-   * - Titles: take from header row C/D/E if a header row exists.
-   * - Values: take from the matched option row C/D/E.
+   * STEP 2: Find matching Sheet2 row and capture:
+   * - titles from header row C/D/E (if present)
+   * - values from matched row C/D/E
    **************************************************************/
   async function step2_getTitlesAndStringsFromSheet2(){
     sheet2MatchOptions = [];
 
-    if (!selectedWorkingLife || !selectedImportanceLevel) return;
-
-    setStatus("Step 2: Looking up selected options in Sheet2…");
-
-    const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-    if (!sheet2.length) {
-      setStatus("Sheet2 empty / not accessible.");
-      return;
-    }
-
-    // Detect header row
-    const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
-    const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
-    const headerish = firstA.includes("working") || firstB.includes("importance");
-
-    const headerRow = headerish ? sheet2[0] : null;
-    const dataRows = headerish ? sheet2.slice(1) : sheet2;
-
-    const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-
-    const matchRow = dataRows.find(r =>
-      eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
-      eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
-    );
-
-    if (!matchRow) {
-      sheet2MatchOptions = [];
-      setStatus("No matching row in Sheet2 for selected options.");
-      return;
-    }
-
-    // Build [{title,value}] for C/D/E
-    sheet2MatchOptions = SHEET2_STRING_COLS
-      .map((colIdx, k) => {
-        const title = headerRow ? normalize(headerRow[colIdx]) : ["C","D","E"][k];
-        const value = normalize(matchRow[colIdx]);
-        return { colIndex: colIdx, title: title || ["C","D","E"][k], value };
-      })
-      .filter(x => x.value.length > 0);
-
-    setStatus("Step 2 complete.");
-  }
-
-  /**************************************************************
-   * STEP 3: Keep only Sheet1 rows where APOE matches any Sheet2 C/D/E,
-   * and attach which Sheet2 cell matched (title + value).
-   **************************************************************/
-  function step3_filterMatchedSheet1Rows(){
-    if (!matchedSheet1Rows.length) return [];
-    if (!sheet2MatchOptions.length) return [];
-
-    return matchedSheet1Rows
-      .map(item => {
-        const apoe = normalize(item.apoe);
-        if (!apoe) return null;
-
-        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
-        if (!match) return null;
-
-        return {
-          ...item,
-          matchTitle: match.title,
-          matchString: match.value
-        };
-      })
-      .filter(Boolean);
-  }
-
-  /**************************************************************
-   * TABLE RENDER (ONLY selected site class column group)
-   *
-   * Requirements you asked for:
-   * - Top-left (first row/first column): Sheet2 title (from C/D/E header)
-   * - Second row/first column: text "apoe"
-   * - Last row/first column: the matching Sheet2 string (C/D/E)
-   * - Only show the columns for the selected Site Class
-   **************************************************************/
-  function buildSiteClassTableFromMatch(sheet1Row, matchTitle, apoeValue, matchString){
-    const sc = selectedSiteClass;
-    const idx = SHEET1_SITECLASS_COLS[sc];
-
-    const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
-    const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
-    const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
-
-    const topLeft = matchTitle || "(Sheet2 title blank)";
-    const apoe = apoeValue || "(APOE blank)";
-    const mStr = matchString || "(Sheet2 string blank)";
-
-    return `
-      <table class="sc-table">
-        <thead>
-          <tr>
-            <th class="left-head">${topLeft}</th>
-            <th colspan="3">Site Class ${sc}</th>
-          </tr>
-          <tr>
-            <th class="subhead left-cell muted-left">apoe</th>
-            <th class="subhead">PGA</th>
-            <th class="subhead">Sa,s</th>
-            <th class="subhead">Tc</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="left-cell">${apoe}</td>
-            <td>${pga}</td>
-            <td>${sa}</td>
-            <td>${tc}</td>
-          </tr>
-          <tr>
-            <td class="left-cell">${mStr}</td>
-            <td colspan="3"></td>
-          </tr>
-        </tbody>
-      </table>
-    `;
-  }
-
-  /**************************************************************
-   * RENDER OUTPUT
-   **************************************************************/
-  function render(filtered){
-    const resultsEl = document.getElementById("results");
-
-    const infoBits = [];
-    if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-      const tLat1 = round1(selectedLat);
-      const tLng1 = round1(selectedLng);
-      infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
-      infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
-    }
-
-    if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
-    if (selectedWorkingLife) {
-      const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-      infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
-    }
-    if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
-
-    if (sheet2MatchOptions.length) {
-      infoBits.push(
-        `Sheet2 (C/D/E): ` +
-        sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join("")
-      );
-    } else if (selectedWorkingLife && selectedImportanceLevel) {
-      infoBits.push(`<span class="muted">Sheet2 (C/D/E): (none found)</span>`);
-    }
-
-    infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
-    setInfo(infoBits.join("<br>"));
-
-    if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-      resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`;
-      return;
-    }
-    if (!selectedSiteClass) {
-      resultsEl.innerHTML = `<div class="muted">Select Site Class.</div>`;
-      return;
-    }
-    if (!selectedWorkingLife || !selectedImportanceLevel) {
-      resultsEl.innerHTML = `<div class="muted">Select Working Life and Importance Level.</div>`;
-      return;
-    }
-    if (!sheet2MatchOptions.length) {
-      resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B values and the working-life mapping).</div>`;
-      return;
-    }
-    if (!matchedSheet1Rows.length) {
-      resultsEl.innerHTML = `<div><strong>No Sheet1 rows matched</strong></div>
-        <div class="muted">No rows in Sheet1 had lat/lng matching your selected location rounded to 1 decimal point.</div>`;
-      return;
-    }
-    if (!filtered.length) {
-      resultsEl.innerHTML = `<div><strong>No matches found</strong></div>
-        <div class="muted">Rows matched the 1dp lat/lng bucket, but none had APOE matching Sheet2 C/D/E strings.</div>`;
-      return;
-    }
-
-    resultsEl.innerHTML = filtered
-      .map(item => buildSiteClassTableFromMatch(item.row, item.matchTitle, normalize(item.apoe), item.matchString))
-      .join("");
-  }
-
-  async function recalc(){
-    try {
-      setRoundedBar();
-
-      await step1_findAllSheet1RowsMatching1dp();
-      await step2_getTitlesAndStringsFromSheet2();
-
-      const filtered = step3_filterMatchedSheet1Rows();
-
-      setStatus("Done.");
-      render(filtered);
-    } catch (err) {
-      console.error(err);
-      setStatus("Error (check console).");
-      document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
-    }
-  }
-
-  /**************************************************************
-   * BUTTON WIRING
-   **************************************************************/
-  function wireSingleSelectButtons(containerId, setter){
-    const buttons = document.querySelectorAll(`#${containerId} button`);
-    buttons.forEach(btn => {
-      btn.addEventListener("click", async () => {
-        buttons.forEach(b => b.classList.remove("selected"));
-        btn.classList.add("selected");
-        setter(btn.dataset.value);
-        await recalc();
-      });
-    });
-  }
-
-  /**************************************************************
-   * MAP + AUTOCOMPLETE
-   **************************************************************/
-  function initMap(){
-    map = new google.maps.Map(document.getElementById("map"), {
-      center: { lat: -41.2865, lng: 174.7762 },
-      zoom: 6
-    });
-
-    map.addListener("click", async (e) => {
-      selectedLat = e.latLng.lat();
-      selectedLng = e.latLng.lng();
-      setMarker(selectedLat, selectedLng);
-
-      document.getElementById("coords").textContent =
-        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
-      setRoundedBar();
-      await recalc();
-    });
-
-    autocomplete = new google.maps.places.Autocomplete(
-      document.getElementById("addressInput"),
-      { componentRestrictions: { country: "nz" } }
-    );
-
-    autocomplete.addListener("place_changed", async () => {
-      const place = autocomplete.getPlace();
-      if (!place.geometry || !place.geometry.location) {
-        setStatus("No geometry for that address. Try another.");
-        return;
-      }
-
-      selectedLat = place.geometry.location.lat();
-      selectedLng = place.geometry.location.lng();
-      setMarker(selectedLat, selectedLng);
-      map.setZoom(14);
-
-      document.getElementById("coords").textContent =
-        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
-
-      setRoundedBar();
-      await recalc();
-    });
-
-    document.getElementById("useMyLocationBtn").addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        setStatus("Geolocation not supported.");
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        selectedLat = pos.coords.latitude;
-        selectedLng = pos.coords.longitude;
-        setMarker(selectedLat, selectedLng);
-        map.setZoom(14);
-
-        document.getElementById("coords").textContent =
-          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
-        setRoundedBar();
-        await recalc();
-      }, () => setStatus("Could not get your location (permission denied?)."));
-    });
-
-    wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
-    wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
-    wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
-
-    setStatus("Ready. Choose location + options.");
-    setRoundedBar();
-  }
-
-  window.initMap = initMap;
-</script>
-
-<script
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap&libraries=places"
-  async defer></script>
-
-</body>
-</html>
+    i
