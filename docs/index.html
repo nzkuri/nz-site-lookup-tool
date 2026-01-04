@@ -121,6 +121,10 @@
   const SHEET1_NAME = "Sheet1";
   const SHEET2_NAME = "Sheet2";
 
+  // ✅ Analytics logging endpoint (Apps Script Web App URL)
+  // Deploy Apps Script as "Web app" and paste the URL here.
+  const ANALYTICS_ENDPOINT = "PASTE_YOUR_APPS_SCRIPT_WEBAPP_URL_HERE";
+
   // Sheet1: A=Lat, B=Lng, C=APOE
   const SHEET1_LAT_COL_INDEX = 0;
   const SHEET1_LNG_COL_INDEX = 1;
@@ -141,7 +145,7 @@
   const SHEET2_IMPORTANCE_COL_INDEX  = 1;
   const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
 
-  // Force these titles (ULS/SLS1/SLS2)
+  // Force table titles (even if Sheet2 header row isn't readable)
   const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
 
   // Option B mapping (UI codes -> Sheet2 labels)
@@ -153,6 +157,93 @@
     "50": "50 years",
     "100": "100 years or more"
   };
+
+  /**************************************************************
+   * PHASE 1 METRICS (client-side)
+   * - Visitor ID (localStorage)
+   * - Time on page
+   * - Button selections
+   * - Location selection
+   * - Results generated
+   * - Geography + timestamp are captured server-side in Apps Script
+   **************************************************************/
+  const VISITOR_KEY = "nz_tool_visitor_id";
+  function getVisitor() {
+    let id = localStorage.getItem(VISITOR_KEY);
+    let isNew = false;
+
+    // crypto.randomUUID() support is good in modern browsers; fallback included.
+    if (!id) {
+      const uuid = (crypto && crypto.randomUUID) ? crypto.randomUUID() :
+        "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+          const r = Math.random()*16|0, v = c === "x" ? r : (r&0x3|0x8);
+          return v.toString(16);
+        });
+      id = "v_" + uuid;
+      localStorage.setItem(VISITOR_KEY, id);
+      isNew = true;
+    }
+
+    return { id, isNew };
+  }
+
+  const visitor = getVisitor();
+  const pageStartMs = Date.now();
+
+  function canLog() {
+    return ANALYTICS_ENDPOINT && ANALYTICS_ENDPOINT.startsWith("http");
+  }
+
+  function baseLogPayload(extra = {}) {
+    return {
+      visitorId: visitor.id,
+      isNew: visitor.isNew,
+      page: location.pathname || "",
+      userAgent: navigator.userAgent || "",
+      // current tool state snapshot:
+      siteClass: selectedSiteClass || "",
+      importanceLevel: selectedImportanceLevel || "",
+      workingLife: selectedWorkingLife || "",
+      roundedLatLng: (Number.isFinite(selectedLat) && Number.isFinite(selectedLng))
+        ? `${round1(selectedLat)},${round1(selectedLng)}`
+        : "",
+      ...extra
+    };
+  }
+
+  async function logEvent(eventName, extra = {}) {
+    if (!canLog()) return;
+    try {
+      await fetch(ANALYTICS_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(baseLogPayload({ event: eventName, ...extra }))
+      });
+    } catch (e) {
+      // Don't break the tool if logging fails
+      console.warn("Analytics log failed:", e);
+    }
+  }
+
+  function beaconEvent(eventName, extra = {}) {
+    if (!canLog() || !navigator.sendBeacon) return;
+    try {
+      const payload = JSON.stringify(baseLogPayload({ event: eventName, ...extra }));
+      const blob = new Blob([payload], { type: "application/json" });
+      navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Log initial page load (server will timestamp + geo)
+  logEvent("page_load", { isNew: visitor.isNew });
+
+  // Log time on page on exit
+  window.addEventListener("beforeunload", () => {
+    const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
+    beaconEvent("page_exit", { timeOnPageSeconds: seconds, isNew: false });
+  });
 
   /**************************************************************
    * STATE
@@ -299,7 +390,7 @@
       return;
     }
 
-    // Detect header row
+    // Detect header row (first row has words "working"/"importance")
     const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
     const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
     const headerish = firstA.includes("working") || firstB.includes("importance");
@@ -324,7 +415,7 @@
     sheet2MatchOptions = SHEET2_STRING_COLS
       .map((colIdx) => {
         const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
-        const title = rawTitle && rawTitle.length > 0 ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
+        const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
         const value = normalize(matchRow[colIdx]);
         return { title, value };
       })
@@ -493,23 +584,45 @@
 
       setStatus("Done.");
       render(filtered);
+
+      // ✅ Log results generated event (with counts)
+      await logEvent("results_generated", {
+        isNew: false,
+        matchedSheet1RowsCount: matchedSheet1Rows.length,
+        displayedTablesCount: filtered.length
+      });
+
     } catch (err) {
       console.error(err);
       setStatus("Error (check console).");
       document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
+
+      // ✅ Log error event
+      await logEvent("error", {
+        isNew: false,
+        message: String(err && err.message ? err.message : err)
+      });
     }
   }
 
   /**************************************************************
-   * BUTTON WIRING
+   * BUTTON WIRING (logs every selection)
    **************************************************************/
-  function wireSingleSelectButtons(containerId, setter){
+  function wireSingleSelectButtons(containerId, setter, buttonType){
     const buttons = document.querySelectorAll(`#${containerId} button`);
     buttons.forEach(btn => {
       btn.addEventListener("click", async () => {
         buttons.forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
         setter(btn.dataset.value);
+
+        // ✅ Log the button click with chosen value
+        await logEvent("button_click", {
+          isNew: false,
+          buttonType,
+          buttonValue: btn.dataset.value
+        });
+
         await recalc();
       });
     });
@@ -533,6 +646,17 @@
         `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
       setRoundedBar();
+
+      // ✅ Log location selection (map click)
+      await logEvent("location_selected", {
+        isNew: false,
+        locationMethod: "map_click",
+        lat: selectedLat,
+        lng: selectedLng,
+        roundedLat: round1(selectedLat),
+        roundedLng: round1(selectedLng)
+      });
+
       await recalc();
     });
 
@@ -545,6 +669,7 @@
       const place = autocomplete.getPlace();
       if (!place.geometry || !place.geometry.location) {
         setStatus("No geometry for that address. Try another.");
+        await logEvent("location_failed", { isNew: false, locationMethod: "address_search" });
         return;
       }
 
@@ -557,12 +682,25 @@
         `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
       setRoundedBar();
+
+      // ✅ Log location selection (address search)
+      await logEvent("location_selected", {
+        isNew: false,
+        locationMethod: "address_search",
+        address: place.formatted_address || "",
+        lat: selectedLat,
+        lng: selectedLng,
+        roundedLat: round1(selectedLat),
+        roundedLng: round1(selectedLng)
+      });
+
       await recalc();
     });
 
     document.getElementById("useMyLocationBtn").addEventListener("click", () => {
       if (!navigator.geolocation) {
         setStatus("Geolocation not supported.");
+        logEvent("location_failed", { isNew: false, locationMethod: "my_location", reason: "no_geolocation" });
         return;
       }
       navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -575,13 +713,27 @@
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
         setRoundedBar();
+
+        // ✅ Log location selection (my location)
+        await logEvent("location_selected", {
+          isNew: false,
+          locationMethod: "my_location",
+          lat: selectedLat,
+          lng: selectedLng,
+          roundedLat: round1(selectedLat),
+          roundedLng: round1(selectedLng)
+        });
+
         await recalc();
-      }, () => setStatus("Could not get your location (permission denied?)."));
+      }, async () => {
+        setStatus("Could not get your location (permission denied?).");
+        await logEvent("location_failed", { isNew: false, locationMethod: "my_location", reason: "permission_denied" });
+      });
     });
 
-    wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
-    wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
-    wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
+    wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
+    wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
+    wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
 
     setStatus("Ready. Choose location + options.");
     setRoundedBar();
@@ -590,6 +742,7 @@
   window.initMap = initMap;
 </script>
 
+<!-- Google Maps (includes Places for address search) -->
 <script
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw&callback=initMap&libraries=places"
   async defer></script>
