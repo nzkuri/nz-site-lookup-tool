@@ -159,6 +159,19 @@ const WORKING_LIFE_LABEL = {
 };
 
 /**************************************************************
+ * STATE
+ **************************************************************/
+let map, marker, autocomplete;
+let selectedLat = null, selectedLng = null;
+
+let selectedSiteClass = "";
+let selectedImportanceLevel = "";
+let selectedWorkingLife = "";
+
+let matchedSheet1Rows = [];     // rows matching 1dp lat/lng
+let sheet2MatchOptions = [];    // [{title,value}] from matched Sheet2 row
+
+/**************************************************************
  * METRICS (Phase 1)
  **************************************************************/
 const VISITOR_KEY = "nz_tool_visitor_id";
@@ -186,16 +199,22 @@ function canLog() {
   return ANALYTICS_ENDPOINT && ANALYTICS_ENDPOINT.startsWith("http");
 }
 function baseLogPayload(extra = {}) {
+  const sc = (typeof selectedSiteClass !== "undefined") ? selectedSiteClass : "";
+  const il = (typeof selectedImportanceLevel !== "undefined") ? selectedImportanceLevel : "";
+  const wl = (typeof selectedWorkingLife !== "undefined") ? selectedWorkingLife : "";
+  const lat = (typeof selectedLat !== "undefined") ? selectedLat : null;
+  const lng = (typeof selectedLng !== "undefined") ? selectedLng : null;
+
   return {
     visitorId: visitor.id,
     isNew: visitor.isNew,
     page: location.pathname || "",
     userAgent: navigator.userAgent || "",
-    siteClass: selectedSiteClass || "",
-    importanceLevel: selectedImportanceLevel || "",
-    workingLife: selectedWorkingLife || "",
-    roundedLatLng: (Number.isFinite(selectedLat) && Number.isFinite(selectedLng))
-      ? `${round1(selectedLat)},${round1(selectedLng)}`
+    siteClass: sc || "",
+    importanceLevel: il || "",
+    workingLife: wl || "",
+    roundedLatLng: (Number.isFinite(lat) && Number.isFinite(lng))
+      ? `${round1(lat)},${round1(lng)}`
       : "",
     ...extra
   };
@@ -230,18 +249,7 @@ window.addEventListener("beforeunload", () => {
   beaconEvent("page_exit", { timeOnPageSeconds: seconds, isNew: false });
 });
 
-/**************************************************************
- * STATE
- **************************************************************/
-let map, marker, autocomplete;
-let selectedLat = null, selectedLng = null;
 
-let selectedSiteClass = "";
-let selectedImportanceLevel = "";
-let selectedWorkingLife = "";
-
-let matchedSheet1Rows = [];     // rows matching 1dp lat/lng
-let sheet2MatchOptions = [];    // [{title,value}] from matched Sheet2 row
 
 /**************************************************************
  * HELPERS
