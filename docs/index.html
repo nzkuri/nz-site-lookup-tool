@@ -219,25 +219,26 @@ function baseLogPayload(extra = {}) {
     ...extra
   };
 }
-async function logEvent(eventName, extra = {}) {
+function logEvent(eventName, extra = {}) {
   if (!canLog()) return;
-  try {
-    await fetch(ANALYTICS_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(baseLogPayload({ event: eventName, ...extra }))
-    });
-  } catch (e) {
-    console.warn("Analytics log failed:", e);
-  }
-}
-function beaconEvent(eventName, extra = {}) {
-  if (!canLog() || !navigator.sendBeacon) return;
-  try {
-    const payload = JSON.stringify(baseLogPayload({ event: eventName, ...extra }));
-    const blob = new Blob([payload], { type: "application/json" });
+
+  const payloadObj = baseLogPayload({ event: eventName, ...extra });
+  const payloadStr = JSON.stringify(payloadObj);
+
+  // Preferred: sendBeacon (made for analytics)
+  if (navigator.sendBeacon) {
+    const blob = new Blob([payloadStr], { type: "text/plain;charset=UTF-8" });
     navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
-  } catch (_e) {}
+    return;
+  }
+
+  // Fallback: fetch as a "simple" request (no preflight)
+  fetch(ANALYTICS_ENDPOINT, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain;charset=UTF-8" },
+    body: payloadStr
+  }).catch(() => {});
 }
 
 // Log initial page load
@@ -246,7 +247,7 @@ logEvent("page_load", { isNew: visitor.isNew });
 // Log time-on-page on exit
 window.addEventListener("beforeunload", () => {
   const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
-  beaconEvent("page_exit", { timeOnPageSeconds: seconds, isNew: false });
+  LogEvent("page_exit", { timeOnPageSeconds: seconds, isNew: false });
 });
 
 
