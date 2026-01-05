@@ -1,730 +1,284 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>NZ Address & Site Parameter Tool</title>
-
-  
+  <title>Analytics + Cloudflare Geo</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-
-    .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
-    #addressInput { width:min(650px,100%); padding:10px; border:1px solid #ccc; border-radius:6px; }
-    #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
-
-    #map { height: 420px; width: 100%; border:1px solid #ccc; border-radius:6px; margin-bottom:12px; }
-    #coords { font-weight: bold; margin-bottom: 12px; }
-
-    .option-block { padding:15px; border:1px solid #ddd; border-radius:6px; background:#fafafa; margin-bottom:14px; }
-    .row { margin-bottom:14px; }
-    .row label { font-weight:bold; display:block; margin-bottom:6px; }
-
-    .option-buttons button{
-      padding:8px 12px; margin:4px;
-      border:1px solid #aaa; border-radius:4px;
-      background:#fff; cursor:pointer;
-      transition: background .15s, color .15s, border-color .15s;
-    }
-    .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
-
-    .status { padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; }
-    .muted { color:#666; }
-
-    .pill { display:inline-block; padding:3px 8px; border:1px solid #ddd; border-radius:999px; margin:2px; background:#f8f8f8; }
-
-    .sc-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 12px 0;
-      background: #fff;
-      font-size: 14px;
-    }
-    .sc-table th, .sc-table td {
-      border: 2px solid #000;
-      padding: 8px;
-      text-align: center;
-      vertical-align: middle;
-      white-space: nowrap;
-    }
-    .sc-table thead th { font-weight: 700; }
-    .sc-table .left-head { width: 220px; text-align:left; }
-    .sc-table .left-cell { text-align:left; font-weight:700; }
-    .sc-table .subhead { font-weight: 700; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 16px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+    button { padding: 10px 14px; cursor: pointer; }
+    input, select { padding: 8px; }
+    .small { opacity: .75; font-size: 12px; }
+    pre { background: #f6f8fa; padding: 12px; border-radius: 8px; overflow: auto; }
   </style>
 </head>
 
 <body>
-
-<h2>NZ Address & Site Parameter Tool</h2>
-
-<div class="search-wrap">
-  <input id="addressInput" placeholder="Search address (NZ only)" />
-  <button id="useMyLocationBtn" type="button">Use my location</button>
-</div>
-
-<div id="map"></div>
-<div id="coords">Choose a location (search or click the map)</div>
-
-<div class="option-block">
-  <h3>Design Parameters</h3>
+  <h1>Site Tool</h1>
+  <p class="small">
+    This page demonstrates logging analytics to Google Apps Script and retrieving estimated visitor geo
+    via a Cloudflare Worker at <code>/geo</code>.
+  </p>
 
   <div class="row">
-    <label>Site Class</label>
-    <div class="option-buttons" id="siteClassOptions">
-      <button type="button" data-value="I">I</button>
-      <button type="button" data-value="II">II</button>
-      <button type="button" data-value="III">III</button>
-      <button type="button" data-value="IV">IV</button>
-      <button type="button" data-value="V">V</button>
-      <button type="button" data-value="VI">VI</button>
-    </div>
+    <button id="btnPageView">Log Pageview</button>
+    <button id="btnTest">Log Test Event</button>
   </div>
 
   <div class="row">
-    <label>Importance Level</label>
-    <div class="option-buttons" id="importanceLevelOptions">
-      <button type="button" data-value="1">1</button>
-      <button type="button" data-value="2">2</button>
-      <button type="button" data-value="3">3</button>
-      <button type="button" data-value="4">4</button>
-    </div>
+    <label>
+      Site Class
+      <select id="siteClass">
+        <option value="">--</option>
+        <option value="I">I</option>
+        <option value="II">II</option>
+        <option value="III">III</option>
+        <option value="IV">IV</option>
+        <option value="V">V</option>
+        <option value="VI">VI</option>
+      </select>
+    </label>
+
+    <label>
+      Importance Level
+      <select id="importanceLevel">
+        <option value="">--</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+    </label>
+
+    <label>
+      Working Life
+      <select id="workingLife">
+        <option value="">--</option>
+        <option value="Construction equipment">Construction equipment</option>
+        <option value="Less than 6 months">Less than 6 months</option>
+        <option value="5 years">5 years</option>
+        <option value="25 years">25 years</option>
+        <option value="50 years">50 years</option>
+        <option value="100 years or more">100 years or more</option>
+      </select>
+    </label>
   </div>
 
   <div class="row">
-    <label>Design Working Life</label>
-    <div class="option-buttons" id="workingLifeOptions">
-      <button type="button" data-value="construction">Construction equipment</button>
-      <button type="button" data-value="lt6months">Less than 6 months</button>
-      <button type="button" data-value="5">5 years</button>
-      <button type="button" data-value="25">25 years</button>
-      <button type="button" data-value="50">50 years</button>
-      <button type="button" data-value="100">100 years or more</button>
-    </div>
+    <label>
+      Analytics
+      <select id="analyticsOpt">
+        <option value="on">On</option>
+        <option value="off">Off</option>
+      </select>
+    </label>
   </div>
-</div>
 
-<div class="status">
-  <div><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
-  <div id="roundedCoordsBar" class="muted"></div>
-  <div id="stepInfo" class="muted"></div>
-  <div id="results"></div>
-</div>
+  <h3>Debug</h3>
+  <pre id="debug">(events will appear here)</pre>
 
-<script>
-/**************************************************************
- * CONFIG
- **************************************************************/
-const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
-const SHEET1_NAME = "Sheet1";
-const SHEET2_NAME = "Sheet2";
+  <script>
+    /***************************************************************
+     * CONFIG — paste your Apps Script Web App URL here
+     ***************************************************************/
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz2nZZdI6Klhn5Xx4a5AfkheAgRtN8oklYGM-sJl40ePQhS4u9V-mXyIizxdvtaI-ny/exec";
 
-// ✅ Paste your Apps Script Web App URL here (Sheet3 logger)
-const ANALYTICS_ENDPOINT = "https://script.google.com/macros/s/AKfycbz2nZZdI6Klhn5Xx4a5AfkheAgRtN8oklYGM-sJl40ePQhS4u9V-mXyIizxdvtaI-ny/exec";
+    /***************************************************************
+     * SIMPLE OPT-OUT (localStorage) + Do Not Track
+     ***************************************************************/
+    const OPT_KEY = "analytics_opt"; // "on" | "off"
 
-// ✅ Your Google Maps API key
-const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
-
-// Sheet1: A=Lat, B=Lng, C=APOE
-const SHEET1_LAT_COL_INDEX = 0;
-const SHEET1_LNG_COL_INDEX = 1;
-const SHEET1_APOE_COL_INDEX = 2;
-
-// Site class column indices in Sheet1
-const SHEET1_SITECLASS_COLS = {
-  I:   { PGA: 3,  Sa: 4,  Tc: 5  },
-  II:  { PGA: 6,  Sa: 7,  Tc: 8  },
-  III: { PGA: 9,  Sa: 10, Tc: 11 },
-  IV:  { PGA: 12, Sa: 13, Tc: 14 },
-  V:   { PGA: 15, Sa: 16, Tc: 17 },
-  VI:  { PGA: 18, Sa: 19, Tc: 20 },
-};
-
-// Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
-const SHEET2_WORKINGLIFE_COL_INDEX = 0;
-const SHEET2_IMPORTANCE_COL_INDEX  = 1;
-const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
-
-// Force table titles (ULS/SLS1/SLS2) regardless of Sheet2 header row
-const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
-
-// Option B mapping (UI codes -> Sheet2 labels)
-const WORKING_LIFE_LABEL = {
-  construction: "Construction equipment",
-  lt6months: "Less than 6 months",
-  "5": "5 years",
-  "25": "25 years",
-  "50": "50 years",
-  "100": "100 years or more"
-};
-
-/**************************************************************
- * STATE
- **************************************************************/
-let map, marker, autocomplete;
-let selectedLat = null, selectedLng = null;
-
-let selectedSiteClass = "";
-let selectedImportanceLevel = "";
-let selectedWorkingLife = "";
-
-let matchedSheet1Rows = [];     // rows matching 1dp lat/lng
-let sheet2MatchOptions = [];    // [{title,value}] from matched Sheet2 row
-
-/**************************************************************
- * METRICS (Phase 1)
- **************************************************************/
-const VISITOR_KEY = "nz_tool_visitor_id";
-function getVisitor() {
-  let id = localStorage.getItem(VISITOR_KEY);
-  let isNew = false;
-
-  if (!id) {
-    const uuid = (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
-          const r = Math.random()*16|0, v = c === "x" ? r : (r&0x3|0x8);
-          return v.toString(16);
-        });
-    id = "v_" + uuid;
-    localStorage.setItem(VISITOR_KEY, id);
-    isNew = true;
-  }
-  return { id, isNew };
-}
-const visitor = getVisitor();
-const pageStartMs = Date.now();
-
-function canLog() {
-  return ANALYTICS_ENDPOINT && ANALYTICS_ENDPOINT.startsWith("http");
-}
-function baseLogPayload(extra = {}) {
-  const sc = (typeof selectedSiteClass !== "undefined") ? selectedSiteClass : "";
-  const il = (typeof selectedImportanceLevel !== "undefined") ? selectedImportanceLevel : "";
-  const wl = (typeof selectedWorkingLife !== "undefined") ? selectedWorkingLife : "";
-  const lat = (typeof selectedLat !== "undefined") ? selectedLat : null;
-  const lng = (typeof selectedLng !== "undefined") ? selectedLng : null;
-
-  return {
-    visitorId: visitor.id,
-    isNew: visitor.isNew,
-    page: location.pathname || "",
-    userAgent: navigator.userAgent || "",
-    siteClass: sc || "",
-    importanceLevel: il || "",
-    workingLife: wl || "",
-    roundedLatLng: (Number.isFinite(lat) && Number.isFinite(lng))
-      ? `${round1(lat)},${round1(lng)}`
-      : "",
-    ...extra
-  };
-}
-function logEvent(eventName, extra = {}) {
-  if (!canLog()) return;
-
-  const payloadObj = baseLogPayload({ event: eventName, ...extra });
-  const payloadStr = JSON.stringify(payloadObj);
-
-  // Preferred: sendBeacon (made for analytics)
-  if (navigator.sendBeacon) {
-    const blob = new Blob([payloadStr], { type: "text/plain;charset=UTF-8" });
-    navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
-    return;
-  }
-
-  // Fallback: fetch as a "simple" request (no preflight)
-  fetch(ANALYTICS_ENDPOINT, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "text/plain;charset=UTF-8" },
-    body: payloadStr
-  }).catch(() => {});
-}
-
-// Log initial page load
-logEvent("page_load", { isNew: visitor.isNew });
-
-// Log time-on-page on exit
-window.addEventListener("beforeunload", () => {
-  const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
-  LogEvent("page_exit", { timeOnPageSeconds: seconds, isNew: false });
-});
-
-
-
-/**************************************************************
- * HELPERS
- **************************************************************/
-function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
-function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
-
-function normalize(v){
-  if (v === null || v === undefined) return "";
-  return String(v).trim();
-}
-function eqLoose(a, b){
-  const sa = normalize(a);
-  const sb = normalize(b);
-  if (sa === sb) return true;
-  const na = Number(sa), nb = Number(sb);
-  if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
-  return sa.toLowerCase() === sb.toLowerCase();
-}
-function safeCell(v) {
-  if (v === null || v === undefined || String(v).trim() === "") return "";
-  const n = Number(v);
-  return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
-}
-function round1(n){
-  const num = Number(n);
-  if (!Number.isFinite(num)) return null;
-  return Math.round(num * 10) / 10;
-}
-function setRoundedBar(){
-  const el = document.getElementById("roundedCoordsBar");
-  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-    el.textContent = "";
-    return;
-  }
-  const rLat = round1(selectedLat);
-  const rLng = round1(selectedLng);
-  el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
-}
-function setMarker(lat,lng){
-  const pos = {lat, lng};
-  if(marker) marker.setMap(null);
-  marker = new google.maps.Marker({ map, position: pos });
-  map.panTo(pos);
-}
-function isOneOver500(apoe){
-  const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
-  return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
-}
-
-/**************************************************************
- * GOOGLE SHEETS (GVIZ)
- **************************************************************/
-function gvizUrl(sheetName, query){
-  const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
-  const params = new URLSearchParams();
-  params.set("sheet", sheetName);
-  params.set("tq", query);
-  return `${base}?${params.toString()}`;
-}
-async function fetchSheetAs2DArray(sheetName, query){
-  const url = gvizUrl(sheetName, query);
-  const res = await fetch(url);
-  const text = await res.text();
-
-  const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-  const data = JSON.parse(jsonText);
-
-  const cols = data.table.cols.length;
-  const rows = data.table.rows || [];
-
-  return rows.map(r => {
-    const arr = new Array(cols).fill(null);
-    (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
-    return arr;
-  });
-}
-
-/**************************************************************
- * STEP 1: Match ALL rows in Sheet1 where (lat,lng) match to 1dp
- **************************************************************/
-async function step1_findAllSheet1RowsMatching1dp(){
-  matchedSheet1Rows = [];
-  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
-
-  setRoundedBar();
-  setStatus("Step 1: Matching Sheet1 rows by lat/lng to 1 decimal point…");
-
-  const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
-  if (!rows.length) {
-    setStatus("No rows found in Sheet1 (check sharing/tab name).");
-    return;
-  }
-
-  const targetLat1 = round1(selectedLat);
-  const targetLng1 = round1(selectedLng);
-
-  for (const row of rows) {
-    const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
-    const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-    if (round1(lat) === targetLat1 && round1(lng) === targetLng1) {
-      matchedSheet1Rows.push({ row });
+    function setOpt(value) {
+      localStorage.setItem(OPT_KEY, value);
     }
-  }
 
-  setStatus(`Step 1 complete. Found ${matchedSheet1Rows.length} Sheet1 row(s) matching ${targetLat1.toFixed(1)}, ${targetLng1.toFixed(1)}.`);
-}
+    function getOpt() {
+      return localStorage.getItem(OPT_KEY) || "on";
+    }
 
-/**************************************************************
- * STEP 2: Find matching Sheet2 row and capture titles+values C/D/E
- **************************************************************/
-async function step2_getTitlesAndStringsFromSheet2(){
-  sheet2MatchOptions = [];
-  if (!selectedWorkingLife || !selectedImportanceLevel) return;
+    function analyticsAllowed() {
+      const dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
+      const opt = (getOpt() === "on");
+      return opt && !dnt;
+    }
 
-  setStatus("Step 2: Looking up selected options in Sheet2…");
+    /***************************************************************
+     * VISITOR ID (pseudonymous)
+     ***************************************************************/
+    const VID_KEY = "vid";
 
-  const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-  if (!sheet2.length) {
-    setStatus("Sheet2 empty / not accessible.");
-    return;
-  }
+    function getVisitorId() {
+      let vid = localStorage.getItem(VID_KEY);
+      if (!vid) {
+        vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2));
+        localStorage.setItem(VID_KEY, vid);
+      }
+      return vid;
+    }
 
-  const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
-  const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
-  const headerish = firstA.includes("working") || firstB.includes("importance");
+    function isNewVisitor() {
+      return !localStorage.getItem(VID_KEY);
+    }
 
-  const headerRow = headerish ? sheet2[0] : null;
-  const dataRows = headerish ? sheet2.slice(1) : sheet2;
+    /***************************************************************
+     * GEO — fetch from Cloudflare Worker at /geo
+     * Expected JSON:
+     * { geoProvider, geoCountry, geoRegion, geoCity, estLat?, estLng? }
+     ***************************************************************/
+    async function getGeo() {
+      try {
+        const r = await fetch("/geo", { method: "GET", cache: "no-store" });
+        if (!r.ok) throw new Error("geo_failed");
+        const g = await r.json();
 
-  const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+        // Keep only coarse fields for analytics (NZ-friendly default)
+        return {
+          geoProvider: (g.geoProvider || "cloudflare"),
+          geoCountry: (g.geoCountry || ""),
+          geoRegion:  (g.geoRegion  || ""),
+          geoCity:    (g.geoCity    || ""),
 
-  const matchRow = dataRows.find(r =>
-    eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
-    eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
-  );
-
-  if (!matchRow) {
-    sheet2MatchOptions = [];
-    setStatus("No matching row in Sheet2 for selected options.");
-    return;
-  }
-
-  sheet2MatchOptions = SHEET2_STRING_COLS
-    .map((colIdx) => {
-      const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
-      const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
-      const value = normalize(matchRow[colIdx]);
-      return { title, value };
-    })
-    .filter(x => x.value.length > 0);
-
-  setStatus("Step 2 complete.");
-}
-
-/**************************************************************
- * STEP 3: Match APOE to Sheet2 strings, dedupe, add 1/500 under ULS
- **************************************************************/
-function step3_filterMatchedSheet1Rows(){
-  if (!matchedSheet1Rows.length) return [];
-  if (!sheet2MatchOptions.length) return [];
-
-  const out = [];
-  const seen = new Set(); // apoe|title|siteclass
-
-  // Normal matches
-  for (const item of matchedSheet1Rows) {
-    const sheet1Row = item.row;
-    const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
-    if (!apoe) continue;
-
-    const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
-    if (!match) continue;
-
-    const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    out.push({ sheet1Row, apoe, matchTitle: match.title });
-  }
-
-  // Add 1/500 for ULS unless already shown
-  const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
-  if (hasULS) {
-    const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
-    if (oneOver500Item && oneOver500Item.row) {
-      const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
-      const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
+          // Optional; keep blank if you want ultra-minimal
+          estLat: (g.estLat ?? ""),
+          estLng: (g.estLng ?? "")
+        };
+      } catch (e) {
+        return {
+          geoProvider: "none",
+          geoCountry: "",
+          geoRegion: "",
+          geoCity: "",
+          estLat: "",
+          estLng: ""
+        };
       }
     }
-  }
 
-  return out;
-}
-
-/**************************************************************
- * TABLE: 3 rows, selected site class only
- **************************************************************/
-function buildThreeRowTable(sheet1Row, apoe, matchTitle){
-  const sc = selectedSiteClass;
-  const idx = SHEET1_SITECLASS_COLS[sc];
-
-  const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
-  const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
-  const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
-
-  const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
-
-  return `
-    <table class="sc-table">
-      <thead>
-        <tr>
-          <th class="left-head">${topLeft}</th>
-          <th colspan="3">Site Class ${sc}</th>
-        </tr>
-        <tr>
-          <th class="subhead left-head">apoe</th>
-          <th class="subhead">PGA</th>
-          <th class="subhead">Sa,s</th>
-          <th class="subhead">Tc</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="left-cell">${apoe || "(APOE blank)"}</td>
-          <td>${pga}</td>
-          <td>${sa}</td>
-          <td>${tc}</td>
-        </tr>
-      </tbody>
-    </table>
-  `;
-}
-
-/**************************************************************
- * RENDER
- **************************************************************/
-function render(filtered){
-  const resultsEl = document.getElementById("results");
-
-  const infoBits = [];
-  if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-    const tLat1 = round1(selectedLat);
-    const tLng1 = round1(selectedLng);
-    infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
-    infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
-  }
-
-  if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
-  if (selectedWorkingLife) {
-    const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-    infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
-  }
-  if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
-
-  if (sheet2MatchOptions.length) {
-    infoBits.push(`Sheet2 candidates (C/D/E): ` + sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join(""));
-  } else if (selectedWorkingLife && selectedImportanceLevel) {
-    infoBits.push(`<span class="muted">Sheet2 candidates (C/D/E): (none found)</span>`);
-  }
-
-  infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
-  setInfo(infoBits.join("<br>"));
-
-  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-    resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`;
-    return;
-  }
-  if (!selectedSiteClass) {
-    resultsEl.innerHTML = `<div class="muted">Select Site Class.</div>`;
-    return;
-  }
-  if (!selectedWorkingLife || !selectedImportanceLevel) {
-    resultsEl.innerHTML = `<div class="muted">Select Working Life and Importance Level.</div>`;
-    return;
-  }
-  if (!sheet2MatchOptions.length) {
-    resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B values and the working-life mapping).</div>`;
-    return;
-  }
-  if (!matchedSheet1Rows.length) {
-    resultsEl.innerHTML = `<div><strong>No Sheet1 rows matched</strong></div>
-      <div class="muted">No rows in Sheet1 had lat/lng matching your selected location rounded to 1 decimal point.</div>`;
-    return;
-  }
-  if (!filtered.length) {
-    resultsEl.innerHTML = `<div><strong>No matches found</strong></div>
-      <div class="muted">Rows matched the 1dp lat/lng bucket, but none had APOE matching Sheet2 C/D/E strings.</div>`;
-    return;
-  }
-
-  resultsEl.innerHTML = filtered.map(x => buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)).join("");
-}
-
-async function recalc(){
-  try {
-    setRoundedBar();
-    await step1_findAllSheet1RowsMatching1dp();
-    await step2_getTitlesAndStringsFromSheet2();
-
-    const filtered = step3_filterMatchedSheet1Rows();
-
-    setStatus("Done.");
-    render(filtered);
-
-    await logEvent("results_generated", {
-      isNew: false,
-      matchedSheet1RowsCount: matchedSheet1Rows.length,
-      displayedTablesCount: filtered.length
-    });
-  } catch (err) {
-    console.error(err);
-    setStatus("Error (check console).");
-    document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
-    await logEvent("error", { isNew: false, message: String(err && err.message ? err.message : err) });
-  }
-}
-
-/**************************************************************
- * BUTTON WIRING (logs every selection)
- **************************************************************/
-function wireSingleSelectButtons(containerId, setter, buttonType){
-  const buttons = document.querySelectorAll(`#${containerId} button`);
-  buttons.forEach(btn => {
-    btn.addEventListener("click", async () => {
-      buttons.forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      setter(btn.dataset.value);
-
-      await logEvent("button_click", {
-        isNew: false,
-        buttonType,
-        buttonValue: btn.dataset.value
-      });
-
-      await recalc();
-    });
-  });
-}
-
-/**************************************************************
- * MAP + AUTOCOMPLETE
- **************************************************************/
-function initMap(){
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: -41.2865, lng: 174.7762 },
-    zoom: 6
-  });
-
-  map.addListener("click", async (e) => {
-    selectedLat = e.latLng.lat();
-    selectedLng = e.latLng.lng();
-    setMarker(selectedLat, selectedLng);
-
-    document.getElementById("coords").textContent =
-      `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
-    setRoundedBar();
-
-    await logEvent("location_selected", {
-      isNew: false,
-      locationMethod: "map_click",
-      lat: selectedLat,
-      lng: selectedLng,
-      roundedLat: round1(selectedLat),
-      roundedLng: round1(selectedLng)
-    });
-
-    await recalc();
-  });
-
-  autocomplete = new google.maps.places.Autocomplete(
-    document.getElementById("addressInput"),
-    { componentRestrictions: { country: "nz" } }
-  );
-
-  autocomplete.addListener("place_changed", async () => {
-    const place = autocomplete.getPlace();
-    if (!place.geometry || !place.geometry.location) {
-      setStatus("No geometry for that address. Try another.");
-      await logEvent("location_failed", { isNew: false, locationMethod: "address_search" });
-      return;
+    /***************************************************************
+     * TIME ON PAGE (simple)
+     ***************************************************************/
+    const pageStart = Date.now();
+    function timeOnPageSeconds() {
+      return Math.max(0, Math.round((Date.now() - pageStart) / 1000));
     }
 
-    selectedLat = place.geometry.location.lat();
-    selectedLng = place.geometry.location.lng();
-    setMarker(selectedLat, selectedLng);
-    map.setZoom(14);
-
-    document.getElementById("coords").textContent =
-      `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
-
-    setRoundedBar();
-
-    await logEvent("location_selected", {
-      isNew: false,
-      locationMethod: "address_search",
-      address: place.formatted_address || "",
-      lat: selectedLat,
-      lng: selectedLng,
-      roundedLat: round1(selectedLat),
-      roundedLng: round1(selectedLng)
-    });
-
-    await recalc();
-  });
-
-  document.getElementById("useMyLocationBtn").addEventListener("click", () => {
-    if (!navigator.geolocation) {
-      setStatus("Geolocation not supported.");
-      logEvent("location_failed", { isNew: false, locationMethod: "my_location", reason: "no_geolocation" });
-      return;
+    /***************************************************************
+     * LOGGER — sends to Apps Script
+     ***************************************************************/
+    function n(v) {
+      return (v === null || v === undefined) ? "" : String(v).trim();
     }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      selectedLat = pos.coords.latitude;
-      selectedLng = pos.coords.longitude;
-      setMarker(selectedLat, selectedLng);
-      map.setZoom(14);
 
-      document.getElementById("coords").textContent =
-        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+    async function logEvent(payload) {
+      if (!analyticsAllowed()) {
+        debug("Analytics disabled (opt-out or DNT). Not logging.");
+        return;
+      }
+      if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_YOUR")) {
+        debug("ERROR: Set WEB_APP_URL at top of the script.");
+        return;
+      }
 
-      setRoundedBar();
+      const geo = await getGeo();
 
-      await logEvent("location_selected", {
-        isNew: false,
-        locationMethod: "my_location",
-        lat: selectedLat,
-        lng: selectedLng,
-        roundedLat: round1(selectedLat),
-        roundedLng: round1(selectedLng)
-      });
+      const body = {
+        // required / common fields
+        visitorId: getVisitorId(),
+        isNew: payload.isNew === true,
+        event: n(payload.event),
+        page: n(payload.page || location.pathname),
 
-      await recalc();
-    }, async () => {
-      setStatus("Could not get your location (permission denied?).");
-      await logEvent("location_failed", { isNew: false, locationMethod: "my_location", reason: "permission_denied" });
+        // your existing fields
+        roundedLatLng: n(payload.roundedLatLng),
+        siteClass: n(payload.siteClass),
+        importanceLevel: n(payload.importanceLevel),
+        workingLife: n(payload.workingLife),
+        buttonType: n(payload.buttonType),
+        buttonValue: n(payload.buttonValue),
+        timeOnPageSeconds: n(payload.timeOnPageSeconds ?? timeOnPageSeconds()),
+        userAgent: navigator.userAgent,
+
+        // geo fields (coarse + optional est lat/lng)
+        geoCountry: n(geo.geoCountry),
+        geoRegion: n(geo.geoRegion),
+        geoCity: n(geo.geoCity),
+        geoProvider: n(geo.geoProvider),
+        estLat: n(geo.estLat),
+        estLng: n(geo.estLng),
+
+        // add anything else you want
+        tsClient: new Date().toISOString()
+      };
+
+      debug("POST payload:\n" + JSON.stringify(body, null, 2));
+
+      try {
+        const res = await fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        const text = await res.text();
+        debug("Response (" + res.status + "):\n" + text);
+      } catch (err) {
+        debug("POST failed:\n" + String(err));
+      }
+    }
+
+    /***************************************************************
+     * UI WIRING
+     ***************************************************************/
+    const debugEl = document.getElementById("debug");
+    function debug(msg) {
+      debugEl.textContent = msg;
+    }
+
+    // Opt-out control
+    const analyticsOpt = document.getElementById("analyticsOpt");
+    analyticsOpt.value = getOpt();
+    analyticsOpt.addEventListener("change", () => {
+      setOpt(analyticsOpt.value);
+      debug("Analytics set to: " + analyticsOpt.value);
     });
-  });
 
-  wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
-  wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
-  wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
+    // Buttons
+    document.getElementById("btnPageView").addEventListener("click", () => {
+      logEvent({
+        isNew: isNewVisitor(),
+        event: "pageview",
+        page: location.pathname,
+        siteClass: document.getElementById("siteClass").value,
+        importanceLevel: document.getElementById("importanceLevel").value,
+        workingLife: document.getElementById("workingLife").value
+      });
+    });
 
-  setStatus("Ready. Choose location + options.");
-  setRoundedBar();
-}
+    document.getElementById("btnTest").addEventListener("click", () => {
+      logEvent({
+        isNew: isNewVisitor(),
+        event: "test_event",
+        page: location.pathname,
+        siteClass: document.getElementById("siteClass").value,
+        importanceLevel: document.getElementById("importanceLevel").value,
+        workingLife: document.getElementById("workingLife").value,
+        buttonType: "test",
+        buttonValue: "clicked"
+      });
+    });
 
-window.initMap = initMap;
-
-/**************************************************************
- * Load Google Maps JS (Places required for address search)
- * This dynamic loader is GitHub Pages-friendly.
- **************************************************************/
-(function loadGoogleMaps(){
-  if (window.google && window.google.maps) return;
-
-  const s = document.createElement("script");
-  s.src =
-    "https://maps.googleapis.com/maps/api/js" +
-    "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY) +
-    "&callback=initMap" +
-    "&libraries=places";
-  s.async = true;
-  s.defer = true;
-  s.onerror = () => setStatus("Google Maps failed to load (check API key restrictions / billing / enabled APIs).");
-  document.head.appendChild(s);
-})();
-</script>
-
+    /***************************************************************
+     * OPTIONAL: Auto-log a pageview on load
+     * Uncomment if desired.
+     ***************************************************************/
+    // window.addEventListener("load", () => {
+    //   logEvent({
+    //     isNew: isNewVisitor(),
+    //     event: "pageview_auto",
+    //     page: location.pathname
+    //   });
+    // });
+  </script>
 </body>
 </html>
