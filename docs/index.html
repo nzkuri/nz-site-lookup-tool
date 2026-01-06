@@ -118,6 +118,87 @@
   });
 </script>
   
+<script>
+  // ✅ SET THIS
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyh8jWZgtF-TQroroAx4fYQ-od6o1TYRMZ0TDVcz7uBHZ7sJvhIhycbkxgAq_vZKxdq/exec";
+
+  // ✅ Because /geo works in your browser, keep this as /geo
+  const GEO_URL = "/geo";
+
+  // Optional: enable debug in console
+  const ANALYTICS_DEBUG = true;
+
+  function dbg(...args) {
+    if (ANALYTICS_DEBUG) console.log("[analytics]", ...args);
+  }
+
+  // Optional: respect Do Not Track
+  function analyticsAllowed() {
+    return !(navigator.doNotTrack === "1" || window.doNotTrack === "1");
+  }
+
+  // Pseudonymous visitor id (no personal info)
+  function getVisitorId() {
+    const key = "vid";
+    let vid = localStorage.getItem(key);
+    if (!vid) {
+      vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2));
+      localStorage.setItem(key, vid);
+    }
+    return vid;
+  }
+
+  async function getGeo() {
+    try {
+      const r = await fetch(GEO_URL, { cache: "no-store" });
+      dbg("GET /geo status:", r.status);
+
+      if (!r.ok) throw new Error("geo_http_" + r.status);
+      const g = await r.json();
+      dbg("Geo JSON:", g);
+
+      // Keep coarse fields only
+      return {
+        geoProvider: g.geoProvider || "cloudflare",
+        geoCountry: g.geoCountry || "",
+        geoRegion: g.geoRegion || "",
+        geoCity: g.geoCity || ""
+      };
+    } catch (e) {
+      dbg("Geo failed:", e);
+      return { geoProvider: "none", geoCountry: "", geoRegion: "", geoCity: "" };
+    }
+  }
+
+  async function logEvent(eventName, extra = {}) {
+    if (!analyticsAllowed()) {
+      dbg("Do Not Track enabled; skipping log");
+      return;
+    }
+    if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_")) {
+      dbg("WEB_APP_URL not set; skipping log");
+      return;
+    }
+
+    const geo = await getGeo();
+
+    const payload = {
+      visitorId: getVisitorId(),
+      isNew: false,
+      event: eventName,
+      page: location.pathname,
+      userAgent: navigator.userAgent,
+      tsClient: new Date().toISOString(),
+      ...geo,
+      ...extra
+    };
+
+    dbg("POST payload:", payload);
+
+    // IMPORTANT: avoid Apps Script preflight by using text/plain
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=ut
 
 <body>
 
