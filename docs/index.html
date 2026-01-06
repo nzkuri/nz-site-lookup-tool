@@ -54,6 +54,71 @@
   </style>
 </head>
 
+<script>
+  const WEB_APP_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+  function analyticsAllowed() {
+    // Optional: respect Do Not Track
+    return !(navigator.doNotTrack === "1" || window.doNotTrack === "1");
+  }
+
+  function getVisitorId() {
+    const key = "vid";
+    let vid = localStorage.getItem(key);
+    if (!vid) {
+      vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2));
+      localStorage.setItem(key, vid);
+    }
+    return vid;
+  }
+
+  async function getGeo() {
+    try {
+      const r = await fetch("/geo", { cache: "no-store" });
+      if (!r.ok) throw new Error("geo_failed");
+      const g = await r.json();
+      return {
+        geoProvider: g.geoProvider || "cloudflare",
+        geoCountry: g.geoCountry || "",
+        geoRegion: g.geoRegion || "",
+        geoCity: g.geoCity || ""
+      };
+    } catch {
+      return { geoProvider: "none", geoCountry: "", geoRegion: "", geoCity: "" };
+    }
+  }
+
+  async function logEvent(eventName, extra = {}) {
+    if (!analyticsAllowed()) return;
+
+    const geo = await getGeo();
+    const payload = {
+      visitorId: getVisitorId(),
+      isNew: false, // optional; you can compute if you want
+      event: eventName,
+      page: location.pathname,
+      timeOnPageSeconds: "",
+      userAgent: navigator.userAgent,
+      tsClient: new Date().toISOString(),
+      ...geo,
+      ...extra
+    };
+
+    // IMPORTANT: use text/plain to avoid Apps Script CORS preflight issues
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+
+  // Example: log a pageview on load
+  window.addEventListener("load", () => {
+    logEvent("pageview");
+  });
+</script>
+  
+
 <body>
 
 <h2>NZ Address & Site Parameter Tool</h2>
