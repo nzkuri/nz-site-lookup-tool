@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>NZ Address & Site Parameter Tool</title>
 
-  
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
 
@@ -53,276 +52,6 @@
     .sc-table .subhead { font-weight: 700; }
   </style>
 </head>
-
-<script>
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8gnEPdG0hLbBTMv0c5kNlruZcRZDNSowkAzeI_pvrVaZwQ24_es7IBfS-g4D-W9a6/exec";
-
-  function analyticsAllowed() {
-    // Optional: respect Do Not Track
-    return !(navigator.doNotTrack === "1" || window.doNotTrack === "1");
-  }
-
-  function getVisitorId() {
-    const key = "vid";
-    let vid = localStorage.getItem(key);
-    if (!vid) {
-      vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2));
-      localStorage.setItem(key, vid);
-    }
-    return vid;
-  }
-
-  async function getGeo() {
-    try {
-      const r = await fetch("/geo", { cache: "no-store" });
-      if (!r.ok) throw new Error("geo_failed");
-      const g = await r.json();
-      return {
-        geoProvider: g.geoProvider || "cloudflare",
-        geoCountry: g.geoCountry || "",
-        geoRegion: g.geoRegion || "",
-        geoCity: g.geoCity || ""
-      };
-    } catch {
-      return { geoProvider: "none", geoCountry: "", geoRegion: "", geoCity: "" };
-    }
-  }
-
-async function logEvent(eventName, extra = {}) {
-  const geo = await getGeo();
-  const payloadObj = {
-    visitorId: getVisitorId(),
-    isNew: false,
-    event: eventName,
-    page: location.pathname,
-    userAgent: navigator.userAgent,
-    tsClient: new Date().toISOString(),
-    ...geo,
-    ...extra
-  };
-  return await postToAppsScript(payloadObj);
-}
-
-    // IMPORTANT: use text/plain to avoid Apps Script CORS preflight issues
-    fetch(WEB_APP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    }).catch(() => {});
-  }
-
-  // Example: log a pageview on load
-  window.addEventListener("load", () => {
-    logEvent("pageview");
-  });
-</script>
-  
-<script>
-  // ✅ SET THIS
- // const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyh8jWZgtF-TQroroAx4fYQ-od6o1TYRMZ0TDVcz7uBHZ7sJvhIhycbkxgAq_vZKxdq/exec";/
-
-  // ✅ Because /geo works in your browser, keep this as /geo
-  const GEO_URL = "/geo";
-
-  // Optional: enable debug in console
-  const ANALYTICS_DEBUG = true;
-
-  function dbg(...args) {
-    if (ANALYTICS_DEBUG) console.log("[analytics]", ...args);
-  }
-
-  // Optional: respect Do Not Track
-  function analyticsAllowed() {
-    return !(navigator.doNotTrack === "1" || window.doNotTrack === "1");
-  }
-
-  // Pseudonymous visitor id (no personal info)
-  function getVisitorId() {
-    const key = "vid";
-    let vid = localStorage.getItem(key);
-    if (!vid) {
-      vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2));
-      localStorage.setItem(key, vid);
-    }
-    return vid;
-  }
-
-  async function getGeo() {
-    try {
-      const r = await fetch(GEO_URL, { cache: "no-store" });
-      dbg("GET /geo status:", r.status);
-
-      if (!r.ok) throw new Error("geo_http_" + r.status);
-      const g = await r.json();
-      dbg("Geo JSON:", g);
-
-      // Keep coarse fields only
-      return {
-        geoProvider: g.geoProvider || "cloudflare",
-        geoCountry: g.geoCountry || "",
-        geoRegion: g.geoRegion || "",
-        geoCity: g.geoCity || ""
-      };
-    } catch (e) {
-      dbg("Geo failed:", e);
-      return { geoProvider: "none", geoCountry: "", geoRegion: "", geoCity: "" };
-    }
-  }
-
-  async function logEvent(eventName, extra = {}) {
-    if (!analyticsAllowed()) {
-      dbg("Do Not Track enabled; skipping log");
-      return;
-    }
-    if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_")) {
-      dbg("WEB_APP_URL not set; skipping log");
-      return;
-    }
-
-    const geo = await getGeo();
-
-    const payload = {
-      visitorId: getVisitorId(),
-      isNew: false,
-      event: eventName,
-      page: location.pathname,
-      userAgent: navigator.userAgent,
-      tsClient: new Date().toISOString(),
-      ...geo,
-      ...extra
-    };
-
-    dbg("POST payload:", payload);
-
-    // IMPORTANT: avoid Apps Script preflight by using text/plain
-    fetch(WEB_APP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    })
-    .then(async (res) => dbg("POST status:", res.status, "body:", await res.text()))
-    .catch((err) => dbg("POST failed:", err));
-  }
-
-  // ✅ Log a pageview after page load
-  window.addEventListener("load", () => logEvent("pageview"));
-</script>
-<script>
-/** =========================
- *  CONFIG (SET THESE)
- *  ========================= */
-window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8gnEPdG0hLbBTMv0c5kNlruZcRZDNSowkAzeI_pvrVaZwQ24_es7IBfS-g4D-W9a6/exec"; // must end with /exec
-
-// If /geo works when you type it in the browser, keep this:
-window.GEO_URL = "/geo";
-
-// Turn this on while debugging, off later
-window.ANALYTICS_DEBUG = true;
-
-/** =========================
- *  HELPERS
- *  ========================= */
-function dbg(...args) {
-  if (window.ANALYTICS_DEBUG) console.log("[analytics]", ...args);
-}
-
-function getVisitorId() {
-  const key = "vid";
-  let vid = localStorage.getItem(key);
-  if (!vid) {
-    vid = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "_" + Math.random().toString(16).slice(2));
-    localStorage.setItem(key, vid);
-  }
-  return vid;
-}
-
-async function getGeo() {
-  try {
-    const r = await fetch(window.GEO_URL, { cache: "no-store" });
-    dbg("GET /geo status:", r.status);
-
-    const text = await r.text();
-    dbg("GET /geo raw:", text);
-
-    // Try parse JSON
-    const g = JSON.parse(text);
-
-    const geo = {
-      geoProvider: g.geoProvider || "cloudflare",
-      geoCountry: g.geoCountry || "",
-      geoRegion: g.geoRegion || "",
-      geoCity: g.geoCity || ""
-    };
-
-    dbg("GET /geo parsed:", geo);
-    return geo;
-
-  } catch (e) {
-    dbg("GET /geo failed:", e);
-    return { geoProvider: "none", geoCountry: "", geoRegion: "", geoCity: "" };
-  }
-}
-
-async function postToAppsScript(payloadObj) {
-  const url = window.WEB_APP_URL;
-
-  if (!url || url.includes("PASTE_")) {
-    dbg("WEB_APP_URL not set correctly:", url);
-    return;
-  }
-
-  // ✅ Simple request (no preflight)
-  const body = new URLSearchParams();
-  body.set("payload", JSON.stringify(payloadObj));
-
-  // Add debug query so it's easy to filter in Network
-  const debugUrl = url + (url.includes("?") ? "&" : "?") + "debug=1";
-
-  dbg("POST url:", debugUrl);
-  dbg("POST payload:", payloadObj);
-
-  const res = await fetch(debugUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body: body.toString()
-  });
-
-  const text = await res.text();
-  dbg("POST status:", res.status);
-  dbg("POST response:", text);
-
-  return { status: res.status, text };
-}
-
-async function logEvent(eventName, extra = {}) {
-  // For debugging, we won't early-return on Do Not Track.
-  // If you want DNT respect later, re-add the check.
-
-  const geo = await getGeo();
-
-  const payloadObj = {
-    visitorId: getVisitorId(),
-    isNew: false,
-    event: eventName,
-    page: location.pathname,
-    userAgent: navigator.userAgent,
-    tsClient: new Date().toISOString(),
-    ...geo,
-    ...extra
-  };
-
-  return postToAppsScript(payloadObj);
-}
-
-/** =========================
- *  AUTO TEST ON LOAD
- *  ========================= */
-window.addEventListener("load", () => {
-  // This should create a row in Sheet3 every refresh (while testing)
-  logEvent("pageview_debug").catch(err => dbg("logEvent failed:", err));
-});
-</script>
-
 
 <body>
 
@@ -381,6 +110,145 @@ window.addEventListener("load", () => {
   <div id="results"></div>
 </div>
 
+<!-- =========================================================
+     CSP-SAFE ANALYTICS MODULE (single source of truth)
+     - No eval/new Function
+     - Fetches coarse geo from /geo
+     - Posts to Apps Script using form-urlencoded payload=
+     - Exposes: window.SiteAnalytics.logEvent(name, extra)
+     - Exposes: window.SiteAnalytics.getVisitor()
+========================================================= -->
+<script>
+  // Configure once
+  window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8gnEPdG0hLbBTMv0c5kNlruZcRZDNSowkAzeI_pvrVaZwQ24_es7IBfS-g4D-W9a6/exec";
+  window.GEO_URL = "/geo";
+  window.ANALYTICS_DEBUG = false; // set true while debugging
+
+  (function () {
+    var VISITOR_KEY = "nz_tool_visitor_id"; // one key for everything
+
+    function dbg() {
+      if (!window.ANALYTICS_DEBUG) return;
+      console.log.apply(console, ["[analytics]"].concat([].slice.call(arguments)));
+    }
+
+    function getVisitor() {
+      var id = localStorage.getItem(VISITOR_KEY);
+      var isNew = false;
+
+      if (!id) {
+        isNew = true;
+        id = (window.crypto && crypto.randomUUID)
+          ? ("v_" + crypto.randomUUID())
+          : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+        localStorage.setItem(VISITOR_KEY, id);
+      }
+      return { id: id, isNew: isNew };
+    }
+
+    function safeGeoObject(g) {
+      return {
+        geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
+        geoCountry:  (g && g.geoCountry)  ? g.geoCountry  : "",
+        geoRegion:   (g && g.geoRegion)   ? g.geoRegion   : "",
+        geoCity:     (g && g.geoCity)     ? g.geoCity     : ""
+      };
+    }
+
+    function getGeo() {
+      var url = window.GEO_URL || "/geo";
+      return fetch(url, { cache: "no-store" })
+        .then(function (r) {
+          dbg("GET /geo status:", r.status);
+          return r.text().then(function (t) {
+            dbg("GET /geo raw:", t);
+            try {
+              return safeGeoObject(JSON.parse(t));
+            } catch (e) {
+              dbg("GET /geo parse error:", e);
+              return safeGeoObject(null);
+            }
+          });
+        })
+        .catch(function (e) {
+          dbg("GET /geo failed:", e);
+          return safeGeoObject(null);
+        });
+    }
+
+    function postToAppsScript(payloadObj) {
+      var url = window.WEB_APP_URL;
+      if (!url || url.indexOf("script.google.com") === -1) {
+        dbg("WEB_APP_URL missing/invalid:", url);
+        return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
+      }
+
+      // ✅ Most reliable from static sites: form-urlencoded (no preflight)
+      var body = new URLSearchParams();
+      body.set("payload", JSON.stringify(payloadObj));
+
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      })
+      .then(function (res) {
+        return res.text().then(function (text) {
+          dbg("POST status:", res.status);
+          dbg("POST response:", text);
+          return { status: res.status, text: text };
+        });
+      })
+      .catch(function (e) {
+        dbg("POST failed:", e);
+        return { status: 0, text: String(e) };
+      });
+    }
+
+    function logEvent(eventName, extra) {
+      if (!extra) extra = {};
+
+      // Optional: respect Do Not Track (NZ-friendly hygiene)
+      var dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
+      if (dnt) {
+        dbg("DNT enabled; skip event:", eventName);
+        return Promise.resolve({ status: 0, text: "DNT enabled" });
+      }
+
+      var v = getVisitor();
+
+      return getGeo().then(function (geo) {
+        var payload = {
+          visitorId: v.id,
+          isNew: v.isNew,
+          event: String(eventName || ""),
+          page: location.pathname || "",
+          userAgent: navigator.userAgent || "",
+          tsClient: new Date().toISOString(),
+
+          geoProvider: geo.geoProvider,
+          geoCountry: geo.geoCountry,
+          geoRegion: geo.geoRegion,
+          geoCity: geo.geoCity
+        };
+
+        // merge extras
+        for (var k in extra) {
+          if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k];
+        }
+
+        dbg("payload:", payload);
+        return postToAppsScript(payload);
+      });
+    }
+
+    window.SiteAnalytics = {
+      logEvent: logEvent,
+      getVisitor: getVisitor
+    };
+  })();
+</script>
+
 <script>
 /**************************************************************
  * CONFIG
@@ -388,9 +256,6 @@ window.addEventListener("load", () => {
 const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
 const SHEET1_NAME = "Sheet1";
 const SHEET2_NAME = "Sheet2";
-
-// ✅ Paste your Apps Script Web App URL here (Sheet3 logger)
-const ANALYTICS_ENDPOINT = "https://script.google.com/macros/s/AKfycby8gnEPdG0hLbBTMv0c5kNlruZcRZDNSowkAzeI_pvrVaZwQ24_es7IBfS-g4D-W9a6/exec";
 
 // ✅ Your Google Maps API key
 const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
@@ -442,85 +307,45 @@ let matchedSheet1Rows = [];     // rows matching 1dp lat/lng
 let sheet2MatchOptions = [];    // [{title,value}] from matched Sheet2 row
 
 /**************************************************************
- * METRICS (Phase 1)
+ * ANALYTICS WRAPPER (uses CSP-safe module above)
  **************************************************************/
-const VISITOR_KEY = "nz_tool_visitor_id";
-function getVisitor() {
-  let id = localStorage.getItem(VISITOR_KEY);
-  let isNew = false;
-
-  if (!id) {
-    const uuid = (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
-          const r = Math.random()*16|0, v = c === "x" ? r : (r&0x3|0x8);
-          return v.toString(16);
-        });
-    id = "v_" + uuid;
-    localStorage.setItem(VISITOR_KEY, id);
-    isNew = true;
-  }
-  return { id, isNew };
-}
-const visitor = getVisitor();
 const pageStartMs = Date.now();
 
-function canLog() {
-  return ANALYTICS_ENDPOINT && ANALYTICS_ENDPOINT.startsWith("http");
+function round1(n){
+  const num = Number(n);
+  if (!Number.isFinite(num)) return null;
+  return Math.round(num * 10) / 10;
 }
-function baseLogPayload(extra = {}) {
-  const sc = (typeof selectedSiteClass !== "undefined") ? selectedSiteClass : "";
-  const il = (typeof selectedImportanceLevel !== "undefined") ? selectedImportanceLevel : "";
-  const wl = (typeof selectedWorkingLife !== "undefined") ? selectedWorkingLife : "";
-  const lat = (typeof selectedLat !== "undefined") ? selectedLat : null;
-  const lng = (typeof selectedLng !== "undefined") ? selectedLng : null;
+
+function analyticsExtraBase() {
+  const lat = selectedLat;
+  const lng = selectedLng;
 
   return {
-    visitorId: visitor.id,
-    isNew: visitor.isNew,
-    page: location.pathname || "",
-    userAgent: navigator.userAgent || "",
-    siteClass: sc || "",
-    importanceLevel: il || "",
-    workingLife: wl || "",
+    siteClass: selectedSiteClass || "",
+    importanceLevel: selectedImportanceLevel || "",
+    workingLife: selectedWorkingLife || "",
     roundedLatLng: (Number.isFinite(lat) && Number.isFinite(lng))
       ? `${round1(lat)},${round1(lng)}`
-      : "",
-    ...extra
+      : ""
   };
 }
+
 function logEvent(eventName, extra = {}) {
-  if (!canLog()) return;
-
-  const payloadObj = baseLogPayload({ event: eventName, ...extra });
-  const payloadStr = JSON.stringify(payloadObj);
-
-  // Preferred: sendBeacon (made for analytics)
-  if (navigator.sendBeacon) {
-    const blob = new Blob([payloadStr], { type: "text/plain;charset=UTF-8" });
-    navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
-    return;
-  }
-
-  // Fallback: fetch as a "simple" request (no preflight)
-  fetch(ANALYTICS_ENDPOINT, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "text/plain;charset=UTF-8" },
-    body: payloadStr
-  }).catch(() => {});
+  if (!window.SiteAnalytics || typeof window.SiteAnalytics.logEvent !== "function") return;
+  return window.SiteAnalytics.logEvent(eventName, Object.assign({}, analyticsExtraBase(), extra));
 }
 
-// Log initial page load
-logEvent("page_load", { isNew: visitor.isNew });
-
-// Log time-on-page on exit
-window.addEventListener("beforeunload", () => {
-  const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
-  LogEvent("page_exit", { timeOnPageSeconds: seconds, isNew: false });
+// Log initial page load (safe)
+window.addEventListener("load", () => {
+  logEvent("page_load", {});
 });
 
-
+// Log time-on-page on exit (FIXED: was LogEvent)
+window.addEventListener("beforeunload", () => {
+  const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
+  logEvent("page_exit", { timeOnPageSeconds: seconds });
+});
 
 /**************************************************************
  * HELPERS
@@ -544,11 +369,6 @@ function safeCell(v) {
   if (v === null || v === undefined || String(v).trim() === "") return "";
   const n = Number(v);
   return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
-}
-function round1(n){
-  const num = Number(n);
-  if (!Number.isFinite(num)) return null;
-  return Math.round(num * 10) / 10;
 }
 function setRoundedBar(){
   const el = document.getElementById("roundedCoordsBar");
@@ -688,7 +508,6 @@ function step3_filterMatchedSheet1Rows(){
   const out = [];
   const seen = new Set(); // apoe|title|siteclass
 
-  // Normal matches
   for (const item of matchedSheet1Rows) {
     const sheet1Row = item.row;
     const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
@@ -704,7 +523,6 @@ function step3_filterMatchedSheet1Rows(){
     out.push({ sheet1Row, apoe, matchTitle: match.title });
   }
 
-  // Add 1/500 for ULS unless already shown
   const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
   if (hasULS) {
     const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
@@ -832,7 +650,6 @@ async function recalc(){
     render(filtered);
 
     await logEvent("results_generated", {
-      isNew: false,
       matchedSheet1RowsCount: matchedSheet1Rows.length,
       displayedTablesCount: filtered.length
     });
@@ -840,7 +657,7 @@ async function recalc(){
     console.error(err);
     setStatus("Error (check console).");
     document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
-    await logEvent("error", { isNew: false, message: String(err && err.message ? err.message : err) });
+    await logEvent("error", { message: String(err && err.message ? err.message : err) });
   }
 }
 
@@ -856,7 +673,6 @@ function wireSingleSelectButtons(containerId, setter, buttonType){
       setter(btn.dataset.value);
 
       await logEvent("button_click", {
-        isNew: false,
         buttonType,
         buttonValue: btn.dataset.value
       });
@@ -886,7 +702,6 @@ function initMap(){
     setRoundedBar();
 
     await logEvent("location_selected", {
-      isNew: false,
       locationMethod: "map_click",
       lat: selectedLat,
       lng: selectedLng,
@@ -906,7 +721,7 @@ function initMap(){
     const place = autocomplete.getPlace();
     if (!place.geometry || !place.geometry.location) {
       setStatus("No geometry for that address. Try another.");
-      await logEvent("location_failed", { isNew: false, locationMethod: "address_search" });
+      await logEvent("location_failed", { locationMethod: "address_search" });
       return;
     }
 
@@ -921,7 +736,6 @@ function initMap(){
     setRoundedBar();
 
     await logEvent("location_selected", {
-      isNew: false,
       locationMethod: "address_search",
       address: place.formatted_address || "",
       lat: selectedLat,
@@ -936,7 +750,7 @@ function initMap(){
   document.getElementById("useMyLocationBtn").addEventListener("click", () => {
     if (!navigator.geolocation) {
       setStatus("Geolocation not supported.");
-      logEvent("location_failed", { isNew: false, locationMethod: "my_location", reason: "no_geolocation" });
+      logEvent("location_failed", { locationMethod: "my_location", reason: "no_geolocation" });
       return;
     }
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -951,7 +765,6 @@ function initMap(){
       setRoundedBar();
 
       await logEvent("location_selected", {
-        isNew: false,
         locationMethod: "my_location",
         lat: selectedLat,
         lng: selectedLng,
@@ -962,7 +775,7 @@ function initMap(){
       await recalc();
     }, async () => {
       setStatus("Could not get your location (permission denied?).");
-      await logEvent("location_failed", { isNew: false, locationMethod: "my_location", reason: "permission_denied" });
+      await logEvent("location_failed", { locationMethod: "my_location", reason: "permission_denied" });
     });
   });
 
@@ -978,7 +791,6 @@ window.initMap = initMap;
 
 /**************************************************************
  * Load Google Maps JS (Places required for address search)
- * This dynamic loader is GitHub Pages-friendly.
  **************************************************************/
 (function loadGoogleMaps(){
   if (window.google && window.google.maps) return;
