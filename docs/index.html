@@ -347,14 +347,7 @@ window.addEventListener("beforeunload", () => {
   logEvent("page_exit", { timeOnPageSeconds: seconds });
 });
   
-<script>
-  console.log("[analytics] module loaded:", !!window.SiteAnalytics);
-  window.addEventListener("load", () => {
-    console.log("[analytics] load fired");
-  });
-</script>
 
-  
 /**************************************************************
  * HELPERS
  **************************************************************/
