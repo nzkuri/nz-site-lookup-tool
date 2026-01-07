@@ -122,7 +122,7 @@
   // Configure once
   window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8gnEPdG0hLbBTMv0c5kNlruZcRZDNSowkAzeI_pvrVaZwQ24_es7IBfS-g4D-W9a6/exec";
   window.GEO_URL = "/geo";
-  window.ANALYTICS_DEBUG = false; // set true while debugging
+  window.ANALYTICS_DEBUG = true; // set true while debugging
 
   (function () {
     var VISITOR_KEY = "nz_tool_visitor_id"; // one key for everything
@@ -346,7 +346,14 @@ window.addEventListener("beforeunload", () => {
   const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
   logEvent("page_exit", { timeOnPageSeconds: seconds });
 });
+<script>
+  console.log("[analytics] module loaded:", !!window.SiteAnalytics);
+  window.addEventListener("load", () => {
+    console.log("[analytics] load fired");
+  });
+</script>
 
+  
 /**************************************************************
  * HELPERS
  **************************************************************/
