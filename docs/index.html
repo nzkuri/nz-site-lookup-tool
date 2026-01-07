@@ -88,21 +88,20 @@
     }
   }
 
-  async function logEvent(eventName, extra = {}) {
-    if (!analyticsAllowed()) return;
-
-    const geo = await getGeo();
-    const payload = {
-      visitorId: getVisitorId(),
-      isNew: false, // optional; you can compute if you want
-      event: eventName,
-      page: location.pathname,
-      timeOnPageSeconds: "",
-      userAgent: navigator.userAgent,
-      tsClient: new Date().toISOString(),
-      ...geo,
-      ...extra
-    };
+async function logEvent(eventName, extra = {}) {
+  const geo = await getGeo();
+  const payloadObj = {
+    visitorId: getVisitorId(),
+    isNew: false,
+    event: eventName,
+    page: location.pathname,
+    userAgent: navigator.userAgent,
+    tsClient: new Date().toISOString(),
+    ...geo,
+    ...extra
+  };
+  return await postToAppsScript(payloadObj);
+}
 
     // IMPORTANT: use text/plain to avoid Apps Script CORS preflight issues
     fetch(WEB_APP_URL, {
