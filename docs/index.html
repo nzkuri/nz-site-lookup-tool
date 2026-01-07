@@ -208,6 +208,121 @@
   // ✅ Log a pageview after page load
   window.addEventListener("load", () => logEvent("pageview"));
 </script>
+<script>
+/** =========================
+ *  CONFIG (SET THESE)
+ *  ========================= */
+window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8gnEPdG0hLbBTMv0c5kNlruZcRZDNSowkAzeI_pvrVaZwQ24_es7IBfS-g4D-W9a6/exec"; // must end with /exec
+
+// If /geo works when you type it in the browser, keep this:
+window.GEO_URL = "/geo";
+
+// Turn this on while debugging, off later
+window.ANALYTICS_DEBUG = true;
+
+/** =========================
+ *  HELPERS
+ *  ========================= */
+function dbg(...args) {
+  if (window.ANALYTICS_DEBUG) console.log("[analytics]", ...args);
+}
+
+function getVisitorId() {
+  const key = "vid";
+  let vid = localStorage.getItem(key);
+  if (!vid) {
+    vid = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "_" + Math.random().toString(16).slice(2));
+    localStorage.setItem(key, vid);
+  }
+  return vid;
+}
+
+async function getGeo() {
+  try {
+    const r = await fetch(window.GEO_URL, { cache: "no-store" });
+    dbg("GET /geo status:", r.status);
+
+    const text = await r.text();
+    dbg("GET /geo raw:", text);
+
+    // Try parse JSON
+    const g = JSON.parse(text);
+
+    const geo = {
+      geoProvider: g.geoProvider || "cloudflare",
+      geoCountry: g.geoCountry || "",
+      geoRegion: g.geoRegion || "",
+      geoCity: g.geoCity || ""
+    };
+
+    dbg("GET /geo parsed:", geo);
+    return geo;
+
+  } catch (e) {
+    dbg("GET /geo failed:", e);
+    return { geoProvider: "none", geoCountry: "", geoRegion: "", geoCity: "" };
+  }
+}
+
+async function postToAppsScript(payloadObj) {
+  const url = window.WEB_APP_URL;
+
+  if (!url || url.includes("PASTE_")) {
+    dbg("WEB_APP_URL not set correctly:", url);
+    return;
+  }
+
+  // ✅ Simple request (no preflight)
+  const body = new URLSearchParams();
+  body.set("payload", JSON.stringify(payloadObj));
+
+  // Add debug query so it's easy to filter in Network
+  const debugUrl = url + (url.includes("?") ? "&" : "?") + "debug=1";
+
+  dbg("POST url:", debugUrl);
+  dbg("POST payload:", payloadObj);
+
+  const res = await fetch(debugUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body: body.toString()
+  });
+
+  const text = await res.text();
+  dbg("POST status:", res.status);
+  dbg("POST response:", text);
+
+  return { status: res.status, text };
+}
+
+async function logEvent(eventName, extra = {}) {
+  // For debugging, we won't early-return on Do Not Track.
+  // If you want DNT respect later, re-add the check.
+
+  const geo = await getGeo();
+
+  const payloadObj = {
+    visitorId: getVisitorId(),
+    isNew: false,
+    event: eventName,
+    page: location.pathname,
+    userAgent: navigator.userAgent,
+    tsClient: new Date().toISOString(),
+    ...geo,
+    ...extra
+  };
+
+  return postToAppsScript(payloadObj);
+}
+
+/** =========================
+ *  AUTO TEST ON LOAD
+ *  ========================= */
+window.addEventListener("load", () => {
+  // This should create a row in Sheet3 every refresh (while testing)
+  logEvent("pageview_debug").catch(err => dbg("logEvent failed:", err));
+});
+</script>
 
 
 <body>
