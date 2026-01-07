@@ -346,6 +346,7 @@ window.addEventListener("beforeunload", () => {
   const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
   logEvent("page_exit", { timeOnPageSeconds: seconds });
 });
+  
 <script>
   console.log("[analytics] module loaded:", !!window.SiteAnalytics);
   window.addEventListener("load", () => {
