@@ -133,8 +133,11 @@
 
       <div class="status">
         <div><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
+
+        <!-- These will auto-hide once all selections are made -->
         <div id="roundedCoordsBar" class="muted"></div>
         <div id="stepInfo" class="muted"></div>
+
         <div id="results"></div>
       </div>
     </div>
@@ -164,7 +167,7 @@
   ========================================================= -->
   <script>
     // Configure once
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx-EhAFBwzePEVis6XLepGjvdypLR1CK_ZstX3UJhtIcJvF1yCH9LIuB8NRkuF-r__s/exec";
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyeIFpuWj3EC56HB3JvGg6DN5WZUnM_B5mWg1gbCR28ft2JabLt6s3tAn5igZX5FcVv/exec";
     window.GEO_URL = "/geo";
     window.ANALYTICS_DEBUG = true; // set true while debugging
 
@@ -375,7 +378,7 @@
      * HELPERS
      **************************************************************/
     function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
-    function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
+    //function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
     function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
 
     function eqLoose(a, b){
@@ -399,6 +402,19 @@
       const rLat = round1(selectedLat);
       const rLng = round1(selectedLng);
       el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
+    }
+
+    // ✅ NEW: hide the debug info once all inputs are selected
+    function updateStatusDetailsVisibility() {
+      const hasAll =
+        Number.isFinite(selectedLat) &&
+        Number.isFinite(selectedLng) &&
+        !!selectedSiteClass &&
+        !!selectedWorkingLife &&
+        !!selectedImportanceLevel;
+
+      document.getElementById("roundedCoordsBar").style.display = hasAll ? "none" : "";
+      document.getElementById("stepInfo").style.display = hasAll ? "none" : "";
     }
 
     function setMarker(lat,lng){
@@ -614,6 +630,9 @@
       infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
       setInfo(infoBits.join("<br>"));
 
+      // Keep visibility in sync whenever we render
+      updateStatusDetailsVisibility();
+
       if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`; return; }
       if (!selectedSiteClass) { resultsEl.innerHTML = `<div class="muted">Select Site Class.</div>`; return; }
       if (!selectedWorkingLife || !selectedImportanceLevel) { resultsEl.innerHTML = `<div class="muted">Select Working Life and Importance Level.</div>`; return; }
@@ -644,11 +663,16 @@
         const filtered = step3_filterMatchedSheet1Rows();
         setStatus("Done.");
         render(filtered);
+
+        // ✅ Ensure debug info is hidden once complete
+        updateStatusDetailsVisibility();
+
         await logEvent("results_generated", { matchedSheet1RowsCount: matchedSheet1Rows.length, displayedTablesCount: filtered.length });
       } catch (err) {
         console.error(err);
         setStatus("Error (check console).");
         document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
+        updateStatusDetailsVisibility();
         await logEvent("error", { message: String(err && err.message ? err.message : err) });
       }
     }
@@ -681,10 +705,7 @@
         const text = (textarea.value || "").trim();
         msg.textContent = "";
 
-        if (!text) {
-          msg.textContent = "Please type a suggestion first.";
-          return;
-        }
+        if (!text) { msg.textContent = "Please type a suggestion first."; return; }
 
         btn.disabled = true;
         btn.textContent = "Submitting…";
@@ -702,7 +723,6 @@
             tsClient: new Date().toISOString()
           });
 
-          // Use same transport as analytics (form-urlencoded payload=JSON)
           const body = new URLSearchParams();
           body.set("payload", JSON.stringify(payload));
 
@@ -833,6 +853,7 @@
 
       setStatus("Ready. Choose location + options.");
       setRoundedBar();
+      updateStatusDetailsVisibility(); // ✅ start visible; auto-hide once complete
     }
 
     window.initMap = initMap;
