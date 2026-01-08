@@ -378,7 +378,7 @@
      * HELPERS
      **************************************************************/
     function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
-    //function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
+    function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
     function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
 
     function eqLoose(a, b){
