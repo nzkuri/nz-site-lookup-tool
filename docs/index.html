@@ -8,20 +8,22 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
 
+    /* Search row */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    .main-grid { display:flex; gap:16px; align-items:flex-start; }
+    /* Two-column layout: left inputs, right map (bottoms aligned via JS height sync) */
+    .main-grid { display:flex; gap:16px; align-items:stretch; }
     .left-panel { flex: 0 0 520px; max-width: 520px; width: 100%; }
-    .right-panel { flex: 1 1 auto; min-width: 320px; }
+    .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
 
     @media (max-width: 980px){
       .main-grid { flex-direction: column; }
       .left-panel { max-width: 100%; }
+      .right-panel { width: 100%; }
     }
 
-    #map { height: 520px; width: 100%; border:1px solid #ccc; border-radius:6px; margin-bottom:12px; }
     #coords { font-weight: bold; margin-bottom: 12px; }
 
     .option-block { padding:15px; border:1px solid #ddd; border-radius:6px; background:#fafafa; margin-bottom:14px; }
@@ -34,17 +36,68 @@
     }
     .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    .status { position: relative; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; }
+    /* Map: height is set by JS to match design inputs block */
+    #map {
+      width: 100%;
+      border:1px solid #ccc;
+      border-radius:6px;
+      min-height: 260px;
+      flex: 1 1 auto;
+    }
 
-    /* We'll only show rounded coords + tables after success */
-    #roundedCoordsBar { display:none; color:#666; margin-bottom: 8px; }
+    /* Full-width results section */
+    .results-wrap{
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      position: relative;
+    }
 
-    .sc-table { width: 100%; border-collapse: collapse; margin: 12px 0; background: #fff; font-size: 14px; }
+    #roundedCoordsBar {
+      display:none; /* shown only after successful tables */
+      color:#666;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    /* Grid for tables (full width) */
+    #tablesGrid{
+      display: grid;
+      gap: 12px;
+      width: 100%;
+    }
+    .table-card{
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .sc-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
     .sc-table th, .sc-table td { border: 2px solid #000; padding: 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
     .sc-table thead th { font-weight: 700; }
     .sc-table .left-head { width: 220px; text-align:left; }
     .sc-table .left-cell { text-align:left; font-weight:700; }
     .sc-table .subhead { font-weight: 700; }
+
+    /* Loading overlay (no pending calc text shown) */
+    .loading-overlay{
+      position:absolute;
+      inset:0;
+      background: rgba(255,255,255,0.85);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      border-radius:8px;
+      z-index: 2;
+      font-weight: 700;
+    }
+    .loading-overlay.show{ display:flex; }
 
     /* Suggestions block */
     .suggestions-wrap{
@@ -76,20 +129,6 @@
       cursor: pointer;
     }
     #suggestionMsg{ margin-top: 8px; color:#666; }
-
-    /* Loading overlay (no pending calc text shown) */
-    .loading-overlay{
-      position:absolute;
-      inset:0;
-      background: rgba(255,255,255,0.85);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      border-radius:6px;
-      z-index: 2;
-      font-weight: 700;
-    }
-    .loading-overlay.show{ display:flex; }
   </style>
 </head>
 
@@ -105,6 +144,7 @@
     <div class="left-panel">
       <div id="coords">Choose a location (search or click the map)</div>
 
+      <!-- Design Inputs block (map height will match this block’s height) -->
       <div class="option-block" id="designInputsBlock">
         <h3>Design Inputs</h3>
 
@@ -142,18 +182,18 @@
           </div>
         </div>
       </div>
-
-      <div class="status">
-        <div class="loading-overlay" id="loadingOverlay">Loading…</div>
-
-        <div id="roundedCoordsBar"></div>
-        <div id="results"></div>
-      </div>
     </div>
 
     <div class="right-panel">
       <div id="map"></div>
     </div>
+  </div>
+
+  <!-- Full-width results (rounded coords + tables only after success) -->
+  <div class="results-wrap">
+    <div class="loading-overlay" id="loadingOverlay">Loading…</div>
+    <div id="roundedCoordsBar"></div>
+    <div id="tablesGrid"></div>
   </div>
 
   <div class="suggestions-wrap">
@@ -304,9 +344,17 @@
       return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
     }
 
+    function hasAllInputs(){
+      return Number.isFinite(selectedLat) &&
+             Number.isFinite(selectedLng) &&
+             !!selectedSiteClass &&
+             !!selectedWorkingLife &&
+             !!selectedImportanceLevel;
+    }
+
     function setRoundedBar(){
       const el = document.getElementById("roundedCoordsBar");
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.textContent = ""; return; }
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.style.display="none"; el.textContent = ""; return; }
       const rLat = round1(selectedLat);
       const rLng = round1(selectedLng);
       el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
@@ -316,21 +364,69 @@
       document.getElementById("loadingOverlay").classList.toggle("show", !!show);
     }
 
-    // ✅ Show only rounded coords + results after success
-    function setCleanResultsMode(enabled){
-      const rounded = document.getElementById("roundedCoordsBar");
-      rounded.style.display = enabled ? "" : "none";
-      // We keep Design Inputs visible; if you want to hide them after success, tell me.
+    function clearResults(){
+      document.getElementById("tablesGrid").innerHTML = "";
+      const el = document.getElementById("roundedCoordsBar");
+      el.style.display = "none";
+      el.textContent = "";
     }
 
-    function hasAllInputs(){
-      return Number.isFinite(selectedLat) &&
-             Number.isFinite(selectedLng) &&
-             !!selectedSiteClass &&
-             !!selectedWorkingLife &&
-             !!selectedImportanceLevel;
+    /**************************************************************
+     * Align map bottom with design inputs bottom (height sync)
+     **************************************************************/
+    function syncMapHeightToDesignInputs(){
+      const di = document.getElementById("designInputsBlock");
+      const mapEl = document.getElementById("map");
+      if (!di || !mapEl) return;
+
+      // Match map height to the design inputs block height
+      const h = Math.max(260, di.getBoundingClientRect().height);
+      mapEl.style.height = Math.round(h) + "px";
+
+      // If map is already created, tell Google to reflow it
+      if (window.google && google.maps && map) {
+        google.maps.event.trigger(map, "resize");
+        // Keep marker/center stable
+        if (marker) map.panTo(marker.getPosition());
+      }
     }
 
+    function setupMapHeightObserver(){
+      const di = document.getElementById("designInputsBlock");
+      if (!di || !("ResizeObserver" in window)) return;
+
+      const ro = new ResizeObserver(() => syncMapHeightToDesignInputs());
+      ro.observe(di);
+
+      window.addEventListener("resize", () => syncMapHeightToDesignInputs());
+    }
+
+    /**************************************************************
+     * Tables layout rules:
+     * 1-3 tables => 1 row across full width (n columns)
+     * 4 tables   => 2 rows x 2 columns across full width
+     **************************************************************/
+    function applyTablesGridColumns(n){
+      const grid = document.getElementById("tablesGrid");
+      if (!grid) return;
+
+      if (n === 4) {
+        grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      } else if (n === 3) {
+        grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      } else if (n === 2) {
+        grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      } else if (n === 1) {
+        grid.style.gridTemplateColumns = "repeat(1, 1fr)";
+      } else {
+        // fallback for >4
+        grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      }
+    }
+
+    /**************************************************************
+     * GOOGLE SHEETS (GVIZ)
+     **************************************************************/
     function gvizUrl(sheetName, query){
       const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
       const params = new URLSearchParams();
@@ -482,22 +578,27 @@
       `;
     }
 
-    function renderTablesOnly(filtered){
-      const resultsEl = document.getElementById("results");
-
-      if (!hasAllInputs()) { resultsEl.innerHTML = ""; setCleanResultsMode(false); return; }
+    function renderTablesFullWidth(filtered){
+      // Only show rounded coords + tables when we have actual tables to show
+      if (!hasAllInputs()) return;
 
       if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
-        // You said you don’t want “pending calc” text.
-        // We'll show nothing unless we have tables.
-        resultsEl.innerHTML = "";
-        setCleanResultsMode(false);
+        // per your request: no noisy "pending" or "no match" text
+        clearResults();
         return;
       }
 
-      resultsEl.innerHTML = filtered.map(x => buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)).join("");
+      const rounded = document.getElementById("roundedCoordsBar");
+      const grid = document.getElementById("tablesGrid");
+
       setRoundedBar();
-      setCleanResultsMode(true);
+      rounded.style.display = "";
+
+      applyTablesGridColumns(filtered.length);
+
+      grid.innerHTML = filtered.map(x => {
+        return `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`;
+      }).join("");
     }
 
     let recalcToken = 0;
@@ -505,13 +606,12 @@
     async function recalc(){
       const myToken = ++recalcToken;
 
-      // Don’t show anything while calculating
+      // Hide everything during calculations
       showLoading(true);
-      setCleanResultsMode(false);
-      document.getElementById("results").innerHTML = "";
+      clearResults();
 
       try {
-        if (!hasAllInputs()) { showLoading(false); return; }
+        if (!hasAllInputs()) return;
 
         await step1_findAllSheet1RowsMatching1dp();
         if (myToken !== recalcToken) return;
@@ -522,12 +622,15 @@
         const filtered = step3_filterMatchedSheet1Rows();
         if (myToken !== recalcToken) return;
 
-        renderTablesOnly(filtered);
+        renderTablesFullWidth(filtered);
 
-        await logEvent("results_generated", { matchedSheet1RowsCount: matchedSheet1Rows.length, displayedTablesCount: filtered.length });
+        await logEvent("results_generated", {
+          matchedSheet1RowsCount: matchedSheet1Rows.length,
+          displayedTablesCount: filtered.length
+        });
       } catch (err) {
         console.error(err);
-        // Silent fail (no pending text). If you want a tiny error label, tell me.
+        // silent: no pending calc text
       } finally {
         if (myToken === recalcToken) showLoading(false);
       }
@@ -540,6 +643,10 @@
           buttons.forEach(b => b.classList.remove("selected"));
           btn.classList.add("selected");
           setter(btn.dataset.value);
+
+          // keep map aligned with any layout changes
+          syncMapHeightToDesignInputs();
+
           await logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
           await recalc();
         });
@@ -608,12 +715,17 @@
         zoom: 6
       });
 
+      // Initial sync once map exists
+      syncMapHeightToDesignInputs();
+      setupMapHeightObserver();
+
       map.addListener("click", async (e) => {
         selectedLat = e.latLng.lat();
         selectedLng = e.latLng.lng();
         setMarker(selectedLat, selectedLng);
 
         document.getElementById("coords").textContent = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
         await recalc();
       });
 
@@ -658,8 +770,8 @@
       wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
       wireSuggestions();
 
-      setCleanResultsMode(false);
       showLoading(false);
+      clearResults();
     }
 
     window.initMap = initMap;
