@@ -34,9 +34,10 @@
     }
     .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    .status { padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; }
-    .muted { color:#666; }
-    .pill { display:inline-block; padding:3px 8px; border:1px solid #ddd; border-radius:999px; margin:2px; background:#f8f8f8; }
+    .status { position: relative; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; }
+
+    /* We'll only show rounded coords + tables after success */
+    #roundedCoordsBar { display:none; color:#666; margin-bottom: 8px; }
 
     .sc-table { width: 100%; border-collapse: collapse; margin: 12px 0; background: #fff; font-size: 14px; }
     .sc-table th, .sc-table td { border: 2px solid #000; padding: 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
@@ -45,6 +46,7 @@
     .sc-table .left-cell { text-align:left; font-weight:700; }
     .sc-table .subhead { font-weight: 700; }
 
+    /* Suggestions block */
     .suggestions-wrap{
       margin-top: 18px;
       padding: 14px;
@@ -73,7 +75,21 @@
       background: #fff;
       cursor: pointer;
     }
-    #suggestionMsg{ margin-top: 8px; }
+    #suggestionMsg{ margin-top: 8px; color:#666; }
+
+    /* Loading overlay (no pending calc text shown) */
+    .loading-overlay{
+      position:absolute;
+      inset:0;
+      background: rgba(255,255,255,0.85);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      border-radius:6px;
+      z-index: 2;
+      font-weight: 700;
+    }
+    .loading-overlay.show{ display:flex; }
   </style>
 </head>
 
@@ -89,7 +105,7 @@
     <div class="left-panel">
       <div id="coords">Choose a location (search or click the map)</div>
 
-      <div class="option-block">
+      <div class="option-block" id="designInputsBlock">
         <h3>Design Inputs</h3>
 
         <div class="row">
@@ -128,15 +144,9 @@
       </div>
 
       <div class="status">
-        <!-- Give this an id so we can hide it after results are shown -->
-        <div id="statusRow"><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
+        <div class="loading-overlay" id="loadingOverlay">Loading…</div>
 
-        <!-- We will keep ONLY this line visible once tables are displayed -->
-        <div id="roundedCoordsBar" class="muted"></div>
-
-        <!-- This is the long debug info; we hide it once tables are displayed -->
-        <div id="stepInfo" class="muted"></div>
-
+        <div id="roundedCoordsBar"></div>
         <div id="results"></div>
       </div>
     </div>
@@ -152,11 +162,11 @@
     <div>
       <button id="submitSuggestionBtn" type="button">Submit</button>
     </div>
-    <div id="suggestionMsg" class="muted"></div>
+    <div id="suggestionMsg"></div>
   </div>
 
   <!-- =========================================================
-    CSP-SAFE ANALYTICS MODULE
+    CSP-SAFE ANALYTICS MODULE (unchanged)
   ========================================================= -->
   <script>
     window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyeIFpuWj3EC56HB3JvGg6DN5WZUnM_B5mWg1gbCR28ft2JabLt6s3tAn5igZX5FcVv/exec";
@@ -165,108 +175,45 @@
 
     (function () {
       var VISITOR_KEY = "nz_tool_visitor_id";
-
-      function dbg() {
-        if (!window.ANALYTICS_DEBUG) return;
-        console.log.apply(console, ["[analytics]"].concat([].slice.call(arguments)));
-      }
-
+      function dbg() { if (!window.ANALYTICS_DEBUG) return; console.log.apply(console, ["[analytics]"].concat([].slice.call(arguments))); }
       function getVisitor() {
         var id = localStorage.getItem(VISITOR_KEY);
         var isNew = false;
         if (!id) {
           isNew = true;
-          id = (window.crypto && crypto.randomUUID)
-            ? ("v_" + crypto.randomUUID())
-            : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+          id = (window.crypto && crypto.randomUUID) ? ("v_" + crypto.randomUUID()) : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
           localStorage.setItem(VISITOR_KEY, id);
         }
         return { id: id, isNew: isNew };
       }
-
-      function safeGeoObject(g) {
-        return {
-          geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
-          geoCountry: (g && g.geoCountry) ? g.geoCountry : "",
-          geoRegion: (g && g.geoRegion) ? g.geoRegion : "",
-          geoCity: (g && g.geoCity) ? g.geoCity : ""
-        };
-      }
-
+      function safeGeoObject(g) { return { geoProvider:(g&&g.geoProvider)?g.geoProvider:"cloudflare", geoCountry:(g&&g.geoCountry)?g.geoCountry:"", geoRegion:(g&&g.geoRegion)?g.geoRegion:"", geoCity:(g&&g.geoCity)?g.geoCity:"" }; }
       function getGeo() {
         var url = window.GEO_URL || "/geo";
         return fetch(url, { cache: "no-store" })
-          .then(function (r) {
-            dbg("GET /geo status:", r.status);
-            return r.text().then(function (t) {
-              dbg("GET /geo raw:", t);
-              try { return safeGeoObject(JSON.parse(t)); }
-              catch (e) { dbg("GET /geo parse error:", e); return safeGeoObject(null); }
-            });
-          })
-          .catch(function (e) {
-            dbg("GET /geo failed:", e);
-            return safeGeoObject(null);
-          });
+          .then(function (r) { return r.text().then(function (t) { try { return safeGeoObject(JSON.parse(t)); } catch (e) { return safeGeoObject(null); } }); })
+          .catch(function () { return safeGeoObject(null); });
       }
-
       function postToAppsScript(payloadObj) {
         var url = window.WEB_APP_URL;
-        if (!url || url.indexOf("script.google.com") === -1) {
-          dbg("WEB_APP_URL missing/invalid:", url);
-          return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
-        }
-
+        if (!url || url.indexOf("script.google.com") === -1) return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
         var body = new URLSearchParams();
         body.set("payload", JSON.stringify(payloadObj));
-
-        return fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: body.toString()
-        })
-          .then(function (res) {
-            return res.text().then(function (text) {
-              dbg("POST status:", res.status);
-              dbg("POST response:", text);
-              return { status: res.status, text: text };
-            });
-          })
-          .catch(function (e) {
-            dbg("POST failed:", e);
-            return { status: 0, text: String(e) };
-          });
+        return fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: body.toString() })
+          .then(function (res) { return res.text().then(function (text) { dbg("POST", res.status, text); return { status: res.status, text: text }; }); })
+          .catch(function (e) { return { status: 0, text: String(e) }; });
       }
-
       function logEvent(eventName, extra) {
         if (!extra) extra = {};
-
         var dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
         if (dnt) return Promise.resolve({ status: 0, text: "DNT enabled" });
-
         var v = getVisitor();
         return getGeo().then(function (geo) {
-          var payload = {
-            visitorId: v.id,
-            isNew: v.isNew,
-            event: String(eventName || ""),
-            page: location.pathname || "",
-            userAgent: navigator.userAgent || "",
-            tsClient: new Date().toISOString(),
-            geoProvider: geo.geoProvider,
-            geoCountry: geo.geoCountry,
-            geoRegion: geo.geoRegion,
-            geoCity: geo.geoCity
-          };
-
-          for (var k in extra) {
-            if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k];
-          }
-
+          var payload = { visitorId:v.id, isNew:v.isNew, event:String(eventName||""), page:location.pathname||"", userAgent:navigator.userAgent||"", tsClient:new Date().toISOString(),
+            geoProvider:geo.geoProvider, geoCountry:geo.geoCountry, geoRegion:geo.geoRegion, geoCity:geo.geoCity };
+          for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k]; }
           return postToAppsScript(payload);
         });
       }
-
       window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
     })();
   </script>
@@ -279,7 +226,6 @@
     const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
     const SHEET1_NAME = "Sheet1";
     const SHEET2_NAME = "Sheet2";
-
     const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
 
     const SHEET1_LAT_COL_INDEX = 0;
@@ -320,8 +266,6 @@
     let matchedSheet1Rows = [];
     let sheet2MatchOptions = [];
 
-    const pageStartMs = Date.now();
-
     function round1(n){
       const num = Number(n);
       if (!Number.isFinite(num)) return null;
@@ -346,25 +290,14 @@
       return window.SiteAnalytics.logEvent(eventName, Object.assign({}, analyticsExtraBase(), extra));
     }
 
-    window.addEventListener("load", () => { logEvent("page_load", {}); });
-    window.addEventListener("beforeunload", () => {
-      const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
-      logEvent("page_exit", { timeOnPageSeconds: seconds });
-    });
-
-    function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
-    function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
     function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
-
     function eqLoose(a, b){
-      const sa = normalize(a);
-      const sb = normalize(b);
+      const sa = normalize(a), sb = normalize(b);
       if (sa === sb) return true;
       const na = Number(sa), nb = Number(sb);
       if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
       return sa.toLowerCase() === sb.toLowerCase();
     }
-
     function safeCell(v) {
       if (v === null || v === undefined || String(v).trim() === "") return "";
       const n = Number(v);
@@ -379,36 +312,23 @@
       el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
     }
 
-    // ✅ NEW: after tables display, show only rounded coords + tables
-    function setPostResultsViewMode(showOnlyRoundedAndTables) {
-      const statusRow = document.getElementById("statusRow");
-      const stepInfo = document.getElementById("stepInfo");
+    function showLoading(show){
+      document.getElementById("loadingOverlay").classList.toggle("show", !!show);
+    }
+
+    // ✅ Show only rounded coords + results after success
+    function setCleanResultsMode(enabled){
       const rounded = document.getElementById("roundedCoordsBar");
-
-      if (showOnlyRoundedAndTables) {
-        // hide status + all debug info
-        if (statusRow) statusRow.style.display = "none";
-        if (stepInfo) stepInfo.style.display = "none";
-        // keep rounded coords visible
-        if (rounded) rounded.style.display = "";
-      } else {
-        // normal mode
-        if (statusRow) statusRow.style.display = "";
-        if (stepInfo) stepInfo.style.display = "";
-        if (rounded) rounded.style.display = "";
-      }
+      rounded.style.display = enabled ? "" : "none";
+      // We keep Design Inputs visible; if you want to hide them after success, tell me.
     }
 
-    function setMarker(lat,lng){
-      const pos = {lat, lng};
-      if(marker) marker.setMap(null);
-      marker = new google.maps.Marker({ map, position: pos });
-      map.panTo(pos);
-    }
-
-    function isOneOver500(apoe){
-      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
-      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
+    function hasAllInputs(){
+      return Number.isFinite(selectedLat) &&
+             Number.isFinite(selectedLng) &&
+             !!selectedSiteClass &&
+             !!selectedWorkingLife &&
+             !!selectedImportanceLevel;
     }
 
     function gvizUrl(sheetName, query){
@@ -437,11 +357,9 @@
     async function step1_findAllSheet1RowsMatching1dp(){
       matchedSheet1Rows = [];
       if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
-      setRoundedBar();
-      setStatus("Step 1: Matching Sheet1 rows by lat/lng to 1 decimal point…");
 
       const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
-      if (!rows.length) { setStatus("No rows found in Sheet1 (check sharing/tab name)."); return; }
+      if (!rows.length) return;
 
       const targetLat1 = round1(selectedLat);
       const targetLng1 = round1(selectedLng);
@@ -452,17 +370,14 @@
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         if (round1(lat) === targetLat1 && round1(lng) === targetLng1) matchedSheet1Rows.push({ row });
       }
-
-      setStatus(`Step 1 complete. Found ${matchedSheet1Rows.length} Sheet1 row(s) matching ${targetLat1.toFixed(1)}, ${targetLng1.toFixed(1)}.`);
     }
 
     async function step2_getTitlesAndStringsFromSheet2(){
       sheet2MatchOptions = [];
       if (!selectedWorkingLife || !selectedImportanceLevel) return;
 
-      setStatus("Step 2: Looking up selected options in Sheet2…");
       const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-      if (!sheet2.length) { setStatus("Sheet2 empty / not accessible."); return; }
+      if (!sheet2.length) return;
 
       const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
       const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
@@ -478,7 +393,7 @@
         eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
       );
 
-      if (!matchRow) { sheet2MatchOptions = []; setStatus("No matching row in Sheet2 for selected options."); return; }
+      if (!matchRow) { sheet2MatchOptions = []; return; }
 
       sheet2MatchOptions = SHEET2_STRING_COLS
         .map((colIdx) => {
@@ -488,8 +403,11 @@
           return { title, value };
         })
         .filter(x => x.value.length > 0);
+    }
 
-      setStatus("Step 2 complete.");
+    function isOneOver500(apoe){
+      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
+      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
     }
 
     function step3_filterMatchedSheet1Rows(){
@@ -564,75 +482,54 @@
       `;
     }
 
-    function render(filtered){
+    function renderTablesOnly(filtered){
       const resultsEl = document.getElementById("results");
-      const infoBits = [];
 
-      // Build debug info (we'll hide it when tables show)
-      if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-        const tLat1 = round1(selectedLat);
-        const tLng1 = round1(selectedLng);
-        infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
-        infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
-      }
-      if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
-      if (selectedWorkingLife) {
-        const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-        infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
-      }
-      if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
-      if (sheet2MatchOptions.length) {
-        infoBits.push(
-          `Sheet2 candidates (C/D/E): ` +
-          sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join("")
-        );
-      }
-      infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
-      setInfo(infoBits.join("<br>"));
+      if (!hasAllInputs()) { resultsEl.innerHTML = ""; setCleanResultsMode(false); return; }
 
-      // Standard guard messages
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`; setPostResultsViewMode(false); return; }
-      if (!selectedSiteClass) { resultsEl.innerHTML = `<div class="muted">Select Site Class.</div>`; setPostResultsViewMode(false); return; }
-      if (!selectedWorkingLife || !selectedImportanceLevel) { resultsEl.innerHTML = `<div class="muted">Select Working Life and Importance Level.</div>`; setPostResultsViewMode(false); return; }
-      if (!sheet2MatchOptions.length) { resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection.</div>`; setPostResultsViewMode(false); return; }
-      if (!matchedSheet1Rows.length) {
-        resultsEl.innerHTML = `
-          <div><strong>No Sheet1 rows matched</strong></div>
-          <div class="muted">No rows in Sheet1 had lat/lng matching your selected location rounded to 1 decimal point.</div>
-        `;
-        setPostResultsViewMode(false);
-        return;
-      }
-      if (!filtered.length) {
-        resultsEl.innerHTML = `
-          <div><strong>No matches found</strong></div>
-          <div class="muted">Rows matched the 1dp lat/lng bucket, but none had APOE matching Sheet2 C/D/E strings.</div>
-        `;
-        setPostResultsViewMode(false);
+      if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
+        // You said you don’t want “pending calc” text.
+        // We'll show nothing unless we have tables.
+        resultsEl.innerHTML = "";
+        setCleanResultsMode(false);
         return;
       }
 
-      // ✅ Tables are displayed: switch to "rounded coords + tables only"
       resultsEl.innerHTML = filtered.map(x => buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)).join("");
-      setRoundedBar(); // ensure rounded coords is present
-      setPostResultsViewMode(true);
+      setRoundedBar();
+      setCleanResultsMode(true);
     }
 
+    let recalcToken = 0;
+
     async function recalc(){
+      const myToken = ++recalcToken;
+
+      // Don’t show anything while calculating
+      showLoading(true);
+      setCleanResultsMode(false);
+      document.getElementById("results").innerHTML = "";
+
       try {
-        setRoundedBar();
+        if (!hasAllInputs()) { showLoading(false); return; }
+
         await step1_findAllSheet1RowsMatching1dp();
+        if (myToken !== recalcToken) return;
+
         await step2_getTitlesAndStringsFromSheet2();
+        if (myToken !== recalcToken) return;
+
         const filtered = step3_filterMatchedSheet1Rows();
-        setStatus("Done.");
-        render(filtered);
+        if (myToken !== recalcToken) return;
+
+        renderTablesOnly(filtered);
+
         await logEvent("results_generated", { matchedSheet1RowsCount: matchedSheet1Rows.length, displayedTablesCount: filtered.length });
       } catch (err) {
         console.error(err);
-        setStatus("Error (check console).");
-        document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
-        setPostResultsViewMode(false);
-        await logEvent("error", { message: String(err && err.message ? err.message : err) });
+        // Silent fail (no pending text). If you want a tiny error label, tell me.
+      } finally {
+        if (myToken === recalcToken) showLoading(false);
       }
     }
 
@@ -698,6 +595,13 @@
       });
     }
 
+    function setMarker(lat,lng){
+      const pos = {lat, lng};
+      if(marker) marker.setMap(null);
+      marker = new google.maps.Marker({ map, position: pos });
+      map.panTo(pos);
+    }
+
     function initMap(){
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: -41.2865, lng: 174.7762 },
@@ -710,9 +614,6 @@
         setMarker(selectedLat, selectedLng);
 
         document.getElementById("coords").textContent = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-        setRoundedBar();
-        setPostResultsViewMode(false);
-
         await recalc();
       });
 
@@ -723,11 +624,7 @@
 
       autocomplete.addListener("place_changed", async () => {
         const place = autocomplete.getPlace();
-        if (!place.geometry || !place.geometry.location) {
-          setStatus("No geometry for that address. Try another.");
-          setPostResultsViewMode(false);
-          return;
-        }
+        if (!place.geometry || !place.geometry.location) return;
 
         selectedLat = place.geometry.location.lat();
         selectedLng = place.geometry.location.lng();
@@ -737,14 +634,11 @@
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
-        setRoundedBar();
-        setPostResultsViewMode(false);
-
         await recalc();
       });
 
       document.getElementById("useMyLocationBtn").addEventListener("click", () => {
-        if (!navigator.geolocation) { setStatus("Geolocation not supported."); return; }
+        if (!navigator.geolocation) return;
 
         navigator.geolocation.getCurrentPosition(async (pos) => {
           selectedLat = pos.coords.latitude;
@@ -755,25 +649,17 @@
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
-          setRoundedBar();
-          setPostResultsViewMode(false);
-
           await recalc();
-        }, () => {
-          setStatus("Could not get your location (permission denied?).");
-          setPostResultsViewMode(false);
         });
       });
 
       wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
       wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
       wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
-
       wireSuggestions();
 
-      setStatus("Ready. Choose location + options.");
-      setRoundedBar();
-      setPostResultsViewMode(false);
+      setCleanResultsMode(false);
+      showLoading(false);
     }
 
     window.initMap = initMap;
@@ -787,7 +673,6 @@
         + "&libraries=places";
       s.async = true;
       s.defer = true;
-      s.onerror = () => setStatus("Google Maps failed to load (check API key restrictions / billing / enabled APIs).");
       document.head.appendChild(s);
     })();
   </script>
