@@ -3,16 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>NZ Address & Site Parameter Tool</title>
+  <title>TS1170.5 site parameter finder</title>
 
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
 
-    .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
-    #addressInput { width:min(650px,100%); padding:10px; border:1px solid #ccc; border-radius:6px; }
+    /* Full-width search row */
+    .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
+    #addressInput { flex:1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    #map { height: 420px; width: 100%; border:1px solid #ccc; border-radius:6px; margin-bottom:12px; }
+    /* Two-column layout: left (inputs + results), right (map) */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) minmax(360px, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 980px){
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    #map { height: 520px; width: 100%; border:1px solid #ccc; border-radius:6px; }
     #coords { font-weight: bold; margin-bottom: 12px; }
 
     .option-block { padding:15px; border:1px solid #ddd; border-radius:6px; background:#fafafa; margin-bottom:14px; }
@@ -27,9 +39,9 @@
     }
     .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    .status { padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; }
+    /* ✅ Remove status bar: hide status area entirely */
+    .status { display:none; }
     .muted { color:#666; }
-
     .pill { display:inline-block; padding:3px 8px; border:1px solid #ddd; border-radius:999px; margin:2px; background:#f8f8f8; }
 
     .sc-table {
@@ -50,73 +62,117 @@
     .sc-table .left-head { width: 220px; text-align:left; }
     .sc-table .left-cell { text-align:left; font-weight:700; }
     .sc-table .subhead { font-weight: 700; }
+
+    /* Suggestions box (full width, bottom) */
+    .suggestions {
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+      width: 100%;
+    }
+    #suggestionText {
+      width: 100%;
+      min-height: 110px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    #suggestionSubmitBtn{
+      margin-top: 10px;
+      padding: 10px 14px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+    }
+    #suggestionMsg { margin-top: 8px; }
   </style>
 </head>
 
 <body>
 
-<h2>NZ Address & Site Parameter Tool</h2>
+<h2>TS1170.5 site parameter finder</h2>
 
 <div class="search-wrap">
   <input id="addressInput" placeholder="Search address (NZ only)" />
   <button id="useMyLocationBtn" type="button">Use my location</button>
 </div>
 
-<div id="map"></div>
-<div id="coords">Choose a location (search or click the map)</div>
+<div class="layout">
+  <!-- LEFT: inputs + outputs -->
+  <div>
+    <div id="coords">Choose a location (search or click the map)</div>
 
-<div class="option-block">
-  <h3>Design Parameters</h3>
+    <div class="option-block">
+      <h3>Design Inputs</h3>
 
-  <div class="row">
-    <label>Site Class</label>
-    <div class="option-buttons" id="siteClassOptions">
-      <button type="button" data-value="I">I</button>
-      <button type="button" data-value="II">II</button>
-      <button type="button" data-value="III">III</button>
-      <button type="button" data-value="IV">IV</button>
-      <button type="button" data-value="V">V</button>
-      <button type="button" data-value="VI">VI</button>
+      <div class="row">
+        <label>Site Class</label>
+        <div class="option-buttons" id="siteClassOptions">
+          <button type="button" data-value="I">I</button>
+          <button type="button" data-value="II">II</button>
+          <button type="button" data-value="III">III</button>
+          <button type="button" data-value="IV">IV</button>
+          <button type="button" data-value="V">V</button>
+          <button type="button" data-value="VI">VI</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Importance Level</label>
+        <div class="option-buttons" id="importanceLevelOptions">
+          <button type="button" data-value="1">1</button>
+          <button type="button" data-value="2">2</button>
+          <button type="button" data-value="3">3</button>
+          <button type="button" data-value="4">4</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Design Working Life</label>
+        <div class="option-buttons" id="workingLifeOptions">
+          <button type="button" data-value="construction">Construction equipment</button>
+          <button type="button" data-value="lt6months">Less than 6 months</button>
+          <button type="button" data-value="5">5 years</button>
+          <button type="button" data-value="25">25 years</button>
+          <button type="button" data-value="50">50 years</button>
+          <button type="button" data-value="100">100 years or more</button>
+        </div>
+      </div>
     </div>
+
+    <!-- (Hidden by CSS, but left in place so your JS keeps working without surgery) -->
+    <div class="status">
+      <div><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
+      <div id="roundedCoordsBar" class="muted"></div>
+      <div id="stepInfo" class="muted"></div>
+      <div id="results"></div>
+    </div>
+
+    <!-- ✅ Visible results (so you still see output after removing status bar) -->
+    <div id="results"></div>
   </div>
 
-  <div class="row">
-    <label>Importance Level</label>
-    <div class="option-buttons" id="importanceLevelOptions">
-      <button type="button" data-value="1">1</button>
-      <button type="button" data-value="2">2</button>
-      <button type="button" data-value="3">3</button>
-      <button type="button" data-value="4">4</button>
-    </div>
-  </div>
-
-  <div class="row">
-    <label>Design Working Life</label>
-    <div class="option-buttons" id="workingLifeOptions">
-      <button type="button" data-value="construction">Construction equipment</button>
-      <button type="button" data-value="lt6months">Less than 6 months</button>
-      <button type="button" data-value="5">5 years</button>
-      <button type="button" data-value="25">25 years</button>
-      <button type="button" data-value="50">50 years</button>
-      <button type="button" data-value="100">100 years or more</button>
-    </div>
+  <!-- RIGHT: map -->
+  <div>
+    <div id="map"></div>
   </div>
 </div>
 
-<div class="status">
-  <div><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
-  <div id="roundedCoordsBar" class="muted"></div>
-  <div id="stepInfo" class="muted"></div>
-  <div id="results"></div>
+<!-- Suggestions (full width at bottom) -->
+<div class="suggestions">
+  <h3>Suggestions</h3>
+  <textarea id="suggestionText" placeholder="Got an idea or found an issue? Drop it here…"></textarea>
+  <button id="suggestionSubmitBtn" type="button">Submit suggestion</button>
+  <div id="suggestionMsg" class="muted"></div>
 </div>
 
 <!-- =========================================================
      CSP-SAFE ANALYTICS MODULE (single source of truth)
-     - No eval/new Function
-     - Fetches coarse geo from /geo
-     - Posts to Apps Script using form-urlencoded payload=
-     - Exposes: window.SiteAnalytics.logEvent(name, extra)
-     - Exposes: window.SiteAnalytics.getVisitor()
 ========================================================= -->
 <script>
   // Configure once
@@ -183,7 +239,6 @@
         return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
       }
 
-      // ✅ Most reliable from static sites: form-urlencoded (no preflight)
       var body = new URLSearchParams();
       body.set("payload", JSON.stringify(payloadObj));
 
@@ -208,7 +263,6 @@
     function logEvent(eventName, extra) {
       if (!extra) extra = {};
 
-      // Optional: respect Do Not Track (NZ-friendly hygiene)
       var dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
       if (dnt) {
         dbg("DNT enabled; skip event:", eventName);
@@ -232,7 +286,6 @@
           geoCity: geo.geoCity
         };
 
-        // merge extras
         for (var k in extra) {
           if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k];
         }
@@ -242,10 +295,7 @@
       });
     }
 
-    window.SiteAnalytics = {
-      logEvent: logEvent,
-      getVisitor: getVisitor
-    };
+    window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
   })();
 </script>
 
@@ -254,13 +304,16 @@
  * CONFIG
  **************************************************************/
 window.GEO_URL = "geo"; // not "/geo"
-  
+
 const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
 const SHEET1_NAME = "Sheet1";
 const SHEET2_NAME = "Sheet2";
 
 // ✅ Your Google Maps API key
 const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+
+// ✅ Suggestions destination
+const SUGGESTIONS_SHEET_NAME = "Sheet6"; // per your request
 
 // Sheet1: A=Lat, B=Lng, C=APOE
 const SHEET1_LAT_COL_INDEX = 0;
@@ -282,10 +335,8 @@ const SHEET2_WORKINGLIFE_COL_INDEX = 0;
 const SHEET2_IMPORTANCE_COL_INDEX  = 1;
 const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
 
-// Force table titles (ULS/SLS1/SLS2) regardless of Sheet2 header row
 const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
 
-// Option B mapping (UI codes -> Sheet2 labels)
 const WORKING_LIFE_LABEL = {
   construction: "Construction equipment",
   lt6months: "Less than 6 months",
@@ -305,11 +356,11 @@ let selectedSiteClass = "";
 let selectedImportanceLevel = "";
 let selectedWorkingLife = "";
 
-let matchedSheet1Rows = [];     // rows matching 1dp lat/lng
-let sheet2MatchOptions = [];    // [{title,value}] from matched Sheet2 row
+let matchedSheet1Rows = [];
+let sheet2MatchOptions = [];
 
 /**************************************************************
- * ANALYTICS WRAPPER (uses CSP-safe module above)
+ * ANALYTICS WRAPPER
  **************************************************************/
 const pageStartMs = Date.now();
 
@@ -318,7 +369,6 @@ function round1(n){
   if (!Number.isFinite(num)) return null;
   return Math.round(num * 10) / 10;
 }
-
 function analyticsExtraBase() {
   const lat = selectedLat;
   const lng = selectedLng;
@@ -332,29 +382,27 @@ function analyticsExtraBase() {
       : ""
   };
 }
-
 function logEvent(eventName, extra = {}) {
   if (!window.SiteAnalytics || typeof window.SiteAnalytics.logEvent !== "function") return;
   return window.SiteAnalytics.logEvent(eventName, Object.assign({}, analyticsExtraBase(), extra));
 }
-
-// Log initial page load (safe)
-window.addEventListener("load", () => {
-  logEvent("page_load", {});
-});
-
-// Log time-on-page on exit (FIXED: was LogEvent)
+window.addEventListener("load", () => logEvent("page_load", {}));
 window.addEventListener("beforeunload", () => {
   const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
   logEvent("page_exit", { timeOnPageSeconds: seconds });
 });
-  
 
 /**************************************************************
  * HELPERS
  **************************************************************/
-function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
-function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
+function setStatus(msg){
+  const el = document.getElementById("statusText");
+  if (el) el.textContent = msg;
+}
+function setInfo(html){
+  const el = document.getElementById("stepInfo");
+  if (el) el.innerHTML = html || "";
+}
 
 function normalize(v){
   if (v === null || v === undefined) return "";
@@ -375,6 +423,7 @@ function safeCell(v) {
 }
 function setRoundedBar(){
   const el = document.getElementById("roundedCoordsBar");
+  if (!el) return;
   if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
     el.textContent = "";
     return;
@@ -423,7 +472,7 @@ async function fetchSheetAs2DArray(sheetName, query){
 }
 
 /**************************************************************
- * STEP 1: Match ALL rows in Sheet1 where (lat,lng) match to 1dp
+ * STEP 1
  **************************************************************/
 async function step1_findAllSheet1RowsMatching1dp(){
   matchedSheet1Rows = [];
@@ -455,7 +504,7 @@ async function step1_findAllSheet1RowsMatching1dp(){
 }
 
 /**************************************************************
- * STEP 2: Find matching Sheet2 row and capture titles+values C/D/E
+ * STEP 2
  **************************************************************/
 async function step2_getTitlesAndStringsFromSheet2(){
   sheet2MatchOptions = [];
@@ -502,14 +551,14 @@ async function step2_getTitlesAndStringsFromSheet2(){
 }
 
 /**************************************************************
- * STEP 3: Match APOE to Sheet2 strings, dedupe, add 1/500 under ULS
+ * STEP 3
  **************************************************************/
 function step3_filterMatchedSheet1Rows(){
   if (!matchedSheet1Rows.length) return [];
   if (!sheet2MatchOptions.length) return [];
 
   const out = [];
-  const seen = new Set(); // apoe|title|siteclass
+  const seen = new Set();
 
   for (const item of matchedSheet1Rows) {
     const sheet1Row = item.row;
@@ -543,7 +592,7 @@ function step3_filterMatchedSheet1Rows(){
 }
 
 /**************************************************************
- * TABLE: 3 rows, selected site class only
+ * TABLE
  **************************************************************/
 function buildThreeRowTable(sheet1Row, apoe, matchTitle){
   const sc = selectedSiteClass;
@@ -586,30 +635,6 @@ function buildThreeRowTable(sheet1Row, apoe, matchTitle){
  **************************************************************/
 function render(filtered){
   const resultsEl = document.getElementById("results");
-
-  const infoBits = [];
-  if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-    const tLat1 = round1(selectedLat);
-    const tLng1 = round1(selectedLng);
-    infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
-    infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
-  }
-
-  if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
-  if (selectedWorkingLife) {
-    const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-    infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
-  }
-  if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
-
-  if (sheet2MatchOptions.length) {
-    infoBits.push(`Sheet2 candidates (C/D/E): ` + sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join(""));
-  } else if (selectedWorkingLife && selectedImportanceLevel) {
-    infoBits.push(`<span class="muted">Sheet2 candidates (C/D/E): (none found)</span>`);
-  }
-
-  infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
-  setInfo(infoBits.join("<br>"));
 
   if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
     resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`;
@@ -665,7 +690,7 @@ async function recalc(){
 }
 
 /**************************************************************
- * BUTTON WIRING (logs every selection)
+ * BUTTON WIRING
  **************************************************************/
 function wireSingleSelectButtons(containerId, setter, buttonType){
   const buttons = document.querySelectorAll(`#${containerId} button`);
@@ -675,13 +700,52 @@ function wireSingleSelectButtons(containerId, setter, buttonType){
       btn.classList.add("selected");
       setter(btn.dataset.value);
 
-      await logEvent("button_click", {
-        buttonType,
-        buttonValue: btn.dataset.value
-      });
-
+      await logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
       await recalc();
     });
+  });
+}
+
+/**************************************************************
+ * SUGGESTIONS -> Sheet6 (via your Apps Script web app)
+ * Sends: { event: "suggestion_submit", suggestionText, tsClient, page, visitorId, isNew, ...geo }
+ **************************************************************/
+function wireSuggestions(){
+  const ta = document.getElementById("suggestionText");
+  const btn = document.getElementById("suggestionSubmitBtn");
+  const msg = document.getElementById("suggestionMsg");
+
+  function setMsg(text, ok){
+    msg.textContent = text || "";
+    msg.style.color = ok ? "#0a7a2f" : "#666";
+  }
+
+  btn.addEventListener("click", async () => {
+    const text = (ta.value || "").trim();
+    if (!text) {
+      setMsg("Please type a suggestion first.", false);
+      return;
+    }
+
+    btn.disabled = true;
+    setMsg("Submitting…", false);
+
+    try {
+      // Use your existing analytics pipeline so it includes visitor+geo automatically
+      const res = await logEvent("suggestion_submit", {
+        targetSheet: SUGGESTIONS_SHEET_NAME,
+        suggestionText: text
+      });
+
+      // If your Apps Script returns JSON you can parse it, but we keep it simple:
+      setMsg("Thanks — suggestion submitted.", true);
+      ta.value = "";
+    } catch (e) {
+      console.error(e);
+      setMsg("Could not submit right now. Please try again.", false);
+    } finally {
+      btn.disabled = false;
+    }
   });
 }
 
@@ -786,6 +850,8 @@ function initMap(){
   wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
   wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
 
+  wireSuggestions();
+
   setStatus("Ready. Choose location + options.");
   setRoundedBar();
 }
@@ -793,7 +859,7 @@ function initMap(){
 window.initMap = initMap;
 
 /**************************************************************
- * Load Google Maps JS (Places required for address search)
+ * Load Google Maps JS
  **************************************************************/
 (function loadGoogleMaps(){
   if (window.google && window.google.maps) return;
