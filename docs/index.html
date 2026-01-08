@@ -8,23 +8,22 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
 
-    /* Full-width search row */
+    /* Search row: input spans full remaining width */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
-    #addressInput { flex:1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
+    #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    /* Two-column layout: left (inputs + status + outputs), right (map) */
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(360px, 1fr) minmax(360px, 1fr);
-      gap: 14px;
-      align-items: start;
-    }
+    /* Two-column layout: left inputs/results, right map */
+    .main-grid { display:flex; gap:16px; align-items:flex-start; }
+    .left-panel { flex: 0 0 520px; max-width: 520px; width: 100%; }
+    .right-panel { flex: 1 1 auto; min-width: 320px; }
+
     @media (max-width: 980px){
-      .layout { grid-template-columns: 1fr; }
+      .main-grid { flex-direction: column; }
+      .left-panel { max-width: 100%; }
     }
 
-    #map { height: 520px; width: 100%; border:1px solid #ccc; border-radius:6px; }
+    #map { height: 520px; width: 100%; border:1px solid #ccc; border-radius:6px; margin-bottom:12px; }
     #coords { font-weight: bold; margin-bottom: 12px; }
 
     .option-block { padding:15px; border:1px solid #ddd; border-radius:6px; background:#fafafa; margin-bottom:14px; }
@@ -32,40 +31,24 @@
     .row label { font-weight:bold; display:block; margin-bottom:6px; }
 
     .option-buttons button{
-      padding:8px 12px; margin:4px;
-      border:1px solid #aaa; border-radius:4px;
-      background:#fff; cursor:pointer;
-      transition: background .15s, color .15s, border-color .15s;
+      padding:8px 12px; margin:4px; border:1px solid #aaa; border-radius:4px;
+      background:#fff; cursor:pointer; transition: background .15s, color .15s, border-color .15s;
     }
     .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    /* ✅ Status bar is back */
-    .status { padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; margin-bottom:14px; }
+    .status { padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; }
     .muted { color:#666; }
-
     .pill { display:inline-block; padding:3px 8px; border:1px solid #ddd; border-radius:999px; margin:2px; background:#f8f8f8; }
 
-    .sc-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 12px 0;
-      background: #fff;
-      font-size: 14px;
-    }
-    .sc-table th, .sc-table td {
-      border: 2px solid #000;
-      padding: 8px;
-      text-align: center;
-      vertical-align: middle;
-      white-space: nowrap;
-    }
+    .sc-table { width: 100%; border-collapse: collapse; margin: 12px 0; background: #fff; font-size: 14px; }
+    .sc-table th, .sc-table td { border: 2px solid #000; padding: 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
     .sc-table thead th { font-weight: 700; }
     .sc-table .left-head { width: 220px; text-align:left; }
     .sc-table .left-cell { text-align:left; font-weight:700; }
     .sc-table .subhead { font-weight: 700; }
 
-    /* Suggestions box (full width, bottom) */
-    .suggestions {
+    /* Suggestions block (full width at bottom) */
+    .suggestions-wrap{
       margin-top: 18px;
       padding: 14px;
       border: 1px solid #ddd;
@@ -73,16 +56,19 @@
       background: #fafafa;
       width: 100%;
     }
-    #suggestionText {
+    #suggestionText{
       width: 100%;
       min-height: 110px;
+      resize: vertical;
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      resize: vertical;
+      font-family: inherit;
+      font-size: 14px;
       box-sizing: border-box;
     }
-    #suggestionSubmitBtn{
+    #submitSuggestionBtn{
+      display: inline-block;
       margin-top: 10px;
       padding: 10px 14px;
       border: 1px solid #aaa;
@@ -90,803 +76,782 @@
       background: #fff;
       cursor: pointer;
     }
-    #suggestionMsg { margin-top: 8px; }
+    #suggestionMsg{ margin-top: 8px; }
   </style>
 </head>
 
 <body>
+  <h2>TS1170.5 site parameter finder</h2>
 
-<h2>TS1170.5 site parameter finder</h2>
+  <div class="search-wrap">
+    <input id="addressInput" placeholder="Search address (NZ only)" />
+    <button id="useMyLocationBtn" type="button">Use my location</button>
+  </div>
 
-<div class="search-wrap">
-  <input id="addressInput" placeholder="Search address (NZ only)" />
-  <button id="useMyLocationBtn" type="button">Use my location</button>
-</div>
+  <div class="main-grid">
+    <!-- LEFT: inputs + status + results -->
+    <div class="left-panel">
+      <div id="coords">Choose a location (search or click the map)</div>
 
-<div class="layout">
-  <!-- LEFT: inputs + status (below inputs) + outputs -->
-  <div>
-    <div id="coords">Choose a location (search or click the map)</div>
+      <div class="option-block">
+        <h3>Design Inputs</h3>
 
-    <div class="option-block">
-      <h3>Design Inputs</h3>
+        <div class="row">
+          <label>Site Class</label>
+          <div class="option-buttons" id="siteClassOptions">
+            <button type="button" data-value="I">I</button>
+            <button type="button" data-value="II">II</button>
+            <button type="button" data-value="III">III</button>
+            <button type="button" data-value="IV">IV</button>
+            <button type="button" data-value="V">V</button>
+            <button type="button" data-value="VI">VI</button>
+          </div>
+        </div>
 
-      <div class="row">
-        <label>Site Class</label>
-        <div class="option-buttons" id="siteClassOptions">
-          <button type="button" data-value="I">I</button>
-          <button type="button" data-value="II">II</button>
-          <button type="button" data-value="III">III</button>
-          <button type="button" data-value="IV">IV</button>
-          <button type="button" data-value="V">V</button>
-          <button type="button" data-value="VI">VI</button>
+        <div class="row">
+          <label>Importance Level</label>
+          <div class="option-buttons" id="importanceLevelOptions">
+            <button type="button" data-value="1">1</button>
+            <button type="button" data-value="2">2</button>
+            <button type="button" data-value="3">3</button>
+            <button type="button" data-value="4">4</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Design Working Life</label>
+          <div class="option-buttons" id="workingLifeOptions">
+            <button type="button" data-value="construction">Construction equipment</button>
+            <button type="button" data-value="lt6months">Less than 6 months</button>
+            <button type="button" data-value="5">5 years</button>
+            <button type="button" data-value="25">25 years</button>
+            <button type="button" data-value="50">50 years</button>
+            <button type="button" data-value="100">100 years or more</button>
+          </div>
         </div>
       </div>
 
-      <div class="row">
-        <label>Importance Level</label>
-        <div class="option-buttons" id="importanceLevelOptions">
-          <button type="button" data-value="1">1</button>
-          <button type="button" data-value="2">2</button>
-          <button type="button" data-value="3">3</button>
-          <button type="button" data-value="4">4</button>
-        </div>
-      </div>
-
-      <div class="row">
-        <label>Design Working Life</label>
-        <div class="option-buttons" id="workingLifeOptions">
-          <button type="button" data-value="construction">Construction equipment</button>
-          <button type="button" data-value="lt6months">Less than 6 months</button>
-          <button type="button" data-value="5">5 years</button>
-          <button type="button" data-value="25">25 years</button>
-          <button type="button" data-value="50">50 years</button>
-          <button type="button" data-value="100">100 years or more</button>
-        </div>
+      <div class="status">
+        <div><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
+        <div id="roundedCoordsBar" class="muted"></div>
+        <div id="stepInfo" class="muted"></div>
+        <div id="results"></div>
       </div>
     </div>
 
-    <!-- ✅ Status bar directly below Design Inputs -->
-    <div class="status">
-      <div><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
-      <div id="roundedCoordsBar" class="muted"></div>
-      <div id="stepInfo" class="muted"></div>
+    <!-- RIGHT: map -->
+    <div class="right-panel">
+      <div id="map"></div>
     </div>
-
-    <!-- Outputs (tables) below the status bar -->
-    <div id="results"></div>
   </div>
 
-  <!-- RIGHT: map -->
-  <div>
-    <div id="map"></div>
+  <!-- Suggestions: full-width at very bottom -->
+  <div class="suggestions-wrap">
+    <div style="font-weight:700; margin-bottom:8px;">Suggestions</div>
+    <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
+    <div>
+      <button id="submitSuggestionBtn" type="button">Submit</button>
+    </div>
+    <div id="suggestionMsg" class="muted"></div>
   </div>
-</div>
 
-<!-- Suggestions (full width at bottom) -->
-<div class="suggestions">
-  <h3>Suggestions</h3>
-  <textarea id="suggestionText" placeholder="Got an idea or found an issue? Drop it here…"></textarea>
-  <button id="suggestionSubmitBtn" type="button">Submit suggestion</button>
-  <div id="suggestionMsg" class="muted"></div>
-</div>
+  <!-- =========================================================
+    CSP-SAFE ANALYTICS MODULE
+    - Fetches coarse geo from /geo
+    - Posts to Apps Script using form-urlencoded payload=
+    - Exposes: window.SiteAnalytics.logEvent(name, extra)
+    - Exposes: window.SiteAnalytics.getVisitor()
+  ========================================================= -->
+  <script>
+    // Configure once
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx-EhAFBwzePEVis6XLepGjvdypLR1CK_ZstX3UJhtIcJvF1yCH9LIuB8NRkuF-r__s/exec";
+    window.GEO_URL = "/geo";
+    window.ANALYTICS_DEBUG = true; // set true while debugging
 
-<!-- =========================================================
-     CSP-SAFE ANALYTICS MODULE (single source of truth)
-========================================================= -->
-<script>
-  // Configure once
-  window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx-EhAFBwzePEVis6XLepGjvdypLR1CK_ZstX3UJhtIcJvF1yCH9LIuB8NRkuF-r__s/exec";
-  window.GEO_URL = "/geo";
-  window.ANALYTICS_DEBUG = true; // set true while debugging
+    (function () {
+      var VISITOR_KEY = "nz_tool_visitor_id";
 
-  (function () {
-    var VISITOR_KEY = "nz_tool_visitor_id"; // one key for everything
-
-    function dbg() {
-      if (!window.ANALYTICS_DEBUG) return;
-      console.log.apply(console, ["[analytics]"].concat([].slice.call(arguments)));
-    }
-
-    function getVisitor() {
-      var id = localStorage.getItem(VISITOR_KEY);
-      var isNew = false;
-
-      if (!id) {
-        isNew = true;
-        id = (window.crypto && crypto.randomUUID)
-          ? ("v_" + crypto.randomUUID())
-          : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
-        localStorage.setItem(VISITOR_KEY, id);
+      function dbg() {
+        if (!window.ANALYTICS_DEBUG) return;
+        console.log.apply(console, ["[analytics]"].concat([].slice.call(arguments)));
       }
-      return { id: id, isNew: isNew };
+
+      function getVisitor() {
+        var id = localStorage.getItem(VISITOR_KEY);
+        var isNew = false;
+        if (!id) {
+          isNew = true;
+          id = (window.crypto && crypto.randomUUID)
+            ? ("v_" + crypto.randomUUID())
+            : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+          localStorage.setItem(VISITOR_KEY, id);
+        }
+        return { id: id, isNew: isNew };
+      }
+
+      function safeGeoObject(g) {
+        return {
+          geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
+          geoCountry: (g && g.geoCountry) ? g.geoCountry : "",
+          geoRegion: (g && g.geoRegion) ? g.geoRegion : "",
+          geoCity: (g && g.geoCity) ? g.geoCity : ""
+        };
+      }
+
+      function getGeo() {
+        var url = window.GEO_URL || "/geo";
+        return fetch(url, { cache: "no-store" })
+          .then(function (r) {
+            dbg("GET /geo status:", r.status);
+            return r.text().then(function (t) {
+              dbg("GET /geo raw:", t);
+              try { return safeGeoObject(JSON.parse(t)); }
+              catch (e) { dbg("GET /geo parse error:", e); return safeGeoObject(null); }
+            });
+          })
+          .catch(function (e) {
+            dbg("GET /geo failed:", e);
+            return safeGeoObject(null);
+          });
+      }
+
+      function postToAppsScript(payloadObj) {
+        var url = window.WEB_APP_URL;
+        if (!url || url.indexOf("script.google.com") === -1) {
+          dbg("WEB_APP_URL missing/invalid:", url);
+          return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
+        }
+
+        var body = new URLSearchParams();
+        body.set("payload", JSON.stringify(payloadObj));
+
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body: body.toString()
+        })
+          .then(function (res) {
+            return res.text().then(function (text) {
+              dbg("POST status:", res.status);
+              dbg("POST response:", text);
+              return { status: res.status, text: text };
+            });
+          })
+          .catch(function (e) {
+            dbg("POST failed:", e);
+            return { status: 0, text: String(e) };
+          });
+      }
+
+      function logEvent(eventName, extra) {
+        if (!extra) extra = {};
+
+        var dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
+        if (dnt) {
+          dbg("DNT enabled; skip event:", eventName);
+          return Promise.resolve({ status: 0, text: "DNT enabled" });
+        }
+
+        var v = getVisitor();
+        return getGeo().then(function (geo) {
+          var payload = {
+            visitorId: v.id,
+            isNew: v.isNew,
+            event: String(eventName || ""),
+            page: location.pathname || "",
+            userAgent: navigator.userAgent || "",
+            tsClient: new Date().toISOString(),
+            geoProvider: geo.geoProvider,
+            geoCountry: geo.geoCountry,
+            geoRegion: geo.geoRegion,
+            geoCity: geo.geoCity
+          };
+
+          for (var k in extra) {
+            if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k];
+          }
+
+          dbg("payload:", payload);
+          return postToAppsScript(payload);
+        });
+      }
+
+      window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
+    })();
+  </script>
+
+  <script>
+    /**************************************************************
+     * CONFIG
+     **************************************************************/
+    window.GEO_URL = "geo"; // not "/geo"
+    const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
+    const SHEET1_NAME = "Sheet1";
+    const SHEET2_NAME = "Sheet2";
+
+    // ✅ Your Google Maps API key
+    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+
+    // Sheet1: A=Lat, B=Lng, C=APOE
+    const SHEET1_LAT_COL_INDEX = 0;
+    const SHEET1_LNG_COL_INDEX = 1;
+    const SHEET1_APOE_COL_INDEX = 2;
+
+    // Site class column indices in Sheet1
+    const SHEET1_SITECLASS_COLS = {
+      I:   { PGA: 3,  Sa: 4,  Tc: 5  },
+      II:  { PGA: 6,  Sa: 7,  Tc: 8  },
+      III: { PGA: 9,  Sa: 10, Tc: 11 },
+      IV:  { PGA: 12, Sa: 13, Tc: 14 },
+      V:   { PGA: 15, Sa: 16, Tc: 17 },
+      VI:  { PGA: 18, Sa: 19, Tc: 20 },
+    };
+
+    // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
+    const SHEET2_WORKINGLIFE_COL_INDEX = 0;
+    const SHEET2_IMPORTANCE_COL_INDEX = 1;
+    const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
+
+    // Force table titles (ULS/SLS1/SLS2) regardless of Sheet2 header row
+    const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
+
+    // Option mapping (UI codes -> Sheet2 labels)
+    const WORKING_LIFE_LABEL = {
+      construction: "Construction equipment",
+      lt6months: "Less than 6 months",
+      "5": "5 years",
+      "25": "25 years",
+      "50": "50 years",
+      "100": "100 years or more"
+    };
+
+    /**************************************************************
+     * STATE
+     **************************************************************/
+    let map, marker, autocomplete;
+    let selectedLat = null, selectedLng = null;
+    let selectedSiteClass = "";
+    let selectedImportanceLevel = "";
+    let selectedWorkingLife = "";
+    let matchedSheet1Rows = [];
+    let sheet2MatchOptions = [];
+
+    /**************************************************************
+     * ANALYTICS WRAPPER
+     **************************************************************/
+    const pageStartMs = Date.now();
+
+    function round1(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return null;
+      return Math.round(num * 10) / 10;
     }
 
-    function safeGeoObject(g) {
+    function analyticsExtraBase() {
+      const lat = selectedLat;
+      const lng = selectedLng;
       return {
-        geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
-        geoCountry:  (g && g.geoCountry)  ? g.geoCountry  : "",
-        geoRegion:   (g && g.geoRegion)   ? g.geoRegion   : "",
-        geoCity:     (g && g.geoCity)     ? g.geoCity     : ""
+        siteClass: selectedSiteClass || "",
+        importanceLevel: selectedImportanceLevel || "",
+        workingLife: selectedWorkingLife || "",
+        roundedLatLng: (Number.isFinite(lat) && Number.isFinite(lng))
+          ? `${round1(lat)},${round1(lng)}`
+          : ""
       };
     }
 
-    function getGeo() {
-      var url = window.GEO_URL || "/geo";
-      return fetch(url, { cache: "no-store" })
-        .then(function (r) {
-          dbg("GET /geo status:", r.status);
-          return r.text().then(function (t) {
-            dbg("GET /geo raw:", t);
-            try {
-              return safeGeoObject(JSON.parse(t));
-            } catch (e) {
-              dbg("GET /geo parse error:", e);
-              return safeGeoObject(null);
-            }
-          });
-        })
-        .catch(function (e) {
-          dbg("GET /geo failed:", e);
-          return safeGeoObject(null);
-        });
+    function logEvent(eventName, extra = {}) {
+      if (!window.SiteAnalytics || typeof window.SiteAnalytics.logEvent !== "function") return;
+      return window.SiteAnalytics.logEvent(eventName, Object.assign({}, analyticsExtraBase(), extra));
     }
 
-    function postToAppsScript(payloadObj) {
-      var url = window.WEB_APP_URL;
-      if (!url || url.indexOf("script.google.com") === -1) {
-        dbg("WEB_APP_URL missing/invalid:", url);
-        return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
-      }
+    window.addEventListener("load", () => { logEvent("page_load", {}); });
+    window.addEventListener("beforeunload", () => {
+      const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
+      logEvent("page_exit", { timeOnPageSeconds: seconds });
+    });
 
-      var body = new URLSearchParams();
-      body.set("payload", JSON.stringify(payloadObj));
+    /**************************************************************
+     * HELPERS
+     **************************************************************/
+    function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
+    function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
+    function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
 
-      return fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
-      })
-      .then(function (res) {
-        return res.text().then(function (text) {
-          dbg("POST status:", res.status);
-          dbg("POST response:", text);
-          return { status: res.status, text: text };
-        });
-      })
-      .catch(function (e) {
-        dbg("POST failed:", e);
-        return { status: 0, text: String(e) };
+    function eqLoose(a, b){
+      const sa = normalize(a);
+      const sb = normalize(b);
+      if (sa === sb) return true;
+      const na = Number(sa), nb = Number(sb);
+      if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
+      return sa.toLowerCase() === sb.toLowerCase();
+    }
+
+    function safeCell(v) {
+      if (v === null || v === undefined || String(v).trim() === "") return "";
+      const n = Number(v);
+      return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
+    }
+
+    function setRoundedBar(){
+      const el = document.getElementById("roundedCoordsBar");
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.textContent = ""; return; }
+      const rLat = round1(selectedLat);
+      const rLng = round1(selectedLng);
+      el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
+    }
+
+    function setMarker(lat,lng){
+      const pos = {lat, lng};
+      if(marker) marker.setMap(null);
+      marker = new google.maps.Marker({ map, position: pos });
+      map.panTo(pos);
+    }
+
+    function isOneOver500(apoe){
+      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
+      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
+    }
+
+    /**************************************************************
+     * GOOGLE SHEETS (GVIZ)
+     **************************************************************/
+    function gvizUrl(sheetName, query){
+      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
+      const params = new URLSearchParams();
+      params.set("sheet", sheetName);
+      params.set("tq", query);
+      return `${base}?${params.toString()}`;
+    }
+
+    async function fetchSheetAs2DArray(sheetName, query){
+      const url = gvizUrl(sheetName, query);
+      const res = await fetch(url);
+      const text = await res.text();
+      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+      const data = JSON.parse(jsonText);
+      const cols = data.table.cols.length;
+      const rows = data.table.rows || [];
+      return rows.map(r => {
+        const arr = new Array(cols).fill(null);
+        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
+        return arr;
       });
     }
 
-    function logEvent(eventName, extra) {
-      if (!extra) extra = {};
+    /**************************************************************
+     * STEP 1
+     **************************************************************/
+    async function step1_findAllSheet1RowsMatching1dp(){
+      matchedSheet1Rows = [];
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+      setRoundedBar();
+      setStatus("Step 1: Matching Sheet1 rows by lat/lng to 1 decimal point…");
 
-      var dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
-      if (dnt) {
-        dbg("DNT enabled; skip event:", eventName);
-        return Promise.resolve({ status: 0, text: "DNT enabled" });
+      const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
+      if (!rows.length) { setStatus("No rows found in Sheet1 (check sharing/tab name)."); return; }
+
+      const targetLat1 = round1(selectedLat);
+      const targetLng1 = round1(selectedLng);
+
+      for (const row of rows) {
+        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
+        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) matchedSheet1Rows.push({ row });
       }
 
-      var v = getVisitor();
+      setStatus(`Step 1 complete. Found ${matchedSheet1Rows.length} Sheet1 row(s) matching ${targetLat1.toFixed(1)}, ${targetLng1.toFixed(1)}.`);
+    }
 
-      return getGeo().then(function (geo) {
-        var payload = {
-          visitorId: v.id,
-          isNew: v.isNew,
-          event: String(eventName || ""),
-          page: location.pathname || "",
-          userAgent: navigator.userAgent || "",
-          tsClient: new Date().toISOString(),
+    /**************************************************************
+     * STEP 2
+     **************************************************************/
+    async function step2_getTitlesAndStringsFromSheet2(){
+      sheet2MatchOptions = [];
+      if (!selectedWorkingLife || !selectedImportanceLevel) return;
 
-          geoProvider: geo.geoProvider,
-          geoCountry: geo.geoCountry,
-          geoRegion: geo.geoRegion,
-          geoCity: geo.geoCity
-        };
+      setStatus("Step 2: Looking up selected options in Sheet2…");
+      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
+      if (!sheet2.length) { setStatus("Sheet2 empty / not accessible."); return; }
 
-        for (var k in extra) {
-          if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k];
+      const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
+      const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
+      const headerish = firstA.includes("working") || firstB.includes("importance");
+
+      const headerRow = headerish ? sheet2[0] : null;
+      const dataRows = headerish ? sheet2.slice(1) : sheet2;
+
+      const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+
+      const matchRow = dataRows.find(r =>
+        eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
+        eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
+      );
+
+      if (!matchRow) { sheet2MatchOptions = []; setStatus("No matching row in Sheet2 for selected options."); return; }
+
+      sheet2MatchOptions = SHEET2_STRING_COLS
+        .map((colIdx) => {
+          const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
+          const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
+          const value = normalize(matchRow[colIdx]);
+          return { title, value };
+        })
+        .filter(x => x.value.length > 0);
+
+      setStatus("Step 2 complete.");
+    }
+
+    /**************************************************************
+     * STEP 3
+     **************************************************************/
+    function step3_filterMatchedSheet1Rows(){
+      if (!matchedSheet1Rows.length) return [];
+      if (!sheet2MatchOptions.length) return [];
+
+      const out = [];
+      const seen = new Set(); // apoe|title|siteclass
+
+      for (const item of matchedSheet1Rows) {
+        const sheet1Row = item.row;
+        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
+        if (!apoe) continue;
+
+        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
+        if (!match) continue;
+
+        const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        out.push({ sheet1Row, apoe, matchTitle: match.title });
+      }
+
+      const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
+      if (hasULS) {
+        const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
+        if (oneOver500Item && oneOver500Item.row) {
+          const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
+          const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
+          }
+        }
+      }
+
+      return out;
+    }
+
+    /**************************************************************
+     * TABLE
+     **************************************************************/
+    function buildThreeRowTable(sheet1Row, apoe, matchTitle){
+      const sc = selectedSiteClass;
+      const idx = SHEET1_SITECLASS_COLS[sc];
+      const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
+      const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
+      const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
+
+      return `
+        <table class="sc-table">
+          <thead>
+            <tr>
+              <th class="left-head">${topLeft}</th>
+              <th colspan="3">Site Class ${sc}</th>
+            </tr>
+            <tr>
+              <th class="subhead left-head">apoe</th>
+              <th class="subhead">PGA</th>
+              <th class="subhead">Sa,s</th>
+              <th class="subhead">Tc</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="left-cell">${apoe || "(APOE blank)"}</td>
+              <td>${pga}</td>
+              <td>${sa}</td>
+              <td>${tc}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    /**************************************************************
+     * RENDER + RECALC
+     **************************************************************/
+    function render(filtered){
+      const resultsEl = document.getElementById("results");
+      const infoBits = [];
+
+      if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        const tLat1 = round1(selectedLat);
+        const tLng1 = round1(selectedLng);
+        infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
+        infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
+      }
+
+      if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
+      if (selectedWorkingLife) {
+        const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+        infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
+      }
+      if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
+
+      if (sheet2MatchOptions.length) {
+        infoBits.push(
+          `Sheet2 candidates (C/D/E): ` +
+          sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join("")
+        );
+      } else if (selectedWorkingLife && selectedImportanceLevel) {
+        infoBits.push(`<span class="muted">Sheet2 candidates (C/D/E): (none found)</span>`);
+      }
+
+      infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
+      setInfo(infoBits.join("<br>"));
+
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`; return; }
+      if (!selectedSiteClass) { resultsEl.innerHTML = `<div class="muted">Select Site Class.</div>`; return; }
+      if (!selectedWorkingLife || !selectedImportanceLevel) { resultsEl.innerHTML = `<div class="muted">Select Working Life and Importance Level.</div>`; return; }
+      if (!sheet2MatchOptions.length) { resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection.</div>`; return; }
+      if (!matchedSheet1Rows.length) {
+        resultsEl.innerHTML = `
+          <div><strong>No Sheet1 rows matched</strong></div>
+          <div class="muted">No rows in Sheet1 had lat/lng matching your selected location rounded to 1 decimal point.</div>
+        `;
+        return;
+      }
+      if (!filtered.length) {
+        resultsEl.innerHTML = `
+          <div><strong>No matches found</strong></div>
+          <div class="muted">Rows matched the 1dp lat/lng bucket, but none had APOE matching Sheet2 C/D/E strings.</div>
+        `;
+        return;
+      }
+
+      resultsEl.innerHTML = filtered.map(x => buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)).join("");
+    }
+
+    async function recalc(){
+      try {
+        setRoundedBar();
+        await step1_findAllSheet1RowsMatching1dp();
+        await step2_getTitlesAndStringsFromSheet2();
+        const filtered = step3_filterMatchedSheet1Rows();
+        setStatus("Done.");
+        render(filtered);
+        await logEvent("results_generated", { matchedSheet1RowsCount: matchedSheet1Rows.length, displayedTablesCount: filtered.length });
+      } catch (err) {
+        console.error(err);
+        setStatus("Error (check console).");
+        document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
+        await logEvent("error", { message: String(err && err.message ? err.message : err) });
+      }
+    }
+
+    /**************************************************************
+     * BUTTON WIRING
+     **************************************************************/
+    function wireSingleSelectButtons(containerId, setter, buttonType){
+      const buttons = document.querySelectorAll(`#${containerId} button`);
+      buttons.forEach(btn => {
+        btn.addEventListener("click", async () => {
+          buttons.forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          setter(btn.dataset.value);
+          await logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
+          await recalc();
+        });
+      });
+    }
+
+    /**************************************************************
+     * SUGGESTIONS SUBMIT (writes to Sheet6 via Apps Script)
+     **************************************************************/
+    function wireSuggestions(){
+      const textarea = document.getElementById("suggestionText");
+      const btn = document.getElementById("submitSuggestionBtn");
+      const msg = document.getElementById("suggestionMsg");
+
+      btn.addEventListener("click", async () => {
+        const text = (textarea.value || "").trim();
+        msg.textContent = "";
+
+        if (!text) {
+          msg.textContent = "Please type a suggestion first.";
+          return;
         }
 
-        dbg("payload:", payload);
-        return postToAppsScript(payload);
+        btn.disabled = true;
+        btn.textContent = "Submitting…";
+
+        try {
+          const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"", isNew:false };
+
+          const payload = Object.assign({}, analyticsExtraBase(), {
+            event: "suggestion_submit",
+            suggestionText: text,
+            visitorId: v.id || "",
+            isNew: !!v.isNew,
+            page: location.pathname || "",
+            userAgent: navigator.userAgent || "",
+            tsClient: new Date().toISOString()
+          });
+
+          // Use same transport as analytics (form-urlencoded payload=JSON)
+          const body = new URLSearchParams();
+          body.set("payload", JSON.stringify(payload));
+
+          const res = await fetch(window.WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            body: body.toString()
+          });
+
+          const t = await res.text();
+
+          if (!res.ok) {
+            msg.textContent = `Submit failed (${res.status}).`;
+            console.warn("suggestion submit response:", t);
+            await logEvent("suggestion_failed", { httpStatus: res.status });
+            return;
+          }
+
+          textarea.value = "";
+          msg.textContent = "Thanks — suggestion submitted.";
+          await logEvent("suggestion_submitted", {});
+        } catch (e) {
+          console.error(e);
+          msg.textContent = "Submit failed (check console).";
+          await logEvent("suggestion_failed", { message: String(e) });
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Submit";
+        }
       });
     }
 
-    window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
-  })();
-</script>
-
-<script>
-/**************************************************************
- * CONFIG
- **************************************************************/
-window.GEO_URL = "geo"; // not "/geo"
-
-const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
-const SHEET1_NAME = "Sheet1";
-const SHEET2_NAME = "Sheet2";
-
-// ✅ Your Google Maps API key
-const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
-
-// ✅ Suggestions destination
-const SUGGESTIONS_SHEET_NAME = "Sheet6"; // per your request
-
-// Sheet1: A=Lat, B=Lng, C=APOE
-const SHEET1_LAT_COL_INDEX = 0;
-const SHEET1_LNG_COL_INDEX = 1;
-const SHEET1_APOE_COL_INDEX = 2;
-
-// Site class column indices in Sheet1
-const SHEET1_SITECLASS_COLS = {
-  I:   { PGA: 3,  Sa: 4,  Tc: 5  },
-  II:  { PGA: 6,  Sa: 7,  Tc: 8  },
-  III: { PGA: 9,  Sa: 10, Tc: 11 },
-  IV:  { PGA: 12, Sa: 13, Tc: 14 },
-  V:   { PGA: 15, Sa: 16, Tc: 17 },
-  VI:  { PGA: 18, Sa: 19, Tc: 20 },
-};
-
-// Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
-const SHEET2_WORKINGLIFE_COL_INDEX = 0;
-const SHEET2_IMPORTANCE_COL_INDEX  = 1;
-const SHEET2_STRING_COLS = [2, 3, 4]; // C, D, E
-
-const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
-
-const WORKING_LIFE_LABEL = {
-  construction: "Construction equipment",
-  lt6months: "Less than 6 months",
-  "5": "5 years",
-  "25": "25 years",
-  "50": "50 years",
-  "100": "100 years or more"
-};
-
-/**************************************************************
- * STATE
- **************************************************************/
-let map, marker, autocomplete;
-let selectedLat = null, selectedLng = null;
-
-let selectedSiteClass = "";
-let selectedImportanceLevel = "";
-let selectedWorkingLife = "";
-
-let matchedSheet1Rows = [];
-let sheet2MatchOptions = [];
-
-/**************************************************************
- * ANALYTICS WRAPPER
- **************************************************************/
-const pageStartMs = Date.now();
-
-function round1(n){
-  const num = Number(n);
-  if (!Number.isFinite(num)) return null;
-  return Math.round(num * 10) / 10;
-}
-function analyticsExtraBase() {
-  const lat = selectedLat;
-  const lng = selectedLng;
-
-  return {
-    siteClass: selectedSiteClass || "",
-    importanceLevel: selectedImportanceLevel || "",
-    workingLife: selectedWorkingLife || "",
-    roundedLatLng: (Number.isFinite(lat) && Number.isFinite(lng))
-      ? `${round1(lat)},${round1(lng)}`
-      : ""
-  };
-}
-function logEvent(eventName, extra = {}) {
-  if (!window.SiteAnalytics || typeof window.SiteAnalytics.logEvent !== "function") return;
-  return window.SiteAnalytics.logEvent(eventName, Object.assign({}, analyticsExtraBase(), extra));
-}
-window.addEventListener("load", () => logEvent("page_load", {}));
-window.addEventListener("beforeunload", () => {
-  const seconds = Math.max(0, Math.round((Date.now() - pageStartMs) / 1000));
-  logEvent("page_exit", { timeOnPageSeconds: seconds });
-});
-
-/**************************************************************
- * HELPERS
- **************************************************************/
-function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
-function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
-
-function normalize(v){
-  if (v === null || v === undefined) return "";
-  return String(v).trim();
-}
-function eqLoose(a, b){
-  const sa = normalize(a);
-  const sb = normalize(b);
-  if (sa === sb) return true;
-  const na = Number(sa), nb = Number(sb);
-  if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
-  return sa.toLowerCase() === sb.toLowerCase();
-}
-function safeCell(v) {
-  if (v === null || v === undefined || String(v).trim() === "") return "";
-  const n = Number(v);
-  return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
-}
-function setRoundedBar(){
-  const el = document.getElementById("roundedCoordsBar");
-  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-    el.textContent = "";
-    return;
-  }
-  const rLat = round1(selectedLat);
-  const rLng = round1(selectedLng);
-  el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
-}
-function setMarker(lat,lng){
-  const pos = {lat, lng};
-  if(marker) marker.setMap(null);
-  marker = new google.maps.Marker({ map, position: pos });
-  map.panTo(pos);
-}
-function isOneOver500(apoe){
-  const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
-  return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
-}
-
-/**************************************************************
- * GOOGLE SHEETS (GVIZ)
- **************************************************************/
-function gvizUrl(sheetName, query){
-  const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
-  const params = new URLSearchParams();
-  params.set("sheet", sheetName);
-  params.set("tq", query);
-  return `${base}?${params.toString()}`;
-}
-async function fetchSheetAs2DArray(sheetName, query){
-  const url = gvizUrl(sheetName, query);
-  const res = await fetch(url);
-  const text = await res.text();
-
-  const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-  const data = JSON.parse(jsonText);
-
-  const cols = data.table.cols.length;
-  const rows = data.table.rows || [];
-
-  return rows.map(r => {
-    const arr = new Array(cols).fill(null);
-    (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
-    return arr;
-  });
-}
-
-/**************************************************************
- * STEP 1
- **************************************************************/
-async function step1_findAllSheet1RowsMatching1dp(){
-  matchedSheet1Rows = [];
-  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
-
-  setRoundedBar();
-  setStatus("Step 1: Matching Sheet1 rows by lat/lng to 1 decimal point…");
-
-  const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
-  if (!rows.length) {
-    setStatus("No rows found in Sheet1 (check sharing/tab name).");
-    return;
-  }
-
-  const targetLat1 = round1(selectedLat);
-  const targetLng1 = round1(selectedLng);
-
-  for (const row of rows) {
-    const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
-    const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-    if (round1(lat) === targetLat1 && round1(lng) === targetLng1) {
-      matchedSheet1Rows.push({ row });
-    }
-  }
-
-  setStatus(`Step 1 complete. Found ${matchedSheet1Rows.length} Sheet1 row(s) matching ${targetLat1.toFixed(1)}, ${targetLng1.toFixed(1)}.`);
-}
-
-/**************************************************************
- * STEP 2
- **************************************************************/
-async function step2_getTitlesAndStringsFromSheet2(){
-  sheet2MatchOptions = [];
-  if (!selectedWorkingLife || !selectedImportanceLevel) return;
-
-  setStatus("Step 2: Looking up selected options in Sheet2…");
-
-  const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-  if (!sheet2.length) {
-    setStatus("Sheet2 empty / not accessible.");
-    return;
-  }
-
-  const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
-  const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
-  const headerish = firstA.includes("working") || firstB.includes("importance");
-
-  const headerRow = headerish ? sheet2[0] : null;
-  const dataRows = headerish ? sheet2.slice(1) : sheet2;
-
-  const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-
-  const matchRow = dataRows.find(r =>
-    eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
-    eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
-  );
-
-  if (!matchRow) {
-    sheet2MatchOptions = [];
-    setStatus("No matching row in Sheet2 for selected options.");
-    return;
-  }
-
-  sheet2MatchOptions = SHEET2_STRING_COLS
-    .map((colIdx) => {
-      const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
-      const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
-      const value = normalize(matchRow[colIdx]);
-      return { title, value };
-    })
-    .filter(x => x.value.length > 0);
-
-  setStatus("Step 2 complete.");
-}
-
-/**************************************************************
- * STEP 3
- **************************************************************/
-function step3_filterMatchedSheet1Rows(){
-  if (!matchedSheet1Rows.length) return [];
-  if (!sheet2MatchOptions.length) return [];
-
-  const out = [];
-  const seen = new Set();
-
-  for (const item of matchedSheet1Rows) {
-    const sheet1Row = item.row;
-    const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
-    if (!apoe) continue;
-
-    const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
-    if (!match) continue;
-
-    const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    out.push({ sheet1Row, apoe, matchTitle: match.title });
-  }
-
-  const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
-  if (hasULS) {
-    const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
-    if (oneOver500Item && oneOver500Item.row) {
-      const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
-      const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
-      }
-    }
-  }
-
-  return out;
-}
-
-/**************************************************************
- * TABLE
- **************************************************************/
-function buildThreeRowTable(sheet1Row, apoe, matchTitle){
-  const sc = selectedSiteClass;
-  const idx = SHEET1_SITECLASS_COLS[sc];
-
-  const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
-  const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
-  const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
-
-  const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
-
-  return `
-    <table class="sc-table">
-      <thead>
-        <tr>
-          <th class="left-head">${topLeft}</th>
-          <th colspan="3">Site Class ${sc}</th>
-        </tr>
-        <tr>
-          <th class="subhead left-head">apoe</th>
-          <th class="subhead">PGA</th>
-          <th class="subhead">Sa,s</th>
-          <th class="subhead">Tc</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="left-cell">${apoe || "(APOE blank)"}</td>
-          <td>${pga}</td>
-          <td>${sa}</td>
-          <td>${tc}</td>
-        </tr>
-      </tbody>
-    </table>
-  `;
-}
-
-/**************************************************************
- * RENDER
- **************************************************************/
-function render(filtered){
-  const resultsEl = document.getElementById("results");
-
-  const infoBits = [];
-  if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-    const tLat1 = round1(selectedLat);
-    const tLng1 = round1(selectedLng);
-    infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
-    infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
-  }
-  if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
-  if (selectedWorkingLife) {
-    const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-    infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
-  }
-  if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
-  if (sheet2MatchOptions.length) {
-    infoBits.push(`Sheet2 candidates (C/D/E): ` + sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join(""));
-  } else if (selectedWorkingLife && selectedImportanceLevel) {
-    infoBits.push(`<span class="muted">Sheet2 candidates (C/D/E): (none found)</span>`);
-  }
-  infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
-  setInfo(infoBits.join("<br>"));
-
-  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-    resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`;
-    return;
-  }
-  if (!selectedSiteClass) {
-    resultsEl.innerHTML = `<div class="muted">Select Site Class.</div>`;
-    return;
-  }
-  if (!selectedWorkingLife || !selectedImportanceLevel) {
-    resultsEl.innerHTML = `<div class="muted">Select Working Life and Importance Level.</div>`;
-    return;
-  }
-  if (!sheet2MatchOptions.length) {
-    resultsEl.innerHTML = `<div class="muted">No Sheet2 strings found for that selection (check Sheet2 A/B values and the working-life mapping).</div>`;
-    return;
-  }
-  if (!matchedSheet1Rows.length) {
-    resultsEl.innerHTML = `<div><strong>No Sheet1 rows matched</strong></div>
-      <div class="muted">No rows in Sheet1 had lat/lng matching your selected location rounded to 1 decimal point.</div>`;
-    return;
-  }
-  if (!filtered.length) {
-    resultsEl.innerHTML = `<div><strong>No matches found</strong></div>
-      <div class="muted">Rows matched the 1dp lat/lng bucket, but none had APOE matching Sheet2 C/D/E strings.</div>`;
-    return;
-  }
-
-  resultsEl.innerHTML = filtered.map(x => buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)).join("");
-}
-
-async function recalc(){
-  try {
-    setRoundedBar();
-    await step1_findAllSheet1RowsMatching1dp();
-    await step2_getTitlesAndStringsFromSheet2();
-
-    const filtered = step3_filterMatchedSheet1Rows();
-
-    setStatus("Done.");
-    render(filtered);
-
-    await logEvent("results_generated", {
-      matchedSheet1RowsCount: matchedSheet1Rows.length,
-      displayedTablesCount: filtered.length
-    });
-  } catch (err) {
-    console.error(err);
-    setStatus("Error (check console).");
-    document.getElementById("results").innerHTML = `<div class="muted">Error occurred. See console.</div>`;
-    await logEvent("error", { message: String(err && err.message ? err.message : err) });
-  }
-}
-
-/**************************************************************
- * BUTTON WIRING
- **************************************************************/
-function wireSingleSelectButtons(containerId, setter, buttonType){
-  const buttons = document.querySelectorAll(`#${containerId} button`);
-  buttons.forEach(btn => {
-    btn.addEventListener("click", async () => {
-      buttons.forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      setter(btn.dataset.value);
-
-      await logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
-      await recalc();
-    });
-  });
-}
-
-/**************************************************************
- * SUGGESTIONS WIRING (posts to Apps Script)
- **************************************************************/
-function wireSuggestions(){
-  const ta = document.getElementById("suggestionText");
-  const btn = document.getElementById("suggestionSubmitBtn");
-  const msg = document.getElementById("suggestionMsg");
-
-  function setMsg(text, ok){
-    msg.textContent = text || "";
-    msg.style.color = ok ? "#0a7a2f" : "#666";
-  }
-
-  btn.addEventListener("click", async () => {
-    const text = (ta.value || "").trim();
-    if (!text) {
-      setMsg("Please type a suggestion first.", false);
-      return;
-    }
-
-    btn.disabled = true;
-    setMsg("Submitting…", false);
-
-    try {
-      await logEvent("suggestion_submit", {
-        targetSheet: SUGGESTIONS_SHEET_NAME,
-        suggestionText: text
+    /**************************************************************
+     * MAP + AUTOCOMPLETE
+     **************************************************************/
+    function initMap(){
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: -41.2865, lng: 174.7762 },
+        zoom: 6
       });
 
-      setMsg("Thanks — suggestion submitted.", true);
-      ta.value = "";
-    } catch (e) {
-      console.error(e);
-      setMsg("Could not submit right now. Please try again.", false);
-    } finally {
-      btn.disabled = false;
-    }
-  });
-}
+      map.addListener("click", async (e) => {
+        selectedLat = e.latLng.lat();
+        selectedLng = e.latLng.lng();
+        setMarker(selectedLat, selectedLng);
 
-/**************************************************************
- * MAP + AUTOCOMPLETE
- **************************************************************/
-function initMap(){
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: -41.2865, lng: 174.7762 },
-    zoom: 6
-  });
+        document.getElementById("coords").textContent = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+        setRoundedBar();
 
-  map.addListener("click", async (e) => {
-    selectedLat = e.latLng.lat();
-    selectedLng = e.latLng.lng();
-    setMarker(selectedLat, selectedLng);
+        await logEvent("location_selected", {
+          locationMethod: "map_click",
+          lat: selectedLat, lng: selectedLng,
+          roundedLat: round1(selectedLat), roundedLng: round1(selectedLng)
+        });
 
-    document.getElementById("coords").textContent =
-      `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+        await recalc();
+      });
 
-    setRoundedBar();
+      autocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("addressInput"),
+        { componentRestrictions: { country: "nz" } }
+      );
 
-    await logEvent("location_selected", {
-      locationMethod: "map_click",
-      lat: selectedLat,
-      lng: selectedLng,
-      roundedLat: round1(selectedLat),
-      roundedLng: round1(selectedLng)
-    });
+      autocomplete.addListener("place_changed", async () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) {
+          setStatus("No geometry for that address. Try another.");
+          await logEvent("location_failed", { locationMethod: "address_search" });
+          return;
+        }
 
-    await recalc();
-  });
+        selectedLat = place.geometry.location.lat();
+        selectedLng = place.geometry.location.lng();
+        setMarker(selectedLat, selectedLng);
+        map.setZoom(14);
 
-  autocomplete = new google.maps.places.Autocomplete(
-    document.getElementById("addressInput"),
-    { componentRestrictions: { country: "nz" } }
-  );
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
-  autocomplete.addListener("place_changed", async () => {
-    const place = autocomplete.getPlace();
-    if (!place.geometry || !place.geometry.location) {
-      setStatus("No geometry for that address. Try another.");
-      await logEvent("location_failed", { locationMethod: "address_search" });
-      return;
-    }
+        setRoundedBar();
 
-    selectedLat = place.geometry.location.lat();
-    selectedLng = place.geometry.location.lng();
-    setMarker(selectedLat, selectedLng);
-    map.setZoom(14);
+        await logEvent("location_selected", {
+          locationMethod: "address_search",
+          address: place.formatted_address || "",
+          lat: selectedLat, lng: selectedLng,
+          roundedLat: round1(selectedLat), roundedLng: round1(selectedLng)
+        });
 
-    document.getElementById("coords").textContent =
-      `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
+        await recalc();
+      });
 
-    setRoundedBar();
+      document.getElementById("useMyLocationBtn").addEventListener("click", () => {
+        if (!navigator.geolocation) {
+          setStatus("Geolocation not supported.");
+          logEvent("location_failed", { locationMethod: "my_location", reason: "no_geolocation" });
+          return;
+        }
 
-    await logEvent("location_selected", {
-      locationMethod: "address_search",
-      address: place.formatted_address || "",
-      lat: selectedLat,
-      lng: selectedLng,
-      roundedLat: round1(selectedLat),
-      roundedLng: round1(selectedLng)
-    });
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          selectedLat = pos.coords.latitude;
+          selectedLng = pos.coords.longitude;
+          setMarker(selectedLat, selectedLng);
+          map.setZoom(14);
 
-    await recalc();
-  });
+          document.getElementById("coords").textContent =
+            `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
-  document.getElementById("useMyLocationBtn").addEventListener("click", () => {
-    if (!navigator.geolocation) {
-      setStatus("Geolocation not supported.");
-      logEvent("location_failed", { locationMethod: "my_location", reason: "no_geolocation" });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      selectedLat = pos.coords.latitude;
-      selectedLng = pos.coords.longitude;
-      setMarker(selectedLat, selectedLng);
-      map.setZoom(14);
+          setRoundedBar();
 
-      document.getElementById("coords").textContent =
-        `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+          await logEvent("location_selected", {
+            locationMethod: "my_location",
+            lat: selectedLat, lng: selectedLng,
+            roundedLat: round1(selectedLat), roundedLng: round1(selectedLng)
+          });
 
+          await recalc();
+        }, async () => {
+          setStatus("Could not get your location (permission denied?).");
+          await logEvent("location_failed", { locationMethod: "my_location", reason: "permission_denied" });
+        });
+      });
+
+      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
+      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
+      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
+
+      wireSuggestions();
+
+      setStatus("Ready. Choose location + options.");
       setRoundedBar();
+    }
 
-      await logEvent("location_selected", {
-        locationMethod: "my_location",
-        lat: selectedLat,
-        lng: selectedLng,
-        roundedLat: round1(selectedLat),
-        roundedLng: round1(selectedLng)
-      });
+    window.initMap = initMap;
 
-      await recalc();
-    }, async () => {
-      setStatus("Could not get your location (permission denied?).");
-      await logEvent("location_failed", { locationMethod: "my_location", reason: "permission_denied" });
-    });
-  });
-
-  wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
-  wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
-  wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
-
-  wireSuggestions();
-
-  setStatus("Ready. Choose location + options.");
-  setRoundedBar();
-}
-
-window.initMap = initMap;
-
-/**************************************************************
- * Load Google Maps JS
- **************************************************************/
-(function loadGoogleMaps(){
-  if (window.google && window.google.maps) return;
-
-  const s = document.createElement("script");
-  s.src =
-    "https://maps.googleapis.com/maps/api/js" +
-    "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY) +
-    "&callback=initMap" +
-    "&libraries=places";
-  s.async = true;
-  s.defer = true;
-  s.onerror = () => setStatus("Google Maps failed to load (check API key restrictions / billing / enabled APIs).");
-  document.head.appendChild(s);
-})();
-</script>
-
+    /**************************************************************
+     * Load Google Maps JS (Places required for address search)
+     **************************************************************/
+    (function loadGoogleMaps(){
+      if (window.google && window.google.maps) return;
+      const s = document.createElement("script");
+      s.src = "https://maps.googleapis.com/maps/api/js"
+        + "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY)
+        + "&callback=initMap"
+        + "&libraries=places";
+      s.async = true;
+      s.defer = true;
+      s.onerror = () => setStatus("Google Maps failed to load (check API key restrictions / billing / enabled APIs).");
+      document.head.appendChild(s);
+    })();
+  </script>
 </body>
 </html>
