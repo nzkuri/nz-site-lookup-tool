@@ -13,7 +13,7 @@
     #addressInput { flex:1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    /* Two-column layout: left (inputs + results), right (map) */
+    /* Two-column layout: left (inputs + status + outputs), right (map) */
     .layout {
       display: grid;
       grid-template-columns: minmax(360px, 1fr) minmax(360px, 1fr);
@@ -39,9 +39,10 @@
     }
     .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    /* ✅ Remove status bar: hide status area entirely */
-    .status { display:none; }
+    /* ✅ Status bar is back */
+    .status { padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff; margin-bottom:14px; }
     .muted { color:#666; }
+
     .pill { display:inline-block; padding:3px 8px; border:1px solid #ddd; border-radius:999px; margin:2px; background:#f8f8f8; }
 
     .sc-table {
@@ -103,7 +104,7 @@
 </div>
 
 <div class="layout">
-  <!-- LEFT: inputs + outputs -->
+  <!-- LEFT: inputs + status (below inputs) + outputs -->
   <div>
     <div id="coords">Choose a location (search or click the map)</div>
 
@@ -145,15 +146,14 @@
       </div>
     </div>
 
-    <!-- (Hidden by CSS, but left in place so your JS keeps working without surgery) -->
+    <!-- ✅ Status bar directly below Design Inputs -->
     <div class="status">
       <div><strong>Status:</strong> <span id="statusText">Waiting for input…</span></div>
       <div id="roundedCoordsBar" class="muted"></div>
       <div id="stepInfo" class="muted"></div>
-      <div id="results"></div>
     </div>
 
-    <!-- ✅ Visible results (so you still see output after removing status bar) -->
+    <!-- Outputs (tables) below the status bar -->
     <div id="results"></div>
   </div>
 
@@ -395,14 +395,8 @@ window.addEventListener("beforeunload", () => {
 /**************************************************************
  * HELPERS
  **************************************************************/
-function setStatus(msg){
-  const el = document.getElementById("statusText");
-  if (el) el.textContent = msg;
-}
-function setInfo(html){
-  const el = document.getElementById("stepInfo");
-  if (el) el.innerHTML = html || "";
-}
+function setStatus(msg){ document.getElementById("statusText").textContent = msg; }
+function setInfo(html){ document.getElementById("stepInfo").innerHTML = html || ""; }
 
 function normalize(v){
   if (v === null || v === undefined) return "";
@@ -423,7 +417,6 @@ function safeCell(v) {
 }
 function setRoundedBar(){
   const el = document.getElementById("roundedCoordsBar");
-  if (!el) return;
   if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
     el.textContent = "";
     return;
@@ -636,6 +629,27 @@ function buildThreeRowTable(sheet1Row, apoe, matchTitle){
 function render(filtered){
   const resultsEl = document.getElementById("results");
 
+  const infoBits = [];
+  if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+    const tLat1 = round1(selectedLat);
+    const tLng1 = round1(selectedLng);
+    infoBits.push(`Location: <b>${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}</b>`);
+    infoBits.push(`<span class="muted">Matching bucket (1dp): ${tLat1.toFixed(1)}, ${tLng1.toFixed(1)}</span>`);
+  }
+  if (selectedSiteClass) infoBits.push(`Site Class: <b>${selectedSiteClass}</b>`);
+  if (selectedWorkingLife) {
+    const wlLabel = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+    infoBits.push(`Working Life: <b>${selectedWorkingLife}</b> <span class="muted">(matches Sheet2 as "${wlLabel}")</span>`);
+  }
+  if (selectedImportanceLevel) infoBits.push(`Importance: <b>${selectedImportanceLevel}</b>`);
+  if (sheet2MatchOptions.length) {
+    infoBits.push(`Sheet2 candidates (C/D/E): ` + sheet2MatchOptions.map(o => `<span class="pill"><b>${o.title}:</b> ${o.value}</span>`).join(""));
+  } else if (selectedWorkingLife && selectedImportanceLevel) {
+    infoBits.push(`<span class="muted">Sheet2 candidates (C/D/E): (none found)</span>`);
+  }
+  infoBits.push(`<span class="muted">Sheet1 rows matched to 1dp: ${matchedSheet1Rows.length}</span>`);
+  setInfo(infoBits.join("<br>"));
+
   if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
     resultsEl.innerHTML = `<div class="muted">Pick a location first.</div>`;
     return;
@@ -707,8 +721,7 @@ function wireSingleSelectButtons(containerId, setter, buttonType){
 }
 
 /**************************************************************
- * SUGGESTIONS -> Sheet6 (via your Apps Script web app)
- * Sends: { event: "suggestion_submit", suggestionText, tsClient, page, visitorId, isNew, ...geo }
+ * SUGGESTIONS WIRING (posts to Apps Script)
  **************************************************************/
 function wireSuggestions(){
   const ta = document.getElementById("suggestionText");
@@ -731,13 +744,11 @@ function wireSuggestions(){
     setMsg("Submitting…", false);
 
     try {
-      // Use your existing analytics pipeline so it includes visitor+geo automatically
-      const res = await logEvent("suggestion_submit", {
+      await logEvent("suggestion_submit", {
         targetSheet: SUGGESTIONS_SHEET_NAME,
         suggestionText: text
       });
 
-      // If your Apps Script returns JSON you can parse it, but we keep it simple:
       setMsg("Thanks — suggestion submitted.", true);
       ta.value = "";
     } catch (e) {
