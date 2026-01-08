@@ -6,27 +6,45 @@
   <title>TS1170.5 site parameter finder</title>
 
   <style>
+    /* Make borders/padding not change overall width (important for right-edge alignment) */
+    *, *::before, *::after { box-sizing: border-box; }
+
     body { font-family: Arial, sans-serif; margin: 20px; }
+
+    /* Shared container: map + results + suggestions share the same right edge */
+    .content-wrap{
+      width: 100%;
+      max-width: 1400px;   /* adjust or remove if you truly want infinite width */
+      margin: 0 auto;
+    }
 
     /* Search row */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    /* Two-column layout: left inputs, right map (bottoms aligned via JS height sync) */
-    .main-grid { display:flex; gap:16px; align-items:stretch; }
+    /* Coords line sits ABOVE the grid so it doesn't break alignment */
+    #coords { font-weight: bold; margin-bottom: 12px; }
+
+    /* Two-column layout */
+    .main-grid { display:flex; gap:16px; align-items: stretch; width:100%; }
     .left-panel { flex: 0 0 520px; max-width: 520px; width: 100%; }
     .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
 
     @media (max-width: 980px){
       .main-grid { flex-direction: column; }
-      .left-panel { max-width: 100%; }
+      .left-panel { max-width: 100%; flex-basis: auto; }
       .right-panel { width: 100%; }
     }
 
-    #coords { font-weight: bold; margin-bottom: 12px; }
-
-    .option-block { padding:15px; border:1px solid #ddd; border-radius:6px; background:#fafafa; margin-bottom:14px; }
+    /* Inputs */
+    .option-block {
+      padding:15px;
+      border:1px solid #ddd;
+      border-radius:6px;
+      background:#fafafa;
+      width:100%;
+    }
     .row { margin-bottom:14px; }
     .row label { font-weight:bold; display:block; margin-bottom:6px; }
 
@@ -36,34 +54,34 @@
     }
     .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    /* Map: height is set by JS to match design inputs block */
+    /* Map (height is synced in JS to match option-block height) */
     #map {
       width: 100%;
       border:1px solid #ccc;
       border-radius:6px;
-      min-height: 260px;
+      min-height: 280px;
       flex: 1 1 auto;
     }
 
-    /* Full-width results section */
+    /* Results section full width (shares right edge with map because it's inside .content-wrap) */
     .results-wrap{
       width: 100%;
       margin-top: 16px;
-      padding: 12px;
       border: 1px solid #ddd;
       border-radius: 8px;
       background: #fff;
       position: relative;
+      padding: 12px;
     }
 
     #roundedCoordsBar {
-      display:none; /* shown only after successful tables */
+      display:none; /* only show after successful tables */
       color:#666;
       margin-bottom: 10px;
       font-weight: 700;
     }
 
-    /* Grid for tables (full width) */
+    /* Grid for tables across full width */
     #tablesGrid{
       display: grid;
       gap: 12px;
@@ -85,7 +103,7 @@
     .sc-table .left-cell { text-align:left; font-weight:700; }
     .sc-table .subhead { font-weight: 700; }
 
-    /* Loading overlay (no pending calc text shown) */
+    /* Loading overlay (no pending calc text) */
     .loading-overlay{
       position:absolute;
       inset:0;
@@ -99,7 +117,7 @@
     }
     .loading-overlay.show{ display:flex; }
 
-    /* Suggestions block */
+    /* Suggestions (right edge aligned because it shares the same container width) */
     .suggestions-wrap{
       margin-top: 18px;
       padding: 14px;
@@ -117,7 +135,6 @@
       border-radius: 6px;
       font-family: inherit;
       font-size: 14px;
-      box-sizing: border-box;
     }
     #submitSuggestionBtn{
       display: inline-block;
@@ -135,74 +152,76 @@
 <body>
   <h2>TS1170.5 site parameter finder</h2>
 
-  <div class="search-wrap">
-    <input id="addressInput" placeholder="Search address (NZ only)" />
-    <button id="useMyLocationBtn" type="button">Use my location</button>
-  </div>
+  <div class="content-wrap">
+    <div class="search-wrap">
+      <input id="addressInput" placeholder="Search address (NZ only)" />
+      <button id="useMyLocationBtn" type="button">Use my location</button>
+    </div>
 
-  <div class="main-grid">
-    <div class="left-panel">
-      <div id="coords">Choose a location (search or click the map)</div>
+    <!-- ✅ moved here so it doesn't break option-block/map alignment -->
+    <div id="coords">Choose a location (search or click the map)</div>
 
-      <!-- Design Inputs block (map height will match this block’s height) -->
-      <div class="option-block" id="designInputsBlock">
-        <h3>Design Inputs</h3>
+    <div class="main-grid">
+      <div class="left-panel">
+        <div class="option-block" id="designInputsBlock">
+          <h3>Design Inputs</h3>
 
-        <div class="row">
-          <label>Site Class</label>
-          <div class="option-buttons" id="siteClassOptions">
-            <button type="button" data-value="I">I</button>
-            <button type="button" data-value="II">II</button>
-            <button type="button" data-value="III">III</button>
-            <button type="button" data-value="IV">IV</button>
-            <button type="button" data-value="V">V</button>
-            <button type="button" data-value="VI">VI</button>
+          <div class="row">
+            <label>Site Class</label>
+            <div class="option-buttons" id="siteClassOptions">
+              <button type="button" data-value="I">I</button>
+              <button type="button" data-value="II">II</button>
+              <button type="button" data-value="III">III</button>
+              <button type="button" data-value="IV">IV</button>
+              <button type="button" data-value="V">V</button>
+              <button type="button" data-value="VI">VI</button>
+            </div>
           </div>
-        </div>
 
-        <div class="row">
-          <label>Importance Level</label>
-          <div class="option-buttons" id="importanceLevelOptions">
-            <button type="button" data-value="1">1</button>
-            <button type="button" data-value="2">2</button>
-            <button type="button" data-value="3">3</button>
-            <button type="button" data-value="4">4</button>
+          <div class="row">
+            <label>Importance Level</label>
+            <div class="option-buttons" id="importanceLevelOptions">
+              <button type="button" data-value="1">1</button>
+              <button type="button" data-value="2">2</button>
+              <button type="button" data-value="3">3</button>
+              <button type="button" data-value="4">4</button>
+            </div>
           </div>
-        </div>
 
-        <div class="row">
-          <label>Design Working Life</label>
-          <div class="option-buttons" id="workingLifeOptions">
-            <button type="button" data-value="construction">Construction equipment</button>
-            <button type="button" data-value="lt6months">Less than 6 months</button>
-            <button type="button" data-value="5">5 years</button>
-            <button type="button" data-value="25">25 years</button>
-            <button type="button" data-value="50">50 years</button>
-            <button type="button" data-value="100">100 years or more</button>
+          <div class="row" style="margin-bottom:0;">
+            <label>Design Working Life</label>
+            <div class="option-buttons" id="workingLifeOptions">
+              <button type="button" data-value="construction">Construction equipment</button>
+              <button type="button" data-value="lt6months">Less than 6 months</button>
+              <button type="button" data-value="5">5 years</button>
+              <button type="button" data-value="25">25 years</button>
+              <button type="button" data-value="50">50 years</button>
+              <button type="button" data-value="100">100 years or more</button>
+            </div>
           </div>
         </div>
       </div>
+
+      <div class="right-panel">
+        <div id="map"></div>
+      </div>
     </div>
 
-    <div class="right-panel">
-      <div id="map"></div>
+    <!-- Full-width results -->
+    <div class="results-wrap">
+      <div class="loading-overlay" id="loadingOverlay">Loading…</div>
+      <div id="roundedCoordsBar"></div>
+      <div id="tablesGrid"></div>
     </div>
-  </div>
 
-  <!-- Full-width results (rounded coords + tables only after success) -->
-  <div class="results-wrap">
-    <div class="loading-overlay" id="loadingOverlay">Loading…</div>
-    <div id="roundedCoordsBar"></div>
-    <div id="tablesGrid"></div>
-  </div>
-
-  <div class="suggestions-wrap">
-    <div style="font-weight:700; margin-bottom:8px;">Suggestions</div>
-    <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
-    <div>
-      <button id="submitSuggestionBtn" type="button">Submit</button>
+    <div class="suggestions-wrap">
+      <div style="font-weight:700; margin-bottom:8px;">Suggestions</div>
+      <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
+      <div>
+        <button id="submitSuggestionBtn" type="button">Submit</button>
+      </div>
+      <div id="suggestionMsg"></div>
     </div>
-    <div id="suggestionMsg"></div>
   </div>
 
   <!-- =========================================================
@@ -372,33 +391,37 @@
     }
 
     /**************************************************************
-     * Align map bottom with design inputs bottom (height sync)
+     * ✅ Fix alignment: option-block and map top+bottom match
      **************************************************************/
-    function syncMapHeightToDesignInputs(){
-      const di = document.getElementById("designInputsBlock");
+    function syncMapHeightToOptionBlock(){
+      const block = document.getElementById("designInputsBlock");
       const mapEl = document.getElementById("map");
-      if (!di || !mapEl) return;
+      if (!block || !mapEl) return;
 
-      // Match map height to the design inputs block height
-      const h = Math.max(260, di.getBoundingClientRect().height);
-      mapEl.style.height = Math.round(h) + "px";
+      // exact pixel match of the option block
+      const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
+      mapEl.style.height = h + "px";
 
-      // If map is already created, tell Google to reflow it
+      // trigger google maps resize after height change
       if (window.google && google.maps && map) {
         google.maps.event.trigger(map, "resize");
-        // Keep marker/center stable
         if (marker) map.panTo(marker.getPosition());
       }
     }
 
-    function setupMapHeightObserver(){
-      const di = document.getElementById("designInputsBlock");
-      if (!di || !("ResizeObserver" in window)) return;
+    function setupHeightSync(){
+      const block = document.getElementById("designInputsBlock");
+      if (!block) return;
 
-      const ro = new ResizeObserver(() => syncMapHeightToDesignInputs());
-      ro.observe(di);
+      // initial + after layout
+      requestAnimationFrame(syncMapHeightToOptionBlock);
 
-      window.addEventListener("resize", () => syncMapHeightToDesignInputs());
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
+        ro.observe(block);
+      }
+
+      window.addEventListener("resize", () => syncMapHeightToOptionBlock());
     }
 
     /**************************************************************
@@ -410,18 +433,10 @@
       const grid = document.getElementById("tablesGrid");
       if (!grid) return;
 
-      if (n === 4) {
-        grid.style.gridTemplateColumns = "repeat(2, 1fr)";
-      } else if (n === 3) {
-        grid.style.gridTemplateColumns = "repeat(3, 1fr)";
-      } else if (n === 2) {
-        grid.style.gridTemplateColumns = "repeat(2, 1fr)";
-      } else if (n === 1) {
-        grid.style.gridTemplateColumns = "repeat(1, 1fr)";
-      } else {
-        // fallback for >4
-        grid.style.gridTemplateColumns = "repeat(2, 1fr)";
-      }
+      if (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
     }
 
     /**************************************************************
@@ -579,11 +594,9 @@
     }
 
     function renderTablesFullWidth(filtered){
-      // Only show rounded coords + tables when we have actual tables to show
       if (!hasAllInputs()) return;
 
       if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
-        // per your request: no noisy "pending" or "no match" text
         clearResults();
         return;
       }
@@ -596,9 +609,9 @@
 
       applyTablesGridColumns(filtered.length);
 
-      grid.innerHTML = filtered.map(x => {
-        return `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`;
-      }).join("");
+      grid.innerHTML = filtered.map(x =>
+        `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
+      ).join("");
     }
 
     let recalcToken = 0;
@@ -606,7 +619,6 @@
     async function recalc(){
       const myToken = ++recalcToken;
 
-      // Hide everything during calculations
       showLoading(true);
       clearResults();
 
@@ -630,7 +642,6 @@
         });
       } catch (err) {
         console.error(err);
-        // silent: no pending calc text
       } finally {
         if (myToken === recalcToken) showLoading(false);
       }
@@ -644,8 +655,8 @@
           btn.classList.add("selected");
           setter(btn.dataset.value);
 
-          // keep map aligned with any layout changes
-          syncMapHeightToDesignInputs();
+          // ✅ Keep alignment perfect after any wrap/height change
+          syncMapHeightToOptionBlock();
 
           await logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
           await recalc();
@@ -668,7 +679,6 @@
 
         try {
           const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"", isNew:false };
-
           const payload = Object.assign({}, analyticsExtraBase(), {
             event: "suggestion_submit",
             suggestionText: text,
@@ -715,17 +725,15 @@
         zoom: 6
       });
 
-      // Initial sync once map exists
-      syncMapHeightToDesignInputs();
-      setupMapHeightObserver();
+      // ✅ Start and keep sync
+      setupHeightSync();
+      syncMapHeightToOptionBlock();
 
       map.addListener("click", async (e) => {
         selectedLat = e.latLng.lat();
         selectedLng = e.latLng.lng();
         setMarker(selectedLat, selectedLng);
-
         document.getElementById("coords").textContent = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
         await recalc();
       });
 
