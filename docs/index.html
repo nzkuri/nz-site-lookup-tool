@@ -388,8 +388,6 @@ Because only approximate, non-identifying location data is collected, there is g
      **************************************************************/
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxo5yBcaRzIyD1Mv4B5YE4pBYxls9RXb4IIV0wa44yUJ2clIXcD_wn5iag1ZQwnsayV/exec"; // must end in /exec
     const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
-
-    // Your coarse geo endpoint (must return JSON with geoCountry/geoRegion/geoCity)
     const GEO_URL = "/geo";
   </script>
 
@@ -406,21 +404,12 @@ Because only approximate, non-identifying location data is collected, there is g
     let recalcToken = 0;
     const pageStartMs = Date.now();
 
-    function round1(n){ const x = Number(n); return Number.isFinite(x) ? (Math.round(x*10)/10) : null; }
-
     function hasAllInputs(){
       return Number.isFinite(selectedLat) &&
              Number.isFinite(selectedLng) &&
              !!selectedSiteClass &&
              !!selectedWorkingLife &&
              !!selectedImportanceLevel;
-    }
-
-    function isBlockedCombo(){
-      const wl = String(selectedWorkingLife || "").toLowerCase().replace(/\s+/g,"");
-      const il = String(selectedImportanceLevel || "").trim();
-      const is100Plus = wl === "100" || wl.startsWith("100years");
-      return is100Plus && il === "4";
     }
 
     function showLoading(show){
@@ -544,7 +533,6 @@ Because only approximate, non-identifying location data is collected, there is g
       };
     }
 
-    // Analytics: sends to mode="analytics" and includes geo fields
     function logEvent(name, extra = {}){
       (async () => {
         try{
@@ -574,12 +562,6 @@ Because only approximate, non-identifying location data is collected, there is g
       clearResults();
       if (!hasAllInputs()) return;
 
-      if (isBlockedCombo()) {
-        showSpecialNotice("Refer to AS/NZS1170.0-2002 Section 3.4 Table 3.3");
-        logEvent("blocked_combo_notice", { notice: "AS/NZS1170.0-2002 Section 3.4 Table 3.3" });
-        return;
-      }
-
       showLoading(true);
 
       try{
@@ -597,7 +579,6 @@ Because only approximate, non-identifying location data is collected, there is g
         const tables = Array.isArray(data.tables) ? data.tables : [];
 
         if (!tables.length) {
-          // show nothing per your preference
           logEvent("results_generated", { displayedTablesCount: 0 });
           return;
         }
@@ -616,7 +597,6 @@ Because only approximate, non-identifying location data is collected, there is g
 
       } catch(err){
         console.error(err);
-        // show a visible message so failures aren't silent
         showSpecialNotice("Lookup failed. Please try again (check Web App URL / deployment).");
         logEvent("error", { message: String(err) });
       } finally {
