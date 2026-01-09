@@ -974,7 +974,7 @@ Because only approximate, non-identifying location data is collected, there is g
     /**************************************************************
      * Consent modal logic + collapsible suggestions
      **************************************************************/
-    const CONSENT_KEY = "ts1170_5_consent_accepted_v1";
+    const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
 
     function showConsentModal(){
       document.getElementById("consentModal").classList.add("show");
@@ -992,12 +992,12 @@ Because only approximate, non-identifying location data is collected, there is g
       const details = document.getElementById("suggestionsDetails");
       if (details) details.open = false;
 
-      const accepted = localStorage.getItem(CONSENT_KEY) === "true";
+      const accepted = sessionStorage.getItem(CONSENT_SESSION_KEY) === "true";
       if (!accepted) showConsentModal();
       else hideConsentModal();
 
       document.getElementById("btnAccept").addEventListener("click", () => {
-        localStorage.setItem(CONSENT_KEY, "true");
+        sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
         hideConsentModal();
       });
 
