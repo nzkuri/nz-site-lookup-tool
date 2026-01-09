@@ -86,6 +86,16 @@
       margin-bottom: 10px;
     }
 
+    #specialNotice{
+      display:none;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
     #tablesGrid{
       display: grid;
       gap: 12px;
@@ -203,7 +213,7 @@
       padding: 16px;
       max-height: min(60vh, 520px);
       overflow: auto;
-      white-space: pre-line; /* preserve line breaks */
+      white-space: pre-line;
       line-height: 1.35;
       font-size: 14px;
     }
@@ -233,7 +243,6 @@
       color: #c00;
     }
 
-    /* Learn more modal close (top right) */
     .close-x{
       width: 34px;
       height: 34px;
@@ -249,11 +258,9 @@
       flex: 0 0 auto;
     }
 
-    /* Block interaction with site until consent */
     body.consent-locked .content-wrap{
       pointer-events: none;
       user-select: none;
-      filter: blur(0px); /* keep sharp; pointer-events is enough */
     }
   </style>
 </head>
@@ -320,6 +327,7 @@
     <div class="results-wrap">
       <div class="loading-overlay" id="loadingOverlay">Loading…</div>
       <div id="roundedCoordsBar"></div>
+      <div id="specialNotice"></div>
       <div id="tablesGrid"></div>
     </div>
 
@@ -340,14 +348,11 @@
 
   </div>
 
-  <!-- ======================
-       Consent Modal (Main)
-  ======================= -->
+  <!-- Consent Modal (Main) -->
   <div class="modal-backdrop show" id="consentModal">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
       <div class="modal-header">
         <div class="modal-title" id="consentTitle">Notice & Consent</div>
-        <!-- no X close for main modal (must accept or exit) -->
         <div style="width:34px;"></div>
       </div>
 
@@ -364,9 +369,7 @@ This site uses essential cookies and collects approximate location data (country
     </div>
   </div>
 
-  <!-- ======================
-       Learn More Modal
-  ======================= -->
+  <!-- Learn More Modal -->
   <div class="modal-backdrop" id="learnMoreModal">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="learnMoreTitle">
       <div class="modal-header">
@@ -483,12 +486,10 @@ Because only approximate, non-identifying location data is collected, there is g
     const SHEET2_NAME = "Sheet2";
     const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
 
-    // Sheet1: A=Lat, B=Lng, C=APOE
     const SHEET1_LAT_COL_INDEX = 0;
     const SHEET1_LNG_COL_INDEX = 1;
     const SHEET1_APOE_COL_INDEX = 2;
 
-    // Site class column indices in Sheet1
     const SHEET1_SITECLASS_COLS = {
       I:   { PGA: 3,  Sa: 4,  Tc: 5  },
       II:  { PGA: 6,  Sa: 7,  Tc: 8  },
@@ -498,7 +499,6 @@ Because only approximate, non-identifying location data is collected, there is g
       VI:  { PGA: 18, Sa: 19, Tc: 20 },
     };
 
-    // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
     const SHEET2_WORKINGLIFE_COL_INDEX = 0;
     const SHEET2_IMPORTANCE_COL_INDEX = 1;
     const SHEET2_STRING_COLS = [2, 3, 4];
@@ -583,8 +583,25 @@ Because only approximate, non-identifying location data is collected, there is g
              !!selectedImportanceLevel;
     }
 
+    function isBlockedCombo(){
+      // ✅ NEW RULE: Working life = 100 and Importance = 4
+      return selectedWorkingLife === "100" && selectedImportanceLevel === "4";
+    }
+
     function showLoading(show){
       document.getElementById("loadingOverlay").classList.toggle("show", !!show);
+    }
+
+    function hideSpecialNotice(){
+      const n = document.getElementById("specialNotice");
+      n.style.display = "none";
+      n.textContent = "";
+    }
+
+    function showSpecialNotice(text){
+      const n = document.getElementById("specialNotice");
+      n.textContent = text;
+      n.style.display = "";
     }
 
     function clearResults(){
@@ -592,6 +609,7 @@ Because only approximate, non-identifying location data is collected, there is g
       const bar = document.getElementById("roundedCoordsBar");
       bar.style.display = "none";
       bar.textContent = "";
+      hideSpecialNotice();
     }
 
     function applyTablesGridColumns(n){
@@ -727,7 +745,7 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Step 2: Sheet2 strings (kept as-is)
+     * Step 2: Sheet2 strings
      **************************************************************/
     async function step2_getTitlesAndStringsFromSheet2(){
       sheet2MatchOptions = [];
@@ -859,6 +877,12 @@ Because only approximate, non-identifying location data is collected, there is g
       clearResults();
       if (!hasAllInputs()) return;
 
+      // ✅ NEW RULE: short-circuit and show message (no results / no lookups)
+      if (isBlockedCombo()) {
+        showSpecialNotice("Refer to AS/NZS1170.0-2002 Section 3.4 Table 3.3");
+        return;
+      }
+
       showLoading(true);
 
       try {
@@ -958,7 +982,6 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     function initConsent(){
-      // Suggestions collapsed on load
       const details = document.getElementById("suggestionsDetails");
       if (details) details.open = false;
 
@@ -985,7 +1008,6 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("consentModal").classList.add("show");
       });
 
-      // Keep the +/- indicator in the summary
       if (details) {
         details.addEventListener("toggle", () => {
           const sym = details.querySelector("summary span:last-child");
@@ -1064,9 +1086,7 @@ Because only approximate, non-identifying location data is collected, there is g
       showLoading(false);
     }
 
-    // init consent & UI
     window.addEventListener("load", initConsent);
-
     window.initMap = initMap;
 
     (function loadGoogleMaps(){
