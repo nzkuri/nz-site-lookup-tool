@@ -9,25 +9,20 @@
     *, *::before, *::after { box-sizing: border-box; }
 
     body { font-family: Arial, sans-serif; margin: 20px; }
-
     #pageTitle { text-align: center; margin: 0 0 16px 0; }
 
-    /* Shared container aligns right edges of map/results/suggestions */
     .content-wrap{
       width: 100%;
-      max-width: 1400px;  /* remove if you want full-bleed */
+      max-width: 1400px; /* remove if you want full width */
       margin: 0 auto;
     }
 
-    /* Search row */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    /* Coords sits ABOVE grid so it doesn't break option-block/map alignment */
     #coords { font-weight:bold; margin-bottom:12px; }
 
-    /* Two-column */
     .main-grid { display:flex; gap:16px; align-items:stretch; width:100%; }
     .left-panel { flex: 0 0 520px; max-width: 520px; width:100%; }
     .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
@@ -63,7 +58,6 @@
       border-color:#007bff;
     }
 
-    /* Map height is synced to option-block height via JS */
     #map{
       width:100%;
       min-height:280px;
@@ -72,7 +66,6 @@
       flex: 1 1 auto;
     }
 
-    /* Full-width results */
     .results-wrap{
       width: 100%;
       margin-top: 16px;
@@ -112,7 +105,6 @@
     .sc-table .left-cell { text-align:left; font-weight:700; }
     .sc-table .subhead { font-weight: 700; }
 
-    /* Loading overlay - no pending calc text */
     .loading-overlay{
       position:absolute;
       inset:0;
@@ -126,7 +118,6 @@
     }
     .loading-overlay.show{ display:flex; }
 
-    /* Suggestions */
     .suggestions-wrap{
       margin-top: 18px;
       padding: 14px;
@@ -239,7 +230,7 @@
     CSP-SAFE ANALYTICS MODULE (kept)
   ========================================================= -->
   <script>
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwdt0bDi9pPJ6iyXwg11ItonXmCZOj40KYOyp71srRBFf9fcCYkdHxyV_4rhP1IGVgO/exec";
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzB5sCiemzPIKgvozUHmn8je2Pqk3H1ICRgtpunFAxWNMKsWqwtKOF7tbMnrbW4C752/exec";
     window.GEO_URL = "/geo";
     window.ANALYTICS_DEBUG = false;
 
@@ -293,4 +284,593 @@
           var payload = Object.assign({
             visitorId: v.id,
             isNew: v.isNew,
-            event: String(
+            event: String(eventName || ""),
+            page: location.pathname || "",
+            userAgent: navigator.userAgent || "",
+            tsClient: new Date().toISOString(),
+            geoProvider: geo.geoProvider,
+            geoCountry: geo.geoCountry,
+            geoRegion: geo.geoRegion,
+            geoCity: geo.geoCity
+          }, extra);
+          return postToAppsScript(payload);
+        });
+      }
+
+      window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
+    })();
+  </script>
+
+  <script>
+    /**************************************************************
+     * CONFIG (GVIZ lookup)
+     **************************************************************/
+    const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
+    const SHEET1_NAME = "Sheet1";
+    const SHEET2_NAME = "Sheet2";
+
+    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+
+    // Sheet1: A=Lat, B=Lng, C=APOE
+    const SHEET1_LAT_COL_INDEX = 0;
+    const SHEET1_LNG_COL_INDEX = 1;
+    const SHEET1_APOE_COL_INDEX = 2;
+
+    // Site class column indices in Sheet1
+    const SHEET1_SITECLASS_COLS = {
+      I:   { PGA: 3,  Sa: 4,  Tc: 5  },
+      II:  { PGA: 6,  Sa: 7,  Tc: 8  },
+      III: { PGA: 9,  Sa: 10, Tc: 11 },
+      IV:  { PGA: 12, Sa: 13, Tc: 14 },
+      V:   { PGA: 15, Sa: 16, Tc: 17 },
+      VI:  { PGA: 18, Sa: 19, Tc: 20 },
+    };
+
+    // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
+    const SHEET2_WORKINGLIFE_COL_INDEX = 0;
+    const SHEET2_IMPORTANCE_COL_INDEX = 1;
+    const SHEET2_STRING_COLS = [2, 3, 4];
+    const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
+
+    const WORKING_LIFE_LABEL = {
+      construction: "Construction equipment",
+      lt6months: "Less than 6 months",
+      "5": "5 years",
+      "25": "25 years",
+      "50": "50 years",
+      "100": "100 years or more"
+    };
+
+    /**************************************************************
+     * ✅ NEW: Sheet1 bucket cache (10 minutes)
+     **************************************************************/
+    const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000; // 10 mins
+    const sheet1BucketCache = new Map(); // key -> {ts, rows}
+
+    function bucketKeyFromLatLng(lat, lng){
+      const rLat = round1(lat);
+      const rLng = round1(lng);
+      if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) return "";
+      return `${rLat.toFixed(1)},${rLng.toFixed(1)}`;
+    }
+
+    function getBucketCache(key){
+      if (!key) return null;
+
+      // 1) in-memory
+      const mem = sheet1BucketCache.get(key);
+      if (mem && (Date.now() - mem.ts) < SHEET1_BUCKET_CACHE_TTL_MS) return mem.rows;
+
+      // 2) localStorage (survives refresh)
+      try{
+        const raw = localStorage.getItem("sheet1_bucket_cache_" + key);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !obj.ts || !Array.isArray(obj.rows)) return null;
+        if ((Date.now() - obj.ts) >= SHEET1_BUCKET_CACHE_TTL_MS) return null;
+
+        // promote to memory
+        sheet1BucketCache.set(key, { ts: obj.ts, rows: obj.rows });
+        return obj.rows;
+      } catch(e){
+        return null;
+      }
+    }
+
+    function setBucketCache(key, rows){
+      if (!key) return;
+      const payload = { ts: Date.now(), rows: rows };
+      sheet1BucketCache.set(key, payload);
+      try{
+        localStorage.setItem("sheet1_bucket_cache_" + key, JSON.stringify(payload));
+      } catch(e){
+        // ignore quota errors
+      }
+    }
+
+    /**************************************************************
+     * STATE
+     **************************************************************/
+    let map, marker, autocomplete;
+    let selectedLat = null, selectedLng = null;
+    let selectedSiteClass = "";
+    let selectedImportanceLevel = "";
+    let selectedWorkingLife = "";
+
+    let matchedSheet1Rows = [];     // cached bucket rows filtered to exact 1dp
+    let sheet2MatchOptions = [];    // strings from Sheet2
+
+    let recalcToken = 0;
+
+    function round1(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return null;
+      return Math.round(num * 10) / 10;
+    }
+
+    function hasAllInputs(){
+      return Number.isFinite(selectedLat) &&
+             Number.isFinite(selectedLng) &&
+             !!selectedSiteClass &&
+             !!selectedWorkingLife &&
+             !!selectedImportanceLevel;
+    }
+
+    function showLoading(show){
+      document.getElementById("loadingOverlay").classList.toggle("show", !!show);
+    }
+
+    function clearResults(){
+      document.getElementById("tablesGrid").innerHTML = "";
+      const bar = document.getElementById("roundedCoordsBar");
+      bar.style.display = "none";
+      bar.textContent = "";
+    }
+
+    function applyTablesGridColumns(n){
+      const grid = document.getElementById("tablesGrid");
+      if (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
+    }
+
+    function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
+
+    function eqLoose(a, b){
+      const sa = normalize(a);
+      const sb = normalize(b);
+      if (sa === sb) return true;
+      const na = Number(sa), nb = Number(sb);
+      if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
+      return sa.toLowerCase() === sb.toLowerCase();
+    }
+
+    function safeCell(v) {
+      if (v === null || v === undefined || String(v).trim() === "") return "";
+      const n = Number(v);
+      return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
+    }
+
+    function isOneOver500(apoe){
+      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
+      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
+    }
+
+    function setRoundedBar(){
+      const el = document.getElementById("roundedCoordsBar");
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.style.display="none"; el.textContent=""; return; }
+      const rLat = round1(selectedLat);
+      const rLng = round1(selectedLng);
+      el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)},${rLng.toFixed(1)}</b>`;
+    }
+
+    /**************************************************************
+     * Align map height to option block height
+     **************************************************************/
+    function syncMapHeightToOptionBlock(){
+      const block = document.getElementById("designInputsBlock");
+      const mapEl = document.getElementById("map");
+      if (!block || !mapEl) return;
+
+      const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
+      mapEl.style.height = h + "px";
+
+      if (window.google && google.maps && map) {
+        google.maps.event.trigger(map, "resize");
+        if (marker) map.panTo(marker.getPosition());
+      }
+    }
+
+    function setupHeightSync(){
+      const block = document.getElementById("designInputsBlock");
+      if (!block) return;
+
+      requestAnimationFrame(syncMapHeightToOptionBlock);
+
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
+        ro.observe(block);
+      }
+      window.addEventListener("resize", syncMapHeightToOptionBlock);
+    }
+
+    /**************************************************************
+     * GVIZ helpers
+     **************************************************************/
+    function gvizUrl(sheetName, query){
+      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
+      const params = new URLSearchParams();
+      params.set("sheet", sheetName);
+      params.set("tq", query);
+      return `${base}?${params.toString()}`;
+    }
+
+    async function fetchSheetAs2DArray(sheetName, query){
+      const url = gvizUrl(sheetName, query);
+      const res = await fetch(url);
+      const text = await res.text();
+      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+      const data = JSON.parse(jsonText);
+      const cols = data.table.cols.length;
+      const rows = data.table.rows || [];
+      return rows.map(r => {
+        const arr = new Array(cols).fill(null);
+        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
+        return arr;
+      });
+    }
+
+    /**************************************************************
+     * ✅ UPDATED STEP 1:
+     * - First check cache by 1dp key
+     * - If miss/expired, fetch only bucket rows (±0.05) from Sheet1 using WHERE
+     * - Filter exact 1dp match and cache for 10 minutes
+     **************************************************************/
+    async function step1_findAllSheet1RowsMatching1dp(){
+      matchedSheet1Rows = [];
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+
+      const key = bucketKeyFromLatLng(selectedLat, selectedLng);
+
+      const cachedRows = getBucketCache(key);
+      if (cachedRows) {
+        matchedSheet1Rows = cachedRows.map(r => ({ row: r }));
+        return;
+      }
+
+      const targetLat1 = round1(selectedLat);
+      const targetLng1 = round1(selectedLng);
+
+      // Bucket range for the 1dp bin
+      const latMin = targetLat1 - 0.05;
+      const latMax = targetLat1 + 0.05;
+      const lngMin = targetLng1 - 0.05;
+      const lngMax = targetLng1 + 0.05;
+
+      // ✅ GViz query: pull ONLY rows in the bucket instead of 26,800 rows
+      const q = `select * where A >= ${latMin} and A < ${latMax} and B >= ${lngMin} and B < ${lngMax}`;
+      const bucketRows = await fetchSheetAs2DArray(SHEET1_NAME, q);
+
+      // Exact 1dp match safety filter
+      const exact = [];
+      for (const row of bucketRows) {
+        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
+        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) {
+          exact.push(row);
+        }
+      }
+
+      // Cache the exact rows for 10 minutes
+      setBucketCache(key, exact);
+
+      matchedSheet1Rows = exact.map(r => ({ row: r }));
+    }
+
+    /**************************************************************
+     * STEP 2: match Sheet2 row, get C/D/E strings
+     **************************************************************/
+    async function step2_getTitlesAndStringsFromSheet2(){
+      sheet2MatchOptions = [];
+      if (!selectedWorkingLife || !selectedImportanceLevel) return;
+
+      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
+      if (!sheet2.length) return;
+
+      const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
+      const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
+      const headerish = firstA.includes("working") || firstB.includes("importance");
+
+      const headerRow = headerish ? sheet2[0] : null;
+      const dataRows = headerish ? sheet2.slice(1) : sheet2;
+
+      const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+
+      const matchRow = dataRows.find(r =>
+        eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
+        eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
+      );
+
+      if (!matchRow) { sheet2MatchOptions = []; return; }
+
+      sheet2MatchOptions = SHEET2_STRING_COLS
+        .map((colIdx) => {
+          const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
+          const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
+          const value = normalize(matchRow[colIdx]);
+          return { title, value };
+        })
+        .filter(x => x.value.length > 0);
+    }
+
+    /**************************************************************
+     * STEP 3: filter Sheet1 by APOE matching C/D/E
+     **************************************************************/
+    function step3_filterMatchedSheet1Rows(){
+      if (!matchedSheet1Rows.length) return [];
+      if (!sheet2MatchOptions.length) return [];
+
+      const out = [];
+      const seen = new Set();
+
+      for (const item of matchedSheet1Rows) {
+        const sheet1Row = item.row;
+        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
+        if (!apoe) continue;
+
+        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
+        if (!match) continue;
+
+        const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        out.push({ sheet1Row, apoe, matchTitle: match.title });
+      }
+
+      const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
+      if (hasULS) {
+        const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
+        if (oneOver500Item && oneOver500Item.row) {
+          const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
+          const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
+          }
+        }
+      }
+
+      return out;
+    }
+
+    function buildThreeRowTable(sheet1Row, apoe, matchTitle){
+      const sc = selectedSiteClass;
+      const idx = SHEET1_SITECLASS_COLS[sc];
+      const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
+      const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
+      const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
+
+      return `
+        <table class="sc-table">
+          <thead>
+            <tr>
+              <th class="left-head">${topLeft}</th>
+              <th colspan="3">Site Class ${sc}</th>
+            </tr>
+            <tr>
+              <th class="subhead left-head">apoe</th>
+              <th class="subhead">PGA</th>
+              <th class="subhead">Sa,s</th>
+              <th class="subhead">Tc</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="left-cell">${apoe || "(APOE blank)"}</td>
+              <td>${pga}</td>
+              <td>${sa}</td>
+              <td>${tc}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderTablesFullWidth(filtered){
+      if (!hasAllInputs()) return;
+
+      if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
+        clearResults();
+        return;
+      }
+
+      setRoundedBar();
+      const rounded = document.getElementById("roundedCoordsBar");
+      rounded.style.display = "";
+
+      applyTablesGridColumns(filtered.length);
+
+      document.getElementById("tablesGrid").innerHTML = filtered.map(x =>
+        `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
+      ).join("");
+    }
+
+    async function recalc(){
+      const myToken = ++recalcToken;
+
+      clearResults();
+      if (!hasAllInputs()) return;
+
+      showLoading(true);
+
+      try {
+        // ✅ Step1 will now be instant for 10 mins if same rounded bucket
+        await step1_findAllSheet1RowsMatching1dp();
+        if (myToken !== recalcToken) return;
+
+        await step2_getTitlesAndStringsFromSheet2();
+        if (myToken !== recalcToken) return;
+
+        const filtered = step3_filterMatchedSheet1Rows();
+        if (myToken !== recalcToken) return;
+
+        renderTablesFullWidth(filtered);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (myToken === recalcToken) showLoading(false);
+      }
+    }
+
+    function wireSingleSelectButtons(containerId, setter){
+      const buttons = document.querySelectorAll(`#${containerId} button`);
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          buttons.forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          setter(btn.dataset.value);
+          syncMapHeightToOptionBlock();
+          recalc();
+        });
+      });
+    }
+
+    /**************************************************************
+     * Suggestions submit -> Sheet6 (same web app)
+     **************************************************************/
+    function wireSuggestions(){
+      const textarea = document.getElementById("suggestionText");
+      const btn = document.getElementById("submitSuggestionBtn");
+      const msg = document.getElementById("suggestionMsg");
+
+      btn.addEventListener("click", async () => {
+        const text = (textarea.value || "").trim();
+        msg.textContent = "";
+        if (!text) { msg.textContent = "Please type a suggestion first."; return; }
+
+        btn.disabled = true;
+        btn.textContent = "Submitting…";
+
+        try {
+          const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"" };
+          const payload = {
+            event: "suggestion_submit",
+            suggestionText: text,
+            visitorId: v.id || "",
+            page: location.pathname || ""
+          };
+
+          const body = new URLSearchParams();
+          body.set("payload", JSON.stringify(payload));
+
+          const res = await fetch(window.WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            body: body.toString()
+          });
+
+          if (!res.ok) { msg.textContent = `Submit failed (${res.status}).`; return; }
+
+          textarea.value = "";
+          msg.textContent = "Thanks — suggestion submitted.";
+        } catch (e) {
+          console.error(e);
+          msg.textContent = "Submit failed (check console).";
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Submit";
+        }
+      });
+    }
+
+    /**************************************************************
+     * Google Maps + Places
+     **************************************************************/
+    function setMarker(lat,lng){
+      const pos = {lat, lng};
+      if(marker) marker.setMap(null);
+      marker = new google.maps.Marker({ map, position: pos });
+      map.panTo(pos);
+    }
+
+    function initMap(){
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: -41.2865, lng: 174.7762 },
+        zoom: 6
+      });
+
+      setupHeightSync();
+      syncMapHeightToOptionBlock();
+
+      map.addListener("click", (e) => {
+        selectedLat = e.latLng.lat();
+        selectedLng = e.latLng.lng();
+        setMarker(selectedLat, selectedLng);
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+        recalc();
+      });
+
+      autocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("addressInput"),
+        { componentRestrictions: { country: "nz" } }
+      );
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) return;
+
+        selectedLat = place.geometry.location.lat();
+        selectedLng = place.geometry.location.lng();
+        setMarker(selectedLat, selectedLng);
+        map.setZoom(14);
+
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
+
+        recalc();
+      });
+
+      document.getElementById("useMyLocationBtn").addEventListener("click", () => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition((pos) => {
+          selectedLat = pos.coords.latitude;
+          selectedLng = pos.coords.longitude;
+          setMarker(selectedLat, selectedLng);
+          map.setZoom(14);
+          document.getElementById("coords").textContent =
+            `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+          recalc();
+        });
+      });
+
+      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
+      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
+      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
+      wireSuggestions();
+
+      clearResults();
+      showLoading(false);
+    }
+
+    window.initMap = initMap;
+
+    (function loadGoogleMaps(){
+      if (window.google && window.google.maps) return;
+      const s = document.createElement("script");
+      s.src = "https://maps.googleapis.com/maps/api/js"
+        + "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY)
+        + "&callback=initMap"
+        + "&libraries=places";
+      s.async = true;
+      s.defer = true;
+      s.onerror = () => console.error("Google Maps failed to load.");
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
