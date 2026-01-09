@@ -6,38 +6,31 @@
   <title>TS1170.5 site parameter finder</title>
 
   <style>
-    /* Make borders/padding not change overall width (important for right-edge alignment) */
     *, *::before, *::after { box-sizing: border-box; }
 
     body { font-family: Arial, sans-serif; margin: 20px; }
 
-    /* Shared container: map + results + suggestions share the same right edge */
-    .content-wrap{
-      width: 100%;
-      max-width: 1400px;   /* adjust or remove if you truly want infinite width */
-      margin: 0 auto;
-    }
+    #pageTitle { text-align:center; margin: 0 0 16px 0; }
 
-    /* Search row */
+    /* Shared container so map/results/suggestions share same right edge */
+    .content-wrap{ width:100%; max-width: 1400px; margin: 0 auto; }
+
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    /* Coords line sits ABOVE the grid so it doesn't break alignment */
-    #coords { font-weight: bold; margin-bottom: 12px; }
+    #coords { font-weight:bold; margin-bottom:12px; }
 
-    /* Two-column layout */
-    .main-grid { display:flex; gap:16px; align-items: stretch; width:100%; }
-    .left-panel { flex: 0 0 520px; max-width: 520px; width: 100%; }
-    .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
+    .main-grid { display:flex; gap:16px; align-items:stretch; width:100%; }
+    .left-panel { flex:0 0 520px; max-width:520px; width:100%; }
+    .right-panel { flex:1 1 auto; min-width: 320px; display:flex; }
 
-    @media (max-width: 980px){
-      .main-grid { flex-direction: column; }
-      .left-panel { max-width: 100%; flex-basis: auto; }
-      .right-panel { width: 100%; }
+    @media (max-width:980px){
+      .main-grid{ flex-direction:column; }
+      .left-panel{ max-width:100%; flex-basis:auto; }
+      .right-panel{ width:100%; }
     }
 
-    /* Inputs */
     .option-block {
       padding:15px;
       border:1px solid #ddd;
@@ -54,56 +47,47 @@
     }
     .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    /* Map (height is synced in JS to match option-block height) */
-    #map {
-      width: 100%;
+    #map{
+      width:100%;
+      min-height:280px;
       border:1px solid #ccc;
       border-radius:6px;
-      min-height: 280px;
       flex: 1 1 auto;
     }
 
-    /* Results section full width (shares right edge with map because it's inside .content-wrap) */
     .results-wrap{
-      width: 100%;
-      margin-top: 16px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #fff;
-      position: relative;
-      padding: 12px;
+      width:100%;
+      margin-top:16px;
+      padding:12px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      background:#fff;
+      position:relative;
     }
-
-    #roundedCoordsBar {
-      display:none; /* only show after successful tables */
+    #roundedCoordsBar{
+      display:none;
+      font-weight:700;
       color:#666;
-      margin-bottom: 10px;
-      font-weight: 700;
+      margin-bottom:10px;
     }
 
-    /* Grid for tables across full width */
-    #tablesGrid{
-      display: grid;
-      gap: 12px;
-      width: 100%;
-    }
+    #tablesGrid{ display:grid; gap:12px; width:100%; }
     .table-card{
-      width: 100%;
-      overflow-x: auto;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      padding: 8px;
-      background: #fff;
+      width:100%;
+      overflow-x:auto;
+      border:1px solid #eee;
+      border-radius:8px;
+      padding:8px;
+      background:#fff;
     }
 
-    .sc-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
-    .sc-table th, .sc-table td { border: 2px solid #000; padding: 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
-    .sc-table thead th { font-weight: 700; }
-    .sc-table .left-head { width: 220px; text-align:left; }
+    .sc-table { width:100%; border-collapse:collapse; background:#fff; font-size:14px; }
+    .sc-table th, .sc-table td { border:2px solid #000; padding:8px; text-align:center; vertical-align:middle; white-space:nowrap; }
+    .sc-table thead th { font-weight:700; }
+    .sc-table .left-head { width:220px; text-align:left; }
     .sc-table .left-cell { text-align:left; font-weight:700; }
-    .sc-table .subhead { font-weight: 700; }
+    .sc-table .subhead { font-weight:700; }
 
-    /* Loading overlay (no pending calc text) */
     .loading-overlay{
       position:absolute;
       inset:0;
@@ -112,53 +96,51 @@
       align-items:center;
       justify-content:center;
       border-radius:8px;
-      z-index: 2;
-      font-weight: 700;
+      z-index:2;
+      font-weight:700;
     }
     .loading-overlay.show{ display:flex; }
 
-    /* Suggestions (right edge aligned because it shares the same container width) */
     .suggestions-wrap{
-      margin-top: 18px;
-      padding: 14px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #fafafa;
-      width: 100%;
+      width:100%;
+      margin-top:18px;
+      padding:14px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      background:#fafafa;
     }
     #suggestionText{
-      width: 100%;
-      min-height: 110px;
-      resize: vertical;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 14px;
+      width:100%;
+      min-height:110px;
+      resize:vertical;
+      padding:10px;
+      border:1px solid #ccc;
+      border-radius:6px;
+      font-family:inherit;
+      font-size:14px;
     }
     #submitSuggestionBtn{
-      display: inline-block;
-      margin-top: 10px;
-      padding: 10px 14px;
-      border: 1px solid #aaa;
-      border-radius: 6px;
-      background: #fff;
-      cursor: pointer;
+      margin-top:10px;
+      padding:10px 14px;
+      border:1px solid #aaa;
+      border-radius:6px;
+      background:#fff;
+      cursor:pointer;
     }
-    #suggestionMsg{ margin-top: 8px; color:#666; }
+    #suggestionMsg{ margin-top:8px; color:#666; }
   </style>
 </head>
 
 <body>
-  <h2>TS1170.5 site parameter finder</h2>
+  <h2 id="pageTitle">TS1170.5 site parameter finder</h2>
 
   <div class="content-wrap">
+
     <div class="search-wrap">
       <input id="addressInput" placeholder="Search address (NZ only)" />
       <button id="useMyLocationBtn" type="button">Use my location</button>
     </div>
 
-    <!-- ✅ moved here so it doesn't break option-block/map alignment -->
     <div id="coords">Choose a location (search or click the map)</div>
 
     <div class="main-grid">
@@ -207,7 +189,6 @@
       </div>
     </div>
 
-    <!-- Full-width results -->
     <div class="results-wrap">
       <div class="loading-overlay" id="loadingOverlay">Loading…</div>
       <div id="roundedCoordsBar"></div>
@@ -222,98 +203,21 @@
       </div>
       <div id="suggestionMsg"></div>
     </div>
+
   </div>
-
-  <!-- =========================================================
-    CSP-SAFE ANALYTICS MODULE (unchanged)
-  ========================================================= -->
-  <script>
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyeIFpuWj3EC56HB3JvGg6DN5WZUnM_B5mWg1gbCR28ft2JabLt6s3tAn5igZX5FcVv/exec";
-    window.GEO_URL = "/geo";
-    window.ANALYTICS_DEBUG = true;
-
-    (function () {
-      var VISITOR_KEY = "nz_tool_visitor_id";
-      function dbg() { if (!window.ANALYTICS_DEBUG) return; console.log.apply(console, ["[analytics]"].concat([].slice.call(arguments))); }
-      function getVisitor() {
-        var id = localStorage.getItem(VISITOR_KEY);
-        var isNew = false;
-        if (!id) {
-          isNew = true;
-          id = (window.crypto && crypto.randomUUID) ? ("v_" + crypto.randomUUID()) : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
-          localStorage.setItem(VISITOR_KEY, id);
-        }
-        return { id: id, isNew: isNew };
-      }
-      function safeGeoObject(g) { return { geoProvider:(g&&g.geoProvider)?g.geoProvider:"cloudflare", geoCountry:(g&&g.geoCountry)?g.geoCountry:"", geoRegion:(g&&g.geoRegion)?g.geoRegion:"", geoCity:(g&&g.geoCity)?g.geoCity:"" }; }
-      function getGeo() {
-        var url = window.GEO_URL || "/geo";
-        return fetch(url, { cache: "no-store" })
-          .then(function (r) { return r.text().then(function (t) { try { return safeGeoObject(JSON.parse(t)); } catch (e) { return safeGeoObject(null); } }); })
-          .catch(function () { return safeGeoObject(null); });
-      }
-      function postToAppsScript(payloadObj) {
-        var url = window.WEB_APP_URL;
-        if (!url || url.indexOf("script.google.com") === -1) return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
-        var body = new URLSearchParams();
-        body.set("payload", JSON.stringify(payloadObj));
-        return fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: body.toString() })
-          .then(function (res) { return res.text().then(function (text) { dbg("POST", res.status, text); return { status: res.status, text: text }; }); })
-          .catch(function (e) { return { status: 0, text: String(e) }; });
-      }
-      function logEvent(eventName, extra) {
-        if (!extra) extra = {};
-        var dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
-        if (dnt) return Promise.resolve({ status: 0, text: "DNT enabled" });
-        var v = getVisitor();
-        return getGeo().then(function (geo) {
-          var payload = { visitorId:v.id, isNew:v.isNew, event:String(eventName||""), page:location.pathname||"", userAgent:navigator.userAgent||"", tsClient:new Date().toISOString(),
-            geoProvider:geo.geoProvider, geoCountry:geo.geoCountry, geoRegion:geo.geoRegion, geoCity:geo.geoCity };
-          for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k]; }
-          return postToAppsScript(payload);
-        });
-      }
-      window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
-    })();
-  </script>
 
   <script>
     /**************************************************************
      * CONFIG
      **************************************************************/
-    window.GEO_URL = "geo";
-    const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
-    const SHEET1_NAME = "Sheet1";
-    const SHEET2_NAME = "Sheet2";
+    // ✅ Update to your deployed Apps Script Web App URL:
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwdt0bDi9pPJ6iyXwg11ItonXmCZOj40KYOyp71srRBFf9fcCYkdHxyV_4rhP1IGVgO/exec";
+
+    // Google Maps API key
     const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+  </script>
 
-    const SHEET1_LAT_COL_INDEX = 0;
-    const SHEET1_LNG_COL_INDEX = 1;
-    const SHEET1_APOE_COL_INDEX = 2;
-
-    const SHEET1_SITECLASS_COLS = {
-      I:   { PGA: 3,  Sa: 4,  Tc: 5  },
-      II:  { PGA: 6,  Sa: 7,  Tc: 8  },
-      III: { PGA: 9,  Sa: 10, Tc: 11 },
-      IV:  { PGA: 12, Sa: 13, Tc: 14 },
-      V:   { PGA: 15, Sa: 16, Tc: 17 },
-      VI:  { PGA: 18, Sa: 19, Tc: 20 },
-    };
-
-    const SHEET2_WORKINGLIFE_COL_INDEX = 0;
-    const SHEET2_IMPORTANCE_COL_INDEX = 1;
-    const SHEET2_STRING_COLS = [2, 3, 4];
-    const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
-
-    const WORKING_LIFE_LABEL = {
-      construction: "Construction equipment",
-      lt6months: "Less than 6 months",
-      "5": "5 years",
-      "25": "25 years",
-      "50": "50 years",
-      "100": "100 years or more"
-    };
-
+  <script>
     /**************************************************************
      * STATE
      **************************************************************/
@@ -322,45 +226,14 @@
     let selectedSiteClass = "";
     let selectedImportanceLevel = "";
     let selectedWorkingLife = "";
-    let matchedSheet1Rows = [];
-    let sheet2MatchOptions = [];
+
+    // cancel in-flight requests when user changes inputs quickly
+    let recalcToken = 0;
 
     function round1(n){
       const num = Number(n);
       if (!Number.isFinite(num)) return null;
       return Math.round(num * 10) / 10;
-    }
-
-    function analyticsExtraBase() {
-      const lat = selectedLat;
-      const lng = selectedLng;
-      return {
-        siteClass: selectedSiteClass || "",
-        importanceLevel: selectedImportanceLevel || "",
-        workingLife: selectedWorkingLife || "",
-        roundedLatLng: (Number.isFinite(lat) && Number.isFinite(lng))
-          ? `${round1(lat)},${round1(lng)}`
-          : ""
-      };
-    }
-
-    function logEvent(eventName, extra = {}) {
-      if (!window.SiteAnalytics || typeof window.SiteAnalytics.logEvent !== "function") return;
-      return window.SiteAnalytics.logEvent(eventName, Object.assign({}, analyticsExtraBase(), extra));
-    }
-
-    function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
-    function eqLoose(a, b){
-      const sa = normalize(a), sb = normalize(b);
-      if (sa === sb) return true;
-      const na = Number(sa), nb = Number(sb);
-      if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
-      return sa.toLowerCase() === sb.toLowerCase();
-    }
-    function safeCell(v) {
-      if (v === null || v === undefined || String(v).trim() === "") return "";
-      const n = Number(v);
-      return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
     }
 
     function hasAllInputs(){
@@ -371,208 +244,33 @@
              !!selectedImportanceLevel;
     }
 
-    function setRoundedBar(){
-      const el = document.getElementById("roundedCoordsBar");
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.style.display="none"; el.textContent = ""; return; }
-      const rLat = round1(selectedLat);
-      const rLng = round1(selectedLng);
-      el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
-    }
-
     function showLoading(show){
       document.getElementById("loadingOverlay").classList.toggle("show", !!show);
     }
 
     function clearResults(){
       document.getElementById("tablesGrid").innerHTML = "";
-      const el = document.getElementById("roundedCoordsBar");
-      el.style.display = "none";
-      el.textContent = "";
+      const r = document.getElementById("roundedCoordsBar");
+      r.style.display = "none";
+      r.textContent = "";
     }
 
-    /**************************************************************
-     * ✅ Fix alignment: option-block and map top+bottom match
-     **************************************************************/
-    function syncMapHeightToOptionBlock(){
-      const block = document.getElementById("designInputsBlock");
-      const mapEl = document.getElementById("map");
-      if (!block || !mapEl) return;
-
-      // exact pixel match of the option block
-      const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
-      mapEl.style.height = h + "px";
-
-      // trigger google maps resize after height change
-      if (window.google && google.maps && map) {
-        google.maps.event.trigger(map, "resize");
-        if (marker) map.panTo(marker.getPosition());
-      }
-    }
-
-    function setupHeightSync(){
-      const block = document.getElementById("designInputsBlock");
-      if (!block) return;
-
-      // initial + after layout
-      requestAnimationFrame(syncMapHeightToOptionBlock);
-
-      if ("ResizeObserver" in window) {
-        const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
-        ro.observe(block);
-      }
-
-      window.addEventListener("resize", () => syncMapHeightToOptionBlock());
-    }
-
-    /**************************************************************
-     * Tables layout rules:
-     * 1-3 tables => 1 row across full width (n columns)
-     * 4 tables   => 2 rows x 2 columns across full width
-     **************************************************************/
     function applyTablesGridColumns(n){
       const grid = document.getElementById("tablesGrid");
-      if (!grid) return;
-
       if (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
       else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
       else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
       else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
     }
 
-    /**************************************************************
-     * GOOGLE SHEETS (GVIZ)
-     **************************************************************/
-    function gvizUrl(sheetName, query){
-      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
-      const params = new URLSearchParams();
-      params.set("sheet", sheetName);
-      params.set("tq", query);
-      return `${base}?${params.toString()}`;
-    }
-
-    async function fetchSheetAs2DArray(sheetName, query){
-      const url = gvizUrl(sheetName, query);
-      const res = await fetch(url);
-      const text = await res.text();
-      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-      const data = JSON.parse(jsonText);
-      const cols = data.table.cols.length;
-      const rows = data.table.rows || [];
-      return rows.map(r => {
-        const arr = new Array(cols).fill(null);
-        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
-        return arr;
-      });
-    }
-
-    async function step1_findAllSheet1RowsMatching1dp(){
-      matchedSheet1Rows = [];
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
-
-      const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
-      if (!rows.length) return;
-
-      const targetLat1 = round1(selectedLat);
-      const targetLng1 = round1(selectedLng);
-
-      for (const row of rows) {
-        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
-        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) matchedSheet1Rows.push({ row });
-      }
-    }
-
-    async function step2_getTitlesAndStringsFromSheet2(){
-      sheet2MatchOptions = [];
-      if (!selectedWorkingLife || !selectedImportanceLevel) return;
-
-      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-      if (!sheet2.length) return;
-
-      const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
-      const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
-      const headerish = firstA.includes("working") || firstB.includes("importance");
-
-      const headerRow = headerish ? sheet2[0] : null;
-      const dataRows = headerish ? sheet2.slice(1) : sheet2;
-
-      const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-
-      const matchRow = dataRows.find(r =>
-        eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
-        eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
-      );
-
-      if (!matchRow) { sheet2MatchOptions = []; return; }
-
-      sheet2MatchOptions = SHEET2_STRING_COLS
-        .map((colIdx) => {
-          const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
-          const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
-          const value = normalize(matchRow[colIdx]);
-          return { title, value };
-        })
-        .filter(x => x.value.length > 0);
-    }
-
-    function isOneOver500(apoe){
-      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
-      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
-    }
-
-    function step3_filterMatchedSheet1Rows(){
-      if (!matchedSheet1Rows.length) return [];
-      if (!sheet2MatchOptions.length) return [];
-
-      const out = [];
-      const seen = new Set();
-
-      for (const item of matchedSheet1Rows) {
-        const sheet1Row = item.row;
-        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
-        if (!apoe) continue;
-
-        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
-        if (!match) continue;
-
-        const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        out.push({ sheet1Row, apoe, matchTitle: match.title });
-      }
-
-      const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
-      if (hasULS) {
-        const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
-        if (oneOver500Item && oneOver500Item.row) {
-          const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
-          const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
-          }
-        }
-      }
-
-      return out;
-    }
-
-    function buildThreeRowTable(sheet1Row, apoe, matchTitle){
-      const sc = selectedSiteClass;
-      const idx = SHEET1_SITECLASS_COLS[sc];
-      const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
-      const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
-      const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
-      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
-
+    function buildTableHTML(t){
+      // t: {title, siteClass, apoe, pga, sa, tc}
       return `
         <table class="sc-table">
           <thead>
             <tr>
-              <th class="left-head">${topLeft}</th>
-              <th colspan="3">Site Class ${sc}</th>
+              <th class="left-head">${t.title}</th>
+              <th colspan="3">Site Class ${t.siteClass}</th>
             </tr>
             <tr>
               <th class="subhead left-head">apoe</th>
@@ -583,85 +281,142 @@
           </thead>
           <tbody>
             <tr>
-              <td class="left-cell">${apoe || "(APOE blank)"}</td>
-              <td>${pga}</td>
-              <td>${sa}</td>
-              <td>${tc}</td>
+              <td class="left-cell">${t.apoe || "(APOE blank)"}</td>
+              <td>${t.pga ?? ""}</td>
+              <td>${t.sa ?? ""}</td>
+              <td>${t.tc ?? ""}</td>
             </tr>
           </tbody>
         </table>
       `;
     }
 
-    function renderTablesFullWidth(filtered){
-      if (!hasAllInputs()) return;
+    async function postToWebApp(payloadObj){
+      const url = window.WEB_APP_URL;
+      if (!url || url.indexOf("script.google.com") === -1) throw new Error("WEB_APP_URL is missing/invalid.");
 
-      if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
-        clearResults();
-        return;
-      }
+      const body = new URLSearchParams();
+      body.set("payload", JSON.stringify(payloadObj));
 
-      const rounded = document.getElementById("roundedCoordsBar");
-      const grid = document.getElementById("tablesGrid");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      });
 
-      setRoundedBar();
-      rounded.style.display = "";
-
-      applyTablesGridColumns(filtered.length);
-
-      grid.innerHTML = filtered.map(x =>
-        `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
-      ).join("");
+      const text = await res.text();
+      let json;
+      try { json = JSON.parse(text); } catch (e) { throw new Error("WebApp returned non-JSON: " + text.slice(0, 200)); }
+      if (!res.ok || json.ok === false) throw new Error(json.error || ("HTTP " + res.status));
+      return json;
     }
-
-    let recalcToken = 0;
 
     async function recalc(){
       const myToken = ++recalcToken;
 
-      showLoading(true);
       clearResults();
+      if (!hasAllInputs()) return;
+
+      showLoading(true);
 
       try {
-        if (!hasAllInputs()) return;
+        const payload = {
+          mode: "lookup",
+          lat: selectedLat,
+          lng: selectedLng,
+          siteClass: selectedSiteClass,
+          importanceLevel: selectedImportanceLevel,
+          workingLife: selectedWorkingLife
+        };
 
-        await step1_findAllSheet1RowsMatching1dp();
-        if (myToken !== recalcToken) return;
+        const data = await postToWebApp(payload);
+        if (myToken !== recalcToken) return; // stale
 
-        await step2_getTitlesAndStringsFromSheet2();
-        if (myToken !== recalcToken) return;
+        const tables = Array.isArray(data.tables) ? data.tables : [];
 
-        const filtered = step3_filterMatchedSheet1Rows();
-        if (myToken !== recalcToken) return;
+        if (!tables.length) {
+          // per your preference: no noisy messages if none returned
+          clearResults();
+          return;
+        }
 
-        renderTablesFullWidth(filtered);
+        // Show rounded key + tables
+        const roundedBar = document.getElementById("roundedCoordsBar");
+        roundedBar.innerHTML = `Rounded (1dp) match key: <b>${data.roundedKey || ""}</b>`;
+        roundedBar.style.display = "";
 
-        await logEvent("results_generated", {
-          matchedSheet1RowsCount: matchedSheet1Rows.length,
-          displayedTablesCount: filtered.length
-        });
+        applyTablesGridColumns(tables.length);
+
+        document.getElementById("tablesGrid").innerHTML = tables
+          .map(t => `<div class="table-card">${buildTableHTML(t)}</div>`)
+          .join("");
+
       } catch (err) {
         console.error(err);
+        // silent (no pending/error spam). If you want a tiny "No results" label, tell me.
       } finally {
         if (myToken === recalcToken) showLoading(false);
       }
     }
 
-    function wireSingleSelectButtons(containerId, setter, buttonType){
+    /**************************************************************
+     * Map / Inputs alignment: sync map height to option block
+     **************************************************************/
+    function syncMapHeightToOptionBlock(){
+      const block = document.getElementById("designInputsBlock");
+      const mapEl = document.getElementById("map");
+      if (!block || !mapEl) return;
+
+      const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
+      mapEl.style.height = h + "px";
+
+      if (window.google && google.maps && map) {
+        google.maps.event.trigger(map, "resize");
+        if (marker) map.panTo(marker.getPosition());
+      }
+    }
+
+    function setupHeightSync(){
+      const block = document.getElementById("designInputsBlock");
+      if (!block) return;
+
+      requestAnimationFrame(syncMapHeightToOptionBlock);
+
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
+        ro.observe(block);
+      }
+      window.addEventListener("resize", syncMapHeightToOptionBlock);
+    }
+
+    /**************************************************************
+     * UI button wiring
+     **************************************************************/
+    function wireSingleSelectButtons(containerId, setter){
       const buttons = document.querySelectorAll(`#${containerId} button`);
       buttons.forEach(btn => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", () => {
           buttons.forEach(b => b.classList.remove("selected"));
           btn.classList.add("selected");
           setter(btn.dataset.value);
 
-          // ✅ Keep alignment perfect after any wrap/height change
           syncMapHeightToOptionBlock();
-
-          await logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
-          await recalc();
+          recalc();
         });
       });
+    }
+
+    /**************************************************************
+     * Suggestions submit -> mode="suggestion"
+     **************************************************************/
+    function getVisitorId(){
+      const key = "nz_tool_visitor_id";
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = (crypto.randomUUID) ? ("v_" + crypto.randomUUID()) : ("v_" + Date.now());
+        localStorage.setItem(key, id);
+      }
+      return id;
     }
 
     function wireSuggestions(){
@@ -678,27 +433,12 @@
         btn.textContent = "Submitting…";
 
         try {
-          const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"", isNew:false };
-          const payload = Object.assign({}, analyticsExtraBase(), {
-            event: "suggestion_submit",
+          await postToWebApp({
+            mode: "suggestion",
             suggestionText: text,
-            visitorId: v.id || "",
-            isNew: !!v.isNew,
-            page: location.pathname || "",
-            userAgent: navigator.userAgent || "",
-            tsClient: new Date().toISOString()
+            visitorId: getVisitorId(),
+            page: location.pathname || ""
           });
-
-          const body = new URLSearchParams();
-          body.set("payload", JSON.stringify(payload));
-
-          const res = await fetch(window.WEB_APP_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-            body: body.toString()
-          });
-
-          if (!res.ok) { msg.textContent = `Submit failed (${res.status}).`; return; }
 
           textarea.value = "";
           msg.textContent = "Thanks — suggestion submitted.";
@@ -712,9 +452,12 @@
       });
     }
 
+    /**************************************************************
+     * Google Maps
+     **************************************************************/
     function setMarker(lat,lng){
-      const pos = {lat, lng};
-      if(marker) marker.setMap(null);
+      const pos = { lat, lng };
+      if (marker) marker.setMap(null);
       marker = new google.maps.Marker({ map, position: pos });
       map.panTo(pos);
     }
@@ -725,16 +468,18 @@
         zoom: 6
       });
 
-      // ✅ Start and keep sync
       setupHeightSync();
       syncMapHeightToOptionBlock();
 
-      map.addListener("click", async (e) => {
+      map.addListener("click", (e) => {
         selectedLat = e.latLng.lat();
         selectedLng = e.latLng.lng();
         setMarker(selectedLat, selectedLng);
-        document.getElementById("coords").textContent = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-        await recalc();
+
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+        recalc();
       });
 
       autocomplete = new google.maps.places.Autocomplete(
@@ -742,7 +487,7 @@
         { componentRestrictions: { country: "nz" } }
       );
 
-      autocomplete.addListener("place_changed", async () => {
+      autocomplete.addListener("place_changed", () => {
         const place = autocomplete.getPlace();
         if (!place.geometry || !place.geometry.location) return;
 
@@ -754,13 +499,12 @@
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
-        await recalc();
+        recalc();
       });
 
       document.getElementById("useMyLocationBtn").addEventListener("click", () => {
         if (!navigator.geolocation) return;
-
-        navigator.geolocation.getCurrentPosition(async (pos) => {
+        navigator.geolocation.getCurrentPosition((pos) => {
           selectedLat = pos.coords.latitude;
           selectedLng = pos.coords.longitude;
           setMarker(selectedLat, selectedLng);
@@ -769,17 +513,18 @@
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
-          await recalc();
+          recalc();
         });
       });
 
-      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
-      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
-      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
-      wireSuggestions();
+      // wire buttons
+      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
+      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
+      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
 
-      showLoading(false);
+      wireSuggestions();
       clearResults();
+      showLoading(false);
     }
 
     window.initMap = initMap;
@@ -787,10 +532,11 @@
     (function loadGoogleMaps(){
       if (window.google && window.google.maps) return;
       const s = document.createElement("script");
-      s.src = "https://maps.googleapis.com/maps/api/js"
-        + "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY)
-        + "&callback=initMap"
-        + "&libraries=places";
+      s.src =
+        "https://maps.googleapis.com/maps/api/js" +
+        "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY) +
+        "&callback=initMap" +
+        "&libraries=places";
       s.async = true;
       s.defer = true;
       document.head.appendChild(s);
