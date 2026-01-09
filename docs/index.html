@@ -584,9 +584,15 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     function isBlockedCombo(){
-      // ✅ NEW RULE: Working life = 100 and Importance = 4
-      return selectedWorkingLife === "100" && selectedImportanceLevel === "4";
+      const wl = String(selectedWorkingLife || "").toLowerCase().replace(/\s+/g, "");
+      const il = String(selectedImportanceLevel || "").trim();
+
+      // Match "100", "100years", "100yearsormore", etc.
+      const is100Plus = wl === "100" || wl.startsWith("100years");
+
+      return is100Plus && il === "4";
     }
+
 
     function showLoading(show){
       document.getElementById("loadingOverlay").classList.toggle("show", !!show);
@@ -601,8 +607,9 @@ Because only approximate, non-identifying location data is collected, there is g
     function showSpecialNotice(text){
       const n = document.getElementById("specialNotice");
       n.textContent = text;
-      n.style.display = "";
+      n.style.display = "block";   // ✅ force visible
     }
+
 
     function clearResults(){
       document.getElementById("tablesGrid").innerHTML = "";
