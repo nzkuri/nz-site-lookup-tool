@@ -10,43 +10,60 @@
 
     body { font-family: Arial, sans-serif; margin: 20px; }
 
-    #pageTitle { text-align:center; margin: 0 0 16px 0; }
+    #pageTitle { text-align: center; margin: 0 0 16px 0; }
 
-    /* Shared container so map/results/suggestions share same right edge */
-    .content-wrap{ width:100%; max-width: 1400px; margin: 0 auto; }
+    /* Shared container aligns right edges of map/results/suggestions */
+    .content-wrap{
+      width: 100%;
+      max-width: 1400px;  /* remove if you want full-bleed */
+      margin: 0 auto;
+    }
 
+    /* Search row */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
+    /* Coords sits ABOVE grid so it doesn't break option-block/map alignment */
     #coords { font-weight:bold; margin-bottom:12px; }
 
+    /* Two-column */
     .main-grid { display:flex; gap:16px; align-items:stretch; width:100%; }
-    .left-panel { flex:0 0 520px; max-width:520px; width:100%; }
-    .right-panel { flex:1 1 auto; min-width: 320px; display:flex; }
+    .left-panel { flex: 0 0 520px; max-width: 520px; width:100%; }
+    .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
 
-    @media (max-width:980px){
-      .main-grid{ flex-direction:column; }
-      .left-panel{ max-width:100%; flex-basis:auto; }
-      .right-panel{ width:100%; }
+    @media (max-width: 980px){
+      .main-grid { flex-direction: column; }
+      .left-panel { max-width: 100%; flex-basis: auto; }
+      .right-panel { width: 100%; }
     }
 
-    .option-block {
+    .option-block{
       padding:15px;
       border:1px solid #ddd;
       border-radius:6px;
       background:#fafafa;
       width:100%;
     }
-    .row { margin-bottom:14px; }
+    .row { margin-bottom: 14px; }
     .row label { font-weight:bold; display:block; margin-bottom:6px; }
 
     .option-buttons button{
-      padding:8px 12px; margin:4px; border:1px solid #aaa; border-radius:4px;
-      background:#fff; cursor:pointer; transition: background .15s, color .15s, border-color .15s;
+      padding:8px 12px;
+      margin:4px;
+      border:1px solid #aaa;
+      border-radius:4px;
+      background:#fff;
+      cursor:pointer;
+      transition: background .15s, color .15s, border-color .15s;
     }
-    .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
+    .option-buttons button.selected{
+      background:#007bff;
+      color:#fff;
+      border-color:#007bff;
+    }
 
+    /* Map height is synced to option-block height via JS */
     #map{
       width:100%;
       min-height:280px;
@@ -55,39 +72,47 @@
       flex: 1 1 auto;
     }
 
+    /* Full-width results */
     .results-wrap{
-      width:100%;
-      margin-top:16px;
-      padding:12px;
-      border:1px solid #ddd;
-      border-radius:8px;
-      background:#fff;
-      position:relative;
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      position: relative;
     }
+
     #roundedCoordsBar{
       display:none;
       font-weight:700;
       color:#666;
-      margin-bottom:10px;
+      margin-bottom: 10px;
     }
 
-    #tablesGrid{ display:grid; gap:12px; width:100%; }
+    #tablesGrid{
+      display: grid;
+      gap: 12px;
+      width: 100%;
+    }
+
     .table-card{
       width:100%;
       overflow-x:auto;
-      border:1px solid #eee;
-      border-radius:8px;
-      padding:8px;
-      background:#fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
     }
 
-    .sc-table { width:100%; border-collapse:collapse; background:#fff; font-size:14px; }
-    .sc-table th, .sc-table td { border:2px solid #000; padding:8px; text-align:center; vertical-align:middle; white-space:nowrap; }
-    .sc-table thead th { font-weight:700; }
-    .sc-table .left-head { width:220px; text-align:left; }
+    .sc-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+    .sc-table th, .sc-table td { border: 2px solid #000; padding: 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
+    .sc-table thead th { font-weight: 700; }
+    .sc-table .left-head { width: 220px; text-align:left; }
     .sc-table .left-cell { text-align:left; font-weight:700; }
-    .sc-table .subhead { font-weight:700; }
+    .sc-table .subhead { font-weight: 700; }
 
+    /* Loading overlay - no pending calc text */
     .loading-overlay{
       position:absolute;
       inset:0;
@@ -96,38 +121,40 @@
       align-items:center;
       justify-content:center;
       border-radius:8px;
-      z-index:2;
-      font-weight:700;
+      z-index: 2;
+      font-weight: 700;
     }
     .loading-overlay.show{ display:flex; }
 
+    /* Suggestions */
     .suggestions-wrap{
-      width:100%;
-      margin-top:18px;
-      padding:14px;
-      border:1px solid #ddd;
-      border-radius:8px;
-      background:#fafafa;
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+      width: 100%;
     }
     #suggestionText{
-      width:100%;
-      min-height:110px;
-      resize:vertical;
-      padding:10px;
-      border:1px solid #ccc;
-      border-radius:6px;
-      font-family:inherit;
-      font-size:14px;
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
     }
     #submitSuggestionBtn{
-      margin-top:10px;
-      padding:10px 14px;
-      border:1px solid #aaa;
-      border-radius:6px;
-      background:#fff;
-      cursor:pointer;
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 14px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
     }
-    #suggestionMsg{ margin-top:8px; color:#666; }
+    #suggestionMsg{ margin-top: 8px; color:#666; }
   </style>
 </head>
 
@@ -189,12 +216,14 @@
       </div>
     </div>
 
+    <!-- Results -->
     <div class="results-wrap">
       <div class="loading-overlay" id="loadingOverlay">Loading…</div>
       <div id="roundedCoordsBar"></div>
       <div id="tablesGrid"></div>
     </div>
 
+    <!-- Suggestions -->
     <div class="suggestions-wrap">
       <div style="font-weight:700; margin-bottom:8px;">Suggestions</div>
       <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
@@ -206,341 +235,62 @@
 
   </div>
 
+  <!-- =========================================================
+    CSP-SAFE ANALYTICS MODULE (kept)
+  ========================================================= -->
   <script>
-    /**************************************************************
-     * CONFIG
-     **************************************************************/
-    // ✅ Update to your deployed Apps Script Web App URL:
     window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwdt0bDi9pPJ6iyXwg11ItonXmCZOj40KYOyp71srRBFf9fcCYkdHxyV_4rhP1IGVgO/exec";
+    window.GEO_URL = "/geo";
+    window.ANALYTICS_DEBUG = false;
 
-    // Google Maps API key
-    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
-  </script>
+    (function () {
+      var VISITOR_KEY = "nz_tool_visitor_id";
 
-  <script>
-    /**************************************************************
-     * STATE
-     **************************************************************/
-    let map, marker, autocomplete;
-    let selectedLat = null, selectedLng = null;
-    let selectedSiteClass = "";
-    let selectedImportanceLevel = "";
-    let selectedWorkingLife = "";
+      function getVisitor() {
+        var id = localStorage.getItem(VISITOR_KEY);
+        var isNew = false;
+        if (!id) {
+          isNew = true;
+          id = (window.crypto && crypto.randomUUID)
+            ? ("v_" + crypto.randomUUID())
+            : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+          localStorage.setItem(VISITOR_KEY, id);
+        }
+        return { id: id, isNew: isNew };
+      }
 
-    // cancel in-flight requests when user changes inputs quickly
-    let recalcToken = 0;
-
-    function round1(n){
-      const num = Number(n);
-      if (!Number.isFinite(num)) return null;
-      return Math.round(num * 10) / 10;
-    }
-
-    function hasAllInputs(){
-      return Number.isFinite(selectedLat) &&
-             Number.isFinite(selectedLng) &&
-             !!selectedSiteClass &&
-             !!selectedWorkingLife &&
-             !!selectedImportanceLevel;
-    }
-
-    function showLoading(show){
-      document.getElementById("loadingOverlay").classList.toggle("show", !!show);
-    }
-
-    function clearResults(){
-      document.getElementById("tablesGrid").innerHTML = "";
-      const r = document.getElementById("roundedCoordsBar");
-      r.style.display = "none";
-      r.textContent = "";
-    }
-
-    function applyTablesGridColumns(n){
-      const grid = document.getElementById("tablesGrid");
-      if (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
-      else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
-      else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
-      else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
-    }
-
-    function buildTableHTML(t){
-      // t: {title, siteClass, apoe, pga, sa, tc}
-      return `
-        <table class="sc-table">
-          <thead>
-            <tr>
-              <th class="left-head">${t.title}</th>
-              <th colspan="3">Site Class ${t.siteClass}</th>
-            </tr>
-            <tr>
-              <th class="subhead left-head">apoe</th>
-              <th class="subhead">PGA</th>
-              <th class="subhead">Sa,s</th>
-              <th class="subhead">Tc</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="left-cell">${t.apoe || "(APOE blank)"}</td>
-              <td>${t.pga ?? ""}</td>
-              <td>${t.sa ?? ""}</td>
-              <td>${t.tc ?? ""}</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
-    }
-
-    async function postToWebApp(payloadObj){
-      const url = window.WEB_APP_URL;
-      if (!url || url.indexOf("script.google.com") === -1) throw new Error("WEB_APP_URL is missing/invalid.");
-
-      const body = new URLSearchParams();
-      body.set("payload", JSON.stringify(payloadObj));
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
-      });
-
-      const text = await res.text();
-      let json;
-      try { json = JSON.parse(text); } catch (e) { throw new Error("WebApp returned non-JSON: " + text.slice(0, 200)); }
-      if (!res.ok || json.ok === false) throw new Error(json.error || ("HTTP " + res.status));
-      return json;
-    }
-
-    async function recalc(){
-      const myToken = ++recalcToken;
-
-      clearResults();
-      if (!hasAllInputs()) return;
-
-      showLoading(true);
-
-      try {
-        const payload = {
-          mode: "lookup",
-          lat: selectedLat,
-          lng: selectedLng,
-          siteClass: selectedSiteClass,
-          importanceLevel: selectedImportanceLevel,
-          workingLife: selectedWorkingLife
+      function safeGeoObject(g) {
+        return {
+          geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
+          geoCountry: (g && g.geoCountry) ? g.geoCountry : "",
+          geoRegion: (g && g.geoRegion) ? g.geoRegion : "",
+          geoCity: (g && g.geoCity) ? g.geoCity : ""
         };
-
-        const data = await postToWebApp(payload);
-        if (myToken !== recalcToken) return; // stale
-
-        const tables = Array.isArray(data.tables) ? data.tables : [];
-
-        if (!tables.length) {
-          // per your preference: no noisy messages if none returned
-          clearResults();
-          return;
-        }
-
-        // Show rounded key + tables
-        const roundedBar = document.getElementById("roundedCoordsBar");
-        roundedBar.innerHTML = `Rounded (1dp) match key: <b>${data.roundedKey || ""}</b>`;
-        roundedBar.style.display = "";
-
-        applyTablesGridColumns(tables.length);
-
-        document.getElementById("tablesGrid").innerHTML = tables
-          .map(t => `<div class="table-card">${buildTableHTML(t)}</div>`)
-          .join("");
-
-      } catch (err) {
-        console.error(err);
-        // silent (no pending/error spam). If you want a tiny "No results" label, tell me.
-      } finally {
-        if (myToken === recalcToken) showLoading(false);
       }
-    }
 
-    /**************************************************************
-     * Map / Inputs alignment: sync map height to option block
-     **************************************************************/
-    function syncMapHeightToOptionBlock(){
-      const block = document.getElementById("designInputsBlock");
-      const mapEl = document.getElementById("map");
-      if (!block || !mapEl) return;
-
-      const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
-      mapEl.style.height = h + "px";
-
-      if (window.google && google.maps && map) {
-        google.maps.event.trigger(map, "resize");
-        if (marker) map.panTo(marker.getPosition());
+      function getGeo() {
+        var url = window.GEO_URL || "/geo";
+        return fetch(url, { cache: "no-store" })
+          .then(r => r.text().then(t => { try { return safeGeoObject(JSON.parse(t)); } catch(e){ return safeGeoObject(null); } }))
+          .catch(() => safeGeoObject(null));
       }
-    }
 
-    function setupHeightSync(){
-      const block = document.getElementById("designInputsBlock");
-      if (!block) return;
-
-      requestAnimationFrame(syncMapHeightToOptionBlock);
-
-      if ("ResizeObserver" in window) {
-        const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
-        ro.observe(block);
+      function postToAppsScript(payloadObj) {
+        var url = window.WEB_APP_URL;
+        var body = new URLSearchParams();
+        body.set("payload", JSON.stringify(payloadObj));
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body: body.toString()
+        }).then(res => res.text());
       }
-      window.addEventListener("resize", syncMapHeightToOptionBlock);
-    }
 
-    /**************************************************************
-     * UI button wiring
-     **************************************************************/
-    function wireSingleSelectButtons(containerId, setter){
-      const buttons = document.querySelectorAll(`#${containerId} button`);
-      buttons.forEach(btn => {
-        btn.addEventListener("click", () => {
-          buttons.forEach(b => b.classList.remove("selected"));
-          btn.classList.add("selected");
-          setter(btn.dataset.value);
-
-          syncMapHeightToOptionBlock();
-          recalc();
-        });
-      });
-    }
-
-    /**************************************************************
-     * Suggestions submit -> mode="suggestion"
-     **************************************************************/
-    function getVisitorId(){
-      const key = "nz_tool_visitor_id";
-      let id = localStorage.getItem(key);
-      if (!id) {
-        id = (crypto.randomUUID) ? ("v_" + crypto.randomUUID()) : ("v_" + Date.now());
-        localStorage.setItem(key, id);
-      }
-      return id;
-    }
-
-    function wireSuggestions(){
-      const textarea = document.getElementById("suggestionText");
-      const btn = document.getElementById("submitSuggestionBtn");
-      const msg = document.getElementById("suggestionMsg");
-
-      btn.addEventListener("click", async () => {
-        const text = (textarea.value || "").trim();
-        msg.textContent = "";
-        if (!text) { msg.textContent = "Please type a suggestion first."; return; }
-
-        btn.disabled = true;
-        btn.textContent = "Submitting…";
-
-        try {
-          await postToWebApp({
-            mode: "suggestion",
-            suggestionText: text,
-            visitorId: getVisitorId(),
-            page: location.pathname || ""
-          });
-
-          textarea.value = "";
-          msg.textContent = "Thanks — suggestion submitted.";
-        } catch (e) {
-          console.error(e);
-          msg.textContent = "Submit failed (check console).";
-        } finally {
-          btn.disabled = false;
-          btn.textContent = "Submit";
-        }
-      });
-    }
-
-    /**************************************************************
-     * Google Maps
-     **************************************************************/
-    function setMarker(lat,lng){
-      const pos = { lat, lng };
-      if (marker) marker.setMap(null);
-      marker = new google.maps.Marker({ map, position: pos });
-      map.panTo(pos);
-    }
-
-    function initMap(){
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: -41.2865, lng: 174.7762 },
-        zoom: 6
-      });
-
-      setupHeightSync();
-      syncMapHeightToOptionBlock();
-
-      map.addListener("click", (e) => {
-        selectedLat = e.latLng.lat();
-        selectedLng = e.latLng.lng();
-        setMarker(selectedLat, selectedLng);
-
-        document.getElementById("coords").textContent =
-          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
-        recalc();
-      });
-
-      autocomplete = new google.maps.places.Autocomplete(
-        document.getElementById("addressInput"),
-        { componentRestrictions: { country: "nz" } }
-      );
-
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace();
-        if (!place.geometry || !place.geometry.location) return;
-
-        selectedLat = place.geometry.location.lat();
-        selectedLng = place.geometry.location.lng();
-        setMarker(selectedLat, selectedLng);
-        map.setZoom(14);
-
-        document.getElementById("coords").textContent =
-          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
-
-        recalc();
-      });
-
-      document.getElementById("useMyLocationBtn").addEventListener("click", () => {
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition((pos) => {
-          selectedLat = pos.coords.latitude;
-          selectedLng = pos.coords.longitude;
-          setMarker(selectedLat, selectedLng);
-          map.setZoom(14);
-
-          document.getElementById("coords").textContent =
-            `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
-          recalc();
-        });
-      });
-
-      // wire buttons
-      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
-      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
-      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
-
-      wireSuggestions();
-      clearResults();
-      showLoading(false);
-    }
-
-    window.initMap = initMap;
-
-    (function loadGoogleMaps(){
-      if (window.google && window.google.maps) return;
-      const s = document.createElement("script");
-      s.src =
-        "https://maps.googleapis.com/maps/api/js" +
-        "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY) +
-        "&callback=initMap" +
-        "&libraries=places";
-      s.async = true;
-      s.defer = true;
-      document.head.appendChild(s);
-    })();
-  </script>
-</body>
-</html>
+      function logEvent(eventName, extra) {
+        extra = extra || {};
+        var v = getVisitor();
+        return getGeo().then(function (geo) {
+          var payload = Object.assign({
+            visitorId: v.id,
+            isNew: v.isNew,
+            event: String(
