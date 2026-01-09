@@ -310,10 +310,10 @@
       <div id="tablesGrid"></div>
     </div>
 
-    <!-- Coming Soon -->
+    <!-- Coming soon -->
     <div class="coming-soon-box">Horizontal Design Action Coefficient - Coming Soon</div>
 
-    <!-- Suggestions (collapsed by default) -->
+    <!-- Suggestions -->
     <details class="suggestions-details" id="suggestionsDetails">
       <summary>
         <span>Suggestions</span>
@@ -384,10 +384,13 @@ Because only approximate, non-identifying location data is collected, there is g
 
   <script>
     /**************************************************************
-     * CONFIG
+     * CONFIG (REQUIRED)
      **************************************************************/
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxo5yBcaRzIyD1Mv4B5YE4pBYxls9RXb4IIV0wa44yUJ2clIXcD_wn5iag1ZQwnsayV/exec"; // <-- REQUIRED
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxo5yBcaRzIyD1Mv4B5YE4pBYxls9RXb4IIV0wa44yUJ2clIXcD_wn5iag1ZQwnsayV/exec"; // must end in /exec
     const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+
+    // Your coarse geo endpoint (must return JSON with geoCountry/geoRegion/geoCity)
+    const GEO_URL = "/geo";
   </script>
 
   <script>
@@ -413,7 +416,6 @@ Because only approximate, non-identifying location data is collected, there is g
              !!selectedImportanceLevel;
     }
 
-    // Rule: WL=100 and IL=4 => show message only
     function isBlockedCombo(){
       const wl = String(selectedWorkingLife || "").toLowerCase().replace(/\s+/g,"");
       const il = String(selectedImportanceLevel || "").trim();
@@ -423,14 +425,6 @@ Because only approximate, non-identifying location data is collected, there is g
 
     function showLoading(show){
       document.getElementById("loadingOverlay").classList.toggle("show", !!show);
-    }
-
-    function clearResults(){
-      document.getElementById("tablesGrid").innerHTML = "";
-      const rounded = document.getElementById("roundedCoordsBar");
-      rounded.style.display = "none";
-      rounded.textContent = "";
-      hideSpecialNotice();
     }
 
     function hideSpecialNotice(){
@@ -443,6 +437,14 @@ Because only approximate, non-identifying location data is collected, there is g
       const n = document.getElementById("specialNotice");
       n.textContent = text;
       n.style.display = "block";
+    }
+
+    function clearResults(){
+      document.getElementById("tablesGrid").innerHTML = "";
+      const rounded = document.getElementById("roundedCoordsBar");
+      rounded.style.display = "none";
+      rounded.textContent = "";
+      hideSpecialNotice();
     }
 
     function applyTablesGridColumns(n){
@@ -480,6 +482,55 @@ Because only approximate, non-identifying location data is collected, there is g
       `;
     }
 
+    async function postWebApp(payloadObj){
+      if (!WEB_APP_URL || WEB_APP_URL.indexOf("script.google.com") === -1) {
+        throw new Error("WEB_APP_URL is missing/invalid.");
+      }
+      const body = new URLSearchParams();
+      body.set("payload", JSON.stringify(payloadObj));
+
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      });
+
+      const text = await res.text();
+      let json;
+      try { json = JSON.parse(text); } catch(e){ throw new Error("Non-JSON response: " + text.slice(0,200)); }
+      if (!res.ok || json.ok === false) throw new Error(json.error || ("HTTP " + res.status));
+      return json;
+    }
+
+    /**************************************************************
+     * GEO (coarse) fetch + cache
+     **************************************************************/
+    let GEO_CACHE = null;
+    let GEO_CACHE_TS = 0;
+    const GEO_CACHE_TTL_MS = 10 * 60 * 1000;
+
+    async function getGeoCoarse(){
+      const now = Date.now();
+      if (GEO_CACHE && (now - GEO_CACHE_TS) < GEO_CACHE_TTL_MS) return GEO_CACHE;
+
+      try{
+        const res = await fetch(GEO_URL, { cache: "no-store" });
+        const txt = await res.text();
+        const obj = JSON.parse(txt);
+
+        GEO_CACHE = {
+          geoCountry: obj.geoCountry || obj.country || "",
+          geoRegion:  obj.geoRegion  || obj.region  || "",
+          geoCity:    obj.geoCity    || obj.city    || ""
+        };
+      } catch(e){
+        GEO_CACHE = { geoCountry:"", geoRegion:"", geoCity:"" };
+      }
+
+      GEO_CACHE_TS = now;
+      return GEO_CACHE;
+    }
+
     function analyticsBase(){
       const rLat = Number.isFinite(selectedLat) ? (Math.round(selectedLat*10)/10).toFixed(1) : "";
       const rLng = Number.isFinite(selectedLng) ? (Math.round(selectedLng*10)/10).toFixed(1) : "";
@@ -493,35 +544,22 @@ Because only approximate, non-identifying location data is collected, there is g
       };
     }
 
-    async function postWebApp(payloadObj){
-      if (!WEB_APP_URL || WEB_APP_URL.indexOf("script.google.com") === -1) {
-        throw new Error("WEB_APP_URL is missing/invalid.");
-      }
-      const body = new URLSearchParams();
-      body.set("payload", JSON.stringify(payloadObj));
-      const res = await fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
-      });
-      const text = await res.text();
-      let json;
-      try { json = JSON.parse(text); } catch(e){ throw new Error("Non-JSON response: " + text.slice(0,200)); }
-      if (!res.ok || json.ok === false) throw new Error(json.error || ("HTTP " + res.status));
-      return json;
-    }
-
-    // Analytics (requires Apps Script patch below to support mode="analytics")
+    // Analytics: sends to mode="analytics" and includes geo fields
     function logEvent(name, extra = {}){
-      // fire-and-forget
-      try{
-        postWebApp(Object.assign(
-          { mode: "analytics", event: String(name || "") },
-          analyticsBase(),
-          extra,
-          { tsClient: new Date().toISOString() }
-        )).catch(()=>{});
-      }catch(e){}
+      (async () => {
+        try{
+          const geo = await getGeoCoarse();
+          await postWebApp(Object.assign(
+            { mode: "analytics", event: String(name || "") },
+            analyticsBase(),
+            geo,
+            extra,
+            { tsClient: new Date().toISOString() }
+          ));
+        } catch(e){
+          // swallow
+        }
+      })();
     }
 
     window.addEventListener("load", () => logEvent("page_load", {}));
@@ -557,8 +595,9 @@ Because only approximate, non-identifying location data is collected, there is g
         if (myToken !== recalcToken) return;
 
         const tables = Array.isArray(data.tables) ? data.tables : [];
+
         if (!tables.length) {
-          // you prefer silence when none
+          // show nothing per your preference
           logEvent("results_generated", { displayedTablesCount: 0 });
           return;
         }
@@ -577,6 +616,8 @@ Because only approximate, non-identifying location data is collected, there is g
 
       } catch(err){
         console.error(err);
+        // show a visible message so failures aren't silent
+        showSpecialNotice("Lookup failed. Please try again (check Web App URL / deployment).");
         logEvent("error", { message: String(err) });
       } finally {
         if (myToken === recalcToken) showLoading(false);
@@ -584,7 +625,7 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Map height sync (align top/bottom with design inputs)
+     * Map height sync
      **************************************************************/
     function syncMapHeightToOptionBlock(){
       const block = document.getElementById("designInputsBlock");
@@ -697,11 +738,9 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     function initConsent(){
-      // suggestions collapsed
       const details = document.getElementById("suggestionsDetails");
       if (details) details.open = false;
 
-      // symbol toggle
       const sym = document.getElementById("suggestionsSymbol");
       if (details && sym){
         details.addEventListener("toggle", () => sym.textContent = details.open ? "−" : "+");
