@@ -9,30 +9,23 @@
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; margin: 20px; }
 
-    #pageTitle { text-align: center; margin: 0 0 16px 0; }
+    #pageTitle { text-align:center; margin: 0 0 16px 0; }
 
-    .content-wrap{
-      width: 100%;
-      max-width: 1400px; /* remove if you want full width */
-      margin: 0 auto;
-    }
+    .content-wrap{ width:100%; max-width:1400px; margin:0 auto; }
 
-    /* Search row */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
     #coords { font-weight:bold; margin-bottom:12px; }
 
-    /* Two-column */
     .main-grid { display:flex; gap:16px; align-items:stretch; width:100%; }
-    .left-panel { flex: 0 0 520px; max-width: 520px; width:100%; }
-    .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
-
+    .left-panel { flex: 0 0 520px; max-width:520px; width:100%; }
+    .right-panel { flex: 1 1 auto; min-width:320px; display:flex; }
     @media (max-width: 980px){
       .main-grid { flex-direction: column; }
-      .left-panel { max-width: 100%; flex-basis: auto; }
-      .right-panel { width: 100%; }
+      .left-panel { max-width:100%; flex-basis:auto; }
+      .right-panel { width:100%; }
     }
 
     .option-block{
@@ -42,22 +35,17 @@
       background:#fafafa;
       width:100%;
     }
-    .row { margin-bottom: 14px; }
+    .row { margin-bottom:14px; }
     .row label { font-weight:bold; display:block; margin-bottom:6px; }
 
     .option-buttons button{
-      padding:8px 12px;
-      margin:4px;
-      border:1px solid #aaa;
-      border-radius:4px;
-      background:#fff;
-      cursor:pointer;
+      padding:8px 12px; margin:4px;
+      border:1px solid #aaa; border-radius:4px;
+      background:#fff; cursor:pointer;
       transition: background .15s, color .15s, border-color .15s;
     }
     .option-buttons button.selected{
-      background:#007bff;
-      color:#fff;
-      border-color:#007bff;
+      background:#007bff; color:#fff; border-color:#007bff;
     }
 
     #map{
@@ -70,210 +58,188 @@
 
     /* Results */
     .results-wrap{
-      width: 100%;
-      margin-top: 16px;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #fff;
-      position: relative;
+      width:100%;
+      margin-top:16px;
+      padding:12px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      background:#fff;
+      position:relative;
     }
-
     #roundedCoordsBar{
       display:none;
       font-weight:700;
       color:#666;
-      margin-bottom: 10px;
+      margin-bottom:10px;
     }
-
     #specialNotice{
       display:none;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #fafafa;
-      font-weight: 800;
-      margin-bottom: 10px;
+      padding:12px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      background:#fafafa;
+      font-weight:800;
+      margin-bottom:10px;
     }
 
-    #tablesGrid{
-      display: grid;
-      gap: 12px;
-      width: 100%;
-    }
-
+    #tablesGrid{ display:grid; gap:12px; width:100%; }
     .table-card{
       width:100%;
       overflow-x:auto;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      padding: 8px;
-      background: #fff;
+      border:1px solid #eee;
+      border-radius:8px;
+      padding:8px;
+      background:#fff;
     }
-
-    .coming-soon-box{
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #f5f5f5;
-  color: #666;
-  font-weight: 700;
-  text-align: center;
-  opacity: 0.8;
-}
-
-    
-    .sc-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
-    .sc-table th, .sc-table td { border: 2px solid #000; padding: 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
-    .sc-table thead th { font-weight: 700; }
-    .sc-table .left-head { width: 220px; text-align:left; }
+    .sc-table { width:100%; border-collapse:collapse; background:#fff; font-size:14px; }
+    .sc-table th, .sc-table td { border:2px solid #000; padding:8px; text-align:center; vertical-align:middle; white-space:nowrap; }
+    .sc-table thead th { font-weight:700; }
+    .sc-table .left-head { width:220px; text-align:left; }
     .sc-table .left-cell { text-align:left; font-weight:700; }
-    .sc-table .subhead { font-weight: 700; }
+    .sc-table .subhead { font-weight:700; }
 
     .loading-overlay{
-      position:absolute;
-      inset:0;
+      position:absolute; inset:0;
       background: rgba(255,255,255,0.85);
       display:none;
       align-items:center;
       justify-content:center;
       border-radius:8px;
-      z-index: 2;
-      font-weight: 700;
+      z-index:2;
+      font-weight:700;
     }
     .loading-overlay.show{ display:flex; }
 
-    /* Suggestions (collapsible) */
-    details.suggestions-details{
-      margin-top: 18px;
-      width: 100%;
+    /* Coming soon box */
+    .coming-soon-box{
+      margin-top: 14px;
+      padding: 12px;
       border: 1px solid #ddd;
       border-radius: 8px;
-      background: #fafafa;
-      padding: 0;
-      overflow: hidden;
+      background: #f5f5f5;
+      color: #666;
+      font-weight: 700;
+      text-align: center;
+      opacity: 0.8;
+    }
+
+    /* Suggestions collapsible */
+    details.suggestions-details{
+      margin-top:18px;
+      width:100%;
+      border:1px solid #ddd;
+      border-radius:8px;
+      background:#fafafa;
+      padding:0;
+      overflow:hidden;
     }
     details.suggestions-details > summary{
-      list-style: none;
-      cursor: pointer;
-      padding: 14px;
-      font-weight: 700;
-      user-select: none;
+      list-style:none;
+      cursor:pointer;
+      padding:14px;
+      font-weight:700;
+      user-select:none;
       display:flex;
       align-items:center;
-      justify-content: space-between;
+      justify-content:space-between;
     }
     details.suggestions-details > summary::-webkit-details-marker { display:none; }
-    .suggestions-body{
-      padding: 14px;
-      border-top: 1px solid #ddd;
-    }
+    .suggestions-body{ padding:14px; border-top:1px solid #ddd; }
     #suggestionText{
-      width: 100%;
-      min-height: 110px;
-      resize: vertical;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 14px;
+      width:100%;
+      min-height:110px;
+      resize:vertical;
+      padding:10px;
+      border:1px solid #ccc;
+      border-radius:6px;
+      font-family:inherit;
+      font-size:14px;
     }
     #submitSuggestionBtn{
-      display: inline-block;
-      margin-top: 10px;
-      padding: 10px 14px;
-      border: 1px solid #aaa;
-      border-radius: 6px;
-      background: #fff;
-      cursor: pointer;
+      display:inline-block;
+      margin-top:10px;
+      padding:10px 14px;
+      border:1px solid #aaa;
+      border-radius:6px;
+      background:#fff;
+      cursor:pointer;
     }
-    #suggestionMsg{ margin-top: 8px; color:#666; }
+    #suggestionMsg{ margin-top:8px; color:#666; }
 
-    /* Consent modal (blocks site until accepted) */
+    /* Consent modals */
     .modal-backdrop{
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 18px;
+      position:fixed; inset:0;
+      background:rgba(0,0,0,0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+      padding:18px;
     }
     .modal-backdrop.show{ display:flex; }
 
     .modal{
-      width: min(820px, 100%);
-      background: #fff;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-      overflow: hidden;
-      position: relative;
+      width:min(820px, 100%);
+      background:#fff;
+      border-radius:12px;
+      border:1px solid #ddd;
+      box-shadow:0 20px 60px rgba(0,0,0,0.25);
+      overflow:hidden;
+      position:relative;
     }
     .modal-header{
-      padding: 14px 16px;
-      border-bottom: 1px solid #eee;
-      font-weight: 800;
+      padding:14px 16px;
+      border-bottom:1px solid #eee;
+      font-weight:800;
       display:flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
     }
-    .modal-title{ font-size: 16px; }
+    .modal-title{ font-size:16px; }
     .modal-body{
-      padding: 16px;
-      max-height: min(60vh, 520px);
-      overflow: auto;
-      white-space: pre-line;
-      line-height: 1.35;
-      font-size: 14px;
+      padding:16px;
+      max-height:min(60vh, 520px);
+      overflow:auto;
+      white-space:pre-line;
+      line-height:1.35;
+      font-size:14px;
     }
     .modal-footer{
-      padding: 14px 16px;
-      border-top: 1px solid #eee;
+      padding:14px 16px;
+      border-top:1px solid #eee;
       display:flex;
-      gap: 10px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
     }
     .btn{
-      padding: 10px 14px;
-      border: 1px solid #aaa;
-      border-radius: 8px;
-      background: #fff;
-      cursor: pointer;
-      font-weight: 700;
+      padding:10px 14px;
+      border:1px solid #aaa;
+      border-radius:8px;
+      background:#fff;
+      cursor:pointer;
+      font-weight:700;
     }
-    .btn.primary{
-      background: #007bff;
-      border-color: #007bff;
-      color: #fff;
-    }
-    .btn.danger{
-      border-color: #c00;
-      color: #c00;
-    }
-
+    .btn.primary{ background:#007bff; border-color:#007bff; color:#fff; }
+    .btn.danger{ border-color:#c00; color:#c00; }
     .close-x{
-      width: 34px;
-      height: 34px;
+      width:34px; height:34px;
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #fff;
-      cursor: pointer;
-      font-weight: 900;
-      line-height: 1;
-      flex: 0 0 auto;
+      border:1px solid #ddd;
+      border-radius:8px;
+      background:#fff;
+      cursor:pointer;
+      font-weight:900;
+      line-height:1;
     }
 
+    /* Lock site until accepted */
     body.consent-locked .content-wrap{
-      pointer-events: none;
-      user-select: none;
+      pointer-events:none;
+      user-select:none;
     }
   </style>
 </head>
@@ -344,16 +310,14 @@
       <div id="tablesGrid"></div>
     </div>
 
-    <div class="coming-soon-box">
-    Horizontal Design Action Coefficient – Coming Soon
-    </div>
-
+    <!-- Coming Soon -->
+    <div class="coming-soon-box">Horizontal Design Action Coefficient - Coming Soon</div>
 
     <!-- Suggestions (collapsed by default) -->
     <details class="suggestions-details" id="suggestionsDetails">
       <summary>
         <span>Suggestions</span>
-        <span style="font-weight:700; color:#666;">+</span>
+        <span id="suggestionsSymbol" style="font-weight:700; color:#666;">+</span>
       </summary>
       <div class="suggestions-body">
         <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
@@ -366,19 +330,17 @@
 
   </div>
 
-  <!-- Consent Modal (Main) -->
+  <!-- Consent Modal -->
   <div class="modal-backdrop show" id="consentModal">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
       <div class="modal-header">
         <div class="modal-title" id="consentTitle">Notice & Consent</div>
         <div style="width:34px;"></div>
       </div>
-
-      <div class="modal-body" id="consentText">
+      <div class="modal-body">
 TS1170.5 Site Parameter Finder is made available without charge and in good faith. It is agreed by the user that no liability for its use, applicability or accuracy is accepted by the author. Professional care and judgement must be exercised, with relevant design knowledge and skill applied by the use.
 This site uses essential cookies and collects approximate location data (country/region/city) for analytics and improvement.
       </div>
-
       <div class="modal-footer">
         <button class="btn primary" id="btnAccept">Accept & Continue</button>
         <button class="btn danger" id="btnExit">Exit</button>
@@ -394,8 +356,7 @@ This site uses essential cookies and collects approximate location data (country
         <div class="modal-title" id="learnMoreTitle">Location Information</div>
         <button class="close-x" id="btnLearnMoreClose" aria-label="Close">×</button>
       </div>
-
-      <div class="modal-body" id="learnMoreText">
+      <div class="modal-body">
 Location Information (NZ Privacy Act 2020)
 This website collects approximate location information (such as country, region, or city) derived from your IP address.
 This information is collected in accordance with the Privacy Act 2020 (New Zealand) and is used for legitimate purposes, including:
@@ -421,158 +382,15 @@ Because only approximate, non-identifying location data is collected, there is g
     </div>
   </div>
 
-  <!-- =========================================================
-    CSP-SAFE ANALYTICS MODULE (kept)
-  ========================================================= -->
   <script>
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzB5sCiemzPIKgvozUHmn8je2Pqk3H1ICRgtpunFAxWNMKsWqwtKOF7tbMnrbW4C752/exec";
-    window.GEO_URL = "/geo";
-    window.ANALYTICS_DEBUG = false;
-
-    (function () {
-      var VISITOR_KEY = "nz_tool_visitor_id";
-      function getVisitor() {
-        var id = localStorage.getItem(VISITOR_KEY);
-        var isNew = false;
-        if (!id) {
-          isNew = true;
-          id = (window.crypto && crypto.randomUUID)
-            ? ("v_" + crypto.randomUUID())
-            : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
-          localStorage.setItem(VISITOR_KEY, id);
-        }
-        return { id: id, isNew: isNew };
-      }
-
-      function safeGeoObject(g) {
-        return {
-          geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
-          geoCountry: (g && g.geoCountry) ? g.geoCountry : "",
-          geoRegion: (g && g.geoRegion) ? g.geoRegion : "",
-          geoCity: (g && g.geoCity) ? g.geoCity : ""
-        };
-      }
-
-      function getGeo() {
-        var url = window.GEO_URL || "/geo";
-        return fetch(url, { cache: "no-store" })
-          .then(r => r.text().then(t => { try { return safeGeoObject(JSON.parse(t)); } catch(e){ return safeGeoObject(null); } }))
-          .catch(() => safeGeoObject(null));
-      }
-
-      function postToAppsScript(payloadObj) {
-        var url = window.WEB_APP_URL;
-        var body = new URLSearchParams();
-        body.set("payload", JSON.stringify(payloadObj));
-        return fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: body.toString()
-        }).then(res => res.text());
-      }
-
-      function logEvent(eventName, extra) {
-        extra = extra || {};
-        var v = getVisitor();
-        return getGeo().then(function (geo) {
-          var payload = Object.assign({
-            visitorId: v.id,
-            isNew: v.isNew,
-            event: String(eventName || ""),
-            page: location.pathname || "",
-            userAgent: navigator.userAgent || "",
-            tsClient: new Date().toISOString(),
-            geoProvider: geo.geoProvider,
-            geoCountry: geo.geoCountry,
-            geoRegion: geo.geoRegion,
-            geoCity: geo.geoCity
-          }, extra);
-          return postToAppsScript(payload);
-        });
-      }
-
-      window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
-    })();
+    /**************************************************************
+     * CONFIG
+     **************************************************************/
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxo5yBcaRzIyD1Mv4B5YE4pBYxls9RXb4IIV0wa44yUJ2clIXcD_wn5iag1ZQwnsayV/exec"; // <-- REQUIRED
+    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
   </script>
 
   <script>
-    /**************************************************************
-     * CONFIG (GVIZ lookup)
-     **************************************************************/
-    const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
-    const SHEET1_NAME = "Sheet1";
-    const SHEET2_NAME = "Sheet2";
-    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
-
-    const SHEET1_LAT_COL_INDEX = 0;
-    const SHEET1_LNG_COL_INDEX = 1;
-    const SHEET1_APOE_COL_INDEX = 2;
-
-    const SHEET1_SITECLASS_COLS = {
-      I:   { PGA: 3,  Sa: 4,  Tc: 5  },
-      II:  { PGA: 6,  Sa: 7,  Tc: 8  },
-      III: { PGA: 9,  Sa: 10, Tc: 11 },
-      IV:  { PGA: 12, Sa: 13, Tc: 14 },
-      V:   { PGA: 15, Sa: 16, Tc: 17 },
-      VI:  { PGA: 18, Sa: 19, Tc: 20 },
-    };
-
-    const SHEET2_WORKINGLIFE_COL_INDEX = 0;
-    const SHEET2_IMPORTANCE_COL_INDEX = 1;
-    const SHEET2_STRING_COLS = [2, 3, 4];
-    const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
-
-    const WORKING_LIFE_LABEL = {
-      construction: "Construction equipment",
-      lt6months: "Less than 6 months",
-      "5": "5 years",
-      "25": "25 years",
-      "50": "50 years",
-      "100": "100 years or more"
-    };
-
-    /**************************************************************
-     * Sheet1 bucket cache (10 minutes)
-     **************************************************************/
-    const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000;
-    const sheet1BucketCache = new Map(); // key -> {ts, rows}
-
-    function bucketKeyFromLatLng(lat, lng){
-      const rLat = round1(lat);
-      const rLng = round1(lng);
-      if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) return "";
-      return `${rLat.toFixed(1)},${rLng.toFixed(1)}`;
-    }
-
-    function getBucketCache(key){
-      if (!key) return null;
-
-      const mem = sheet1BucketCache.get(key);
-      if (mem && (Date.now() - mem.ts) < SHEET1_BUCKET_CACHE_TTL_MS) return mem.rows;
-
-      try{
-        const raw = localStorage.getItem("sheet1_bucket_cache_" + key);
-        if (!raw) return null;
-        const obj = JSON.parse(raw);
-        if (!obj || !obj.ts || !Array.isArray(obj.rows)) return null;
-        if ((Date.now() - obj.ts) >= SHEET1_BUCKET_CACHE_TTL_MS) return null;
-
-        sheet1BucketCache.set(key, { ts: obj.ts, rows: obj.rows });
-        return obj.rows;
-      } catch(e){
-        return null;
-      }
-    }
-
-    function setBucketCache(key, rows){
-      if (!key) return;
-      const payload = { ts: Date.now(), rows: rows };
-      sheet1BucketCache.set(key, payload);
-      try{
-        localStorage.setItem("sheet1_bucket_cache_" + key, JSON.stringify(payload));
-      } catch(e){}
-    }
-
     /**************************************************************
      * STATE
      **************************************************************/
@@ -582,16 +400,10 @@ Because only approximate, non-identifying location data is collected, there is g
     let selectedImportanceLevel = "";
     let selectedWorkingLife = "";
 
-    let matchedSheet1Rows = [];
-    let sheet2MatchOptions = [];
-
     let recalcToken = 0;
+    const pageStartMs = Date.now();
 
-    function round1(n){
-      const num = Number(n);
-      if (!Number.isFinite(num)) return null;
-      return Math.round(num * 10) / 10;
-    }
+    function round1(n){ const x = Number(n); return Number.isFinite(x) ? (Math.round(x*10)/10) : null; }
 
     function hasAllInputs(){
       return Number.isFinite(selectedLat) &&
@@ -601,19 +413,24 @@ Because only approximate, non-identifying location data is collected, there is g
              !!selectedImportanceLevel;
     }
 
+    // Rule: WL=100 and IL=4 => show message only
     function isBlockedCombo(){
-      const wl = String(selectedWorkingLife || "").toLowerCase().replace(/\s+/g, "");
+      const wl = String(selectedWorkingLife || "").toLowerCase().replace(/\s+/g,"");
       const il = String(selectedImportanceLevel || "").trim();
-
-      // Match "100", "100years", "100yearsormore", etc.
       const is100Plus = wl === "100" || wl.startsWith("100years");
-
       return is100Plus && il === "4";
     }
 
-
     function showLoading(show){
       document.getElementById("loadingOverlay").classList.toggle("show", !!show);
+    }
+
+    function clearResults(){
+      document.getElementById("tablesGrid").innerHTML = "";
+      const rounded = document.getElementById("roundedCoordsBar");
+      rounded.style.display = "none";
+      rounded.textContent = "";
+      hideSpecialNotice();
     }
 
     function hideSpecialNotice(){
@@ -625,16 +442,7 @@ Because only approximate, non-identifying location data is collected, there is g
     function showSpecialNotice(text){
       const n = document.getElementById("specialNotice");
       n.textContent = text;
-      n.style.display = "block";   // ✅ force visible
-    }
-
-
-    function clearResults(){
-      document.getElementById("tablesGrid").innerHTML = "";
-      const bar = document.getElementById("roundedCoordsBar");
-      bar.style.display = "none";
-      bar.textContent = "";
-      hideSpecialNotice();
+      n.style.display = "block";
     }
 
     function applyTablesGridColumns(n){
@@ -645,38 +453,138 @@ Because only approximate, non-identifying location data is collected, there is g
       else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
     }
 
-    function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
-
-    function eqLoose(a, b){
-      const sa = normalize(a);
-      const sb = normalize(b);
-      if (sa === sb) return true;
-      const na = Number(sa), nb = Number(sb);
-      if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
-      return sa.toLowerCase() === sb.toLowerCase();
+    function buildTableHTML(t){
+      return `
+        <table class="sc-table">
+          <thead>
+            <tr>
+              <th class="left-head">${t.title || ""}</th>
+              <th colspan="3">Site Class ${t.siteClass || ""}</th>
+            </tr>
+            <tr>
+              <th class="subhead left-head">apoe</th>
+              <th class="subhead">PGA</th>
+              <th class="subhead">Sa,s</th>
+              <th class="subhead">Tc</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="left-cell">${t.apoe || "(APOE blank)"}</td>
+              <td>${t.pga ?? ""}</td>
+              <td>${t.sa ?? ""}</td>
+              <td>${t.tc ?? ""}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
     }
 
-    function safeCell(v) {
-      if (v === null || v === undefined || String(v).trim() === "") return "";
-      const n = Number(v);
-      return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
+    function analyticsBase(){
+      const rLat = Number.isFinite(selectedLat) ? (Math.round(selectedLat*10)/10).toFixed(1) : "";
+      const rLng = Number.isFinite(selectedLng) ? (Math.round(selectedLng*10)/10).toFixed(1) : "";
+      return {
+        siteClass: selectedSiteClass || "",
+        importanceLevel: selectedImportanceLevel || "",
+        workingLife: selectedWorkingLife || "",
+        roundedLatLng: (rLat && rLng) ? `${rLat},${rLng}` : "",
+        page: location.pathname || "",
+        userAgent: navigator.userAgent || ""
+      };
     }
 
-    function isOneOver500(apoe){
-      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
-      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
+    async function postWebApp(payloadObj){
+      if (!WEB_APP_URL || WEB_APP_URL.indexOf("script.google.com") === -1) {
+        throw new Error("WEB_APP_URL is missing/invalid.");
+      }
+      const body = new URLSearchParams();
+      body.set("payload", JSON.stringify(payloadObj));
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      });
+      const text = await res.text();
+      let json;
+      try { json = JSON.parse(text); } catch(e){ throw new Error("Non-JSON response: " + text.slice(0,200)); }
+      if (!res.ok || json.ok === false) throw new Error(json.error || ("HTTP " + res.status));
+      return json;
     }
 
-    function setRoundedBar(){
-      const el = document.getElementById("roundedCoordsBar");
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.style.display="none"; el.textContent=""; return; }
-      const rLat = round1(selectedLat);
-      const rLng = round1(selectedLng);
-      el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)},${rLng.toFixed(1)}</b>`;
+    // Analytics (requires Apps Script patch below to support mode="analytics")
+    function logEvent(name, extra = {}){
+      // fire-and-forget
+      try{
+        postWebApp(Object.assign(
+          { mode: "analytics", event: String(name || "") },
+          analyticsBase(),
+          extra,
+          { tsClient: new Date().toISOString() }
+        )).catch(()=>{});
+      }catch(e){}
+    }
+
+    window.addEventListener("load", () => logEvent("page_load", {}));
+    window.addEventListener("beforeunload", () => {
+      const seconds = Math.max(0, Math.round((Date.now() - pageStartMs)/1000));
+      logEvent("page_exit", { timeOnPageSeconds: seconds });
+    });
+
+    async function recalc(){
+      const myToken = ++recalcToken;
+
+      clearResults();
+      if (!hasAllInputs()) return;
+
+      if (isBlockedCombo()) {
+        showSpecialNotice("Refer to AS/NZS1170.0-2002 Section 3.4 Table 3.3");
+        logEvent("blocked_combo_notice", { notice: "AS/NZS1170.0-2002 Section 3.4 Table 3.3" });
+        return;
+      }
+
+      showLoading(true);
+
+      try{
+        const data = await postWebApp({
+          mode: "lookup",
+          lat: selectedLat,
+          lng: selectedLng,
+          siteClass: selectedSiteClass,
+          importanceLevel: selectedImportanceLevel,
+          workingLife: selectedWorkingLife
+        });
+
+        if (myToken !== recalcToken) return;
+
+        const tables = Array.isArray(data.tables) ? data.tables : [];
+        if (!tables.length) {
+          // you prefer silence when none
+          logEvent("results_generated", { displayedTablesCount: 0 });
+          return;
+        }
+
+        const roundedBar = document.getElementById("roundedCoordsBar");
+        roundedBar.innerHTML = `Rounded (1dp) match key: <b>${data.roundedKey || ""}</b>`;
+        roundedBar.style.display = "";
+
+        applyTablesGridColumns(tables.length);
+
+        document.getElementById("tablesGrid").innerHTML = tables
+          .map(t => `<div class="table-card">${buildTableHTML(t)}</div>`)
+          .join("");
+
+        logEvent("results_generated", { displayedTablesCount: tables.length });
+
+      } catch(err){
+        console.error(err);
+        logEvent("error", { message: String(err) });
+      } finally {
+        if (myToken === recalcToken) showLoading(false);
+      }
     }
 
     /**************************************************************
-     * Align map height to option block height
+     * Map height sync (align top/bottom with design inputs)
      **************************************************************/
     function syncMapHeightToOptionBlock(){
       const block = document.getElementById("designInputsBlock");
@@ -706,235 +614,18 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * GVIZ helpers
+     * Buttons
      **************************************************************/
-    function gvizUrl(sheetName, query){
-      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
-      const params = new URLSearchParams();
-      params.set("sheet", sheetName);
-      params.set("tq", query);
-      return `${base}?${params.toString()}`;
-    }
-
-    async function fetchSheetAs2DArray(sheetName, query){
-      const url = gvizUrl(sheetName, query);
-      const res = await fetch(url);
-      const text = await res.text();
-      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-      const data = JSON.parse(jsonText);
-      const cols = data.table.cols.length;
-      const rows = data.table.rows || [];
-      return rows.map(r => {
-        const arr = new Array(cols).fill(null);
-        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
-        return arr;
-      });
-    }
-
-    /**************************************************************
-     * Step 1: cached bucket lookup (10 mins) + WHERE query
-     **************************************************************/
-    async function step1_findAllSheet1RowsMatching1dp(){
-      matchedSheet1Rows = [];
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
-
-      const key = bucketKeyFromLatLng(selectedLat, selectedLng);
-
-      const cached = getBucketCache(key);
-      if (cached) {
-        matchedSheet1Rows = cached.map(r => ({ row: r }));
-        return;
-      }
-
-      const targetLat1 = round1(selectedLat);
-      const targetLng1 = round1(selectedLng);
-
-      const latMin = targetLat1 - 0.05;
-      const latMax = targetLat1 + 0.05;
-      const lngMin = targetLng1 - 0.05;
-      const lngMax = targetLng1 + 0.05;
-
-      const q = `select * where A >= ${latMin} and A < ${latMax} and B >= ${lngMin} and B < ${lngMax}`;
-      const bucketRows = await fetchSheetAs2DArray(SHEET1_NAME, q);
-
-      const exact = [];
-      for (const row of bucketRows) {
-        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
-        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) exact.push(row);
-      }
-
-      setBucketCache(key, exact);
-      matchedSheet1Rows = exact.map(r => ({ row: r }));
-    }
-
-    /**************************************************************
-     * Step 2: Sheet2 strings
-     **************************************************************/
-    async function step2_getTitlesAndStringsFromSheet2(){
-      sheet2MatchOptions = [];
-      if (!selectedWorkingLife || !selectedImportanceLevel) return;
-
-      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
-      if (!sheet2.length) return;
-
-      const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
-      const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
-      const headerish = firstA.includes("working") || firstB.includes("importance");
-
-      const headerRow = headerish ? sheet2[0] : null;
-      const dataRows = headerish ? sheet2.slice(1) : sheet2;
-
-      const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
-
-      const matchRow = dataRows.find(r =>
-        eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
-        eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
-      );
-
-      if (!matchRow) { sheet2MatchOptions = []; return; }
-
-      sheet2MatchOptions = SHEET2_STRING_COLS
-        .map((colIdx) => {
-          const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
-          const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
-          const value = normalize(matchRow[colIdx]);
-          return { title, value };
-        })
-        .filter(x => x.value.length > 0);
-    }
-
-    function step3_filterMatchedSheet1Rows(){
-      if (!matchedSheet1Rows.length) return [];
-      if (!sheet2MatchOptions.length) return [];
-
-      const out = [];
-      const seen = new Set();
-
-      for (const item of matchedSheet1Rows) {
-        const sheet1Row = item.row;
-        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
-        if (!apoe) continue;
-
-        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
-        if (!match) continue;
-
-        const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        out.push({ sheet1Row, apoe, matchTitle: match.title });
-      }
-
-      const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
-      if (hasULS) {
-        const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
-        if (oneOver500Item && oneOver500Item.row) {
-          const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
-          const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
-          }
-        }
-      }
-
-      return out;
-    }
-
-    function buildThreeRowTable(sheet1Row, apoe, matchTitle){
-      const sc = selectedSiteClass;
-      const idx = SHEET1_SITECLASS_COLS[sc];
-      const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
-      const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
-      const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
-      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
-
-      return `
-        <table class="sc-table">
-          <thead>
-            <tr>
-              <th class="left-head">${topLeft}</th>
-              <th colspan="3">Site Class ${sc}</th>
-            </tr>
-            <tr>
-              <th class="subhead left-head">apoe</th>
-              <th class="subhead">PGA</th>
-              <th class="subhead">Sa,s</th>
-              <th class="subhead">Tc</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="left-cell">${apoe || "(APOE blank)"}</td>
-              <td>${pga}</td>
-              <td>${sa}</td>
-              <td>${tc}</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
-    }
-
-    function renderTablesFullWidth(filtered){
-      if (!hasAllInputs()) return;
-
-      if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
-        clearResults();
-        return;
-      }
-
-      setRoundedBar();
-      const rounded = document.getElementById("roundedCoordsBar");
-      rounded.style.display = "";
-
-      applyTablesGridColumns(filtered.length);
-
-      document.getElementById("tablesGrid").innerHTML = filtered.map(x =>
-        `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
-      ).join("");
-    }
-
-    async function recalc(){
-      const myToken = ++recalcToken;
-
-      clearResults();
-      if (!hasAllInputs()) return;
-
-      // ✅ NEW RULE: short-circuit and show message (no results / no lookups)
-      if (isBlockedCombo()) {
-        showSpecialNotice("Refer to AS/NZS1170.0-2002 Section 3.4 Table 3.3");
-        return;
-      }
-
-      showLoading(true);
-
-      try {
-        await step1_findAllSheet1RowsMatching1dp();
-        if (myToken !== recalcToken) return;
-
-        await step2_getTitlesAndStringsFromSheet2();
-        if (myToken !== recalcToken) return;
-
-        const filtered = step3_filterMatchedSheet1Rows();
-        if (myToken !== recalcToken) return;
-
-        renderTablesFullWidth(filtered);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (myToken === recalcToken) showLoading(false);
-      }
-    }
-
-    function wireSingleSelectButtons(containerId, setter){
+    function wireSingleSelectButtons(containerId, setter, buttonType){
       const buttons = document.querySelectorAll(`#${containerId} button`);
       buttons.forEach(btn => {
         btn.addEventListener("click", () => {
           buttons.forEach(b => b.classList.remove("selected"));
           btn.classList.add("selected");
           setter(btn.dataset.value);
+
+          logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
+
           syncMapHeightToOptionBlock();
           recalc();
         });
@@ -942,8 +633,18 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Suggestions submit (kept)
+     * Suggestions submit -> mode="suggestion"
      **************************************************************/
+    function getVisitorId(){
+      const key = "nz_tool_visitor_id";
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = (crypto.randomUUID) ? ("v_" + crypto.randomUUID()) : ("v_" + Date.now());
+        localStorage.setItem(key, id);
+      }
+      return id;
+    }
+
     function wireSuggestions(){
       const textarea = document.getElementById("suggestionText");
       const btn = document.getElementById("submitSuggestionBtn");
@@ -957,31 +658,20 @@ Because only approximate, non-identifying location data is collected, there is g
         btn.disabled = true;
         btn.textContent = "Submitting…";
 
-        try {
-          const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"" };
-          const payload = {
-            event: "suggestion_submit",
+        try{
+          await postWebApp({
+            mode: "suggestion",
             suggestionText: text,
-            visitorId: v.id || "",
+            visitorId: getVisitorId(),
             page: location.pathname || ""
-          };
-
-          const body = new URLSearchParams();
-          body.set("payload", JSON.stringify(payload));
-
-          const res = await fetch(window.WEB_APP_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-            body: body.toString()
           });
-
-          if (!res.ok) { msg.textContent = `Submit failed (${res.status}).`; return; }
-
           textarea.value = "";
           msg.textContent = "Thanks — suggestion submitted.";
-        } catch (e) {
-          console.error(e);
+          logEvent("suggestion_submitted", {});
+        } catch(err){
+          console.error(err);
           msg.textContent = "Submit failed (check console).";
+          logEvent("suggestion_failed", { message: String(err) });
         } finally {
           btn.disabled = false;
           btn.textContent = "Submit";
@@ -990,7 +680,7 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Consent modal logic + collapsible suggestions
+     * Consent modals (every new session)
      **************************************************************/
     const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
 
@@ -1007,8 +697,15 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     function initConsent(){
+      // suggestions collapsed
       const details = document.getElementById("suggestionsDetails");
       if (details) details.open = false;
+
+      // symbol toggle
+      const sym = document.getElementById("suggestionsSymbol");
+      if (details && sym){
+        details.addEventListener("toggle", () => sym.textContent = details.open ? "−" : "+");
+      }
 
       const accepted = sessionStorage.getItem(CONSENT_SESSION_KEY) === "true";
       if (!accepted) showConsentModal();
@@ -1017,6 +714,7 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("btnAccept").addEventListener("click", () => {
         sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
         hideConsentModal();
+        logEvent("consent_accepted", {});
       });
 
       document.getElementById("btnExit").addEventListener("click", () => {
@@ -1032,21 +730,14 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("learnMoreModal").classList.remove("show");
         document.getElementById("consentModal").classList.add("show");
       });
-
-      if (details) {
-        details.addEventListener("toggle", () => {
-          const sym = details.querySelector("summary span:last-child");
-          if (sym) sym.textContent = details.open ? "−" : "+";
-        });
-      }
     }
 
     /**************************************************************
-     * Google Maps + Places
+     * Google Maps
      **************************************************************/
     function setMarker(lat,lng){
-      const pos = {lat, lng};
-      if(marker) marker.setMap(null);
+      const pos = { lat, lng };
+      if (marker) marker.setMap(null);
       marker = new google.maps.Marker({ map, position: pos });
       map.panTo(pos);
     }
@@ -1064,8 +755,12 @@ Because only approximate, non-identifying location data is collected, there is g
         selectedLat = e.latLng.lat();
         selectedLng = e.latLng.lng();
         setMarker(selectedLat, selectedLng);
+
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+        logEvent("location_selected", { locationMethod: "map_click", lat: selectedLat, lng: selectedLng });
+
         recalc();
       });
 
@@ -1086,27 +781,41 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
+        logEvent("location_selected", {
+          locationMethod: "address_search",
+          address: place.formatted_address || "",
+          lat: selectedLat,
+          lng: selectedLng
+        });
+
         recalc();
       });
 
       document.getElementById("useMyLocationBtn").addEventListener("click", () => {
         if (!navigator.geolocation) return;
+
         navigator.geolocation.getCurrentPosition((pos) => {
           selectedLat = pos.coords.latitude;
           selectedLng = pos.coords.longitude;
           setMarker(selectedLat, selectedLng);
           map.setZoom(14);
+
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+          logEvent("location_selected", { locationMethod: "my_location", lat: selectedLat, lng: selectedLng });
+
           recalc();
+        }, () => {
+          logEvent("location_failed", { locationMethod: "my_location", reason: "permission_denied" });
         });
       });
 
-      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
-      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
-      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
-      wireSuggestions();
+      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
+      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
+      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
 
+      wireSuggestions();
       clearResults();
       showLoading(false);
     }
@@ -1123,7 +832,6 @@ Because only approximate, non-identifying location data is collected, there is g
         + "&libraries=places";
       s.async = true;
       s.defer = true;
-      s.onerror = () => console.error("Google Maps failed to load.");
       document.head.appendChild(s);
     })();
   </script>
