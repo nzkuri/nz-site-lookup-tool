@@ -10,6 +10,7 @@
     body { font-family: Arial, sans-serif; margin: 20px; }
 
     #pageTitle { text-align:center; margin: 0 0 16px 0; }
+
     .content-wrap{ width:100%; max-width:1400px; margin:0 auto; }
 
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
@@ -55,6 +56,7 @@
       flex: 1 1 auto;
     }
 
+    /* Results */
     .results-wrap{
       width:100%;
       margin-top:16px;
@@ -108,6 +110,7 @@
     }
     .loading-overlay.show{ display:flex; }
 
+    /* Coming soon box */
     .coming-soon-box{
       margin-top: 14px;
       padding: 12px;
@@ -120,6 +123,7 @@
       opacity: 0.8;
     }
 
+    /* Suggestions collapsible */
     details.suggestions-details{
       margin-top:18px;
       width:100%;
@@ -276,7 +280,6 @@
   <h2 id="pageTitle">TS1170.5 site parameter finder</h2>
 
   <div class="content-wrap">
-
     <div class="search-wrap">
       <input id="addressInput" placeholder="Search address (NZ only)" />
       <button id="useMyLocationBtn" type="button">Use my location</button>
@@ -330,14 +333,12 @@
       </div>
     </div>
 
-    <!-- Results -->
     <div class="results-wrap">
       <div class="loading-overlay" id="loadingOverlay">Loading…</div>
       <div id="roundedCoordsBar"></div>
       <div id="specialNotice"></div>
       <div id="tablesGrid"></div>
 
-      <!-- Debug panel -->
       <details class="debug-details" id="debugDetails">
         <summary>
           <span>Debug: Last lookup response</span>
@@ -351,7 +352,6 @@
 
     <div class="coming-soon-box">Horizontal Design Action Coefficient - Coming Soon</div>
 
-    <!-- Suggestions -->
     <details class="suggestions-details" id="suggestionsDetails">
       <summary>
         <span>Suggestions</span>
@@ -365,7 +365,6 @@
         <div id="suggestionMsg"></div>
       </div>
     </details>
-
   </div>
 
   <!-- Consent Modal -->
@@ -424,7 +423,7 @@ Because only approximate, non-identifying location data is collected, there is g
     /**************************************************************
      * CONFIG (REQUIRED)
      **************************************************************/
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxo5yBcaRzIyD1Mv4B5YE4pBYxls9RXb4IIV0wa44yUJ2clIXcD_wn5iag1ZQwnsayV/exec"; // must end in /exec
+    const WEB_APP_URL = "PASTE_YOUR_WEB_APP_URL_HERE"; // must end in /exec
     const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
     const GEO_URL = "/geo";
   </script>
@@ -439,7 +438,6 @@ Because only approximate, non-identifying location data is collected, there is g
     let recalcToken = 0;
     const pageStartMs = Date.now();
 
-    // Debug helpers
     const DEBUG_ENABLED = true;
     function setDebug(obj){
       if (!DEBUG_ENABLED) return;
@@ -535,6 +533,7 @@ Because only approximate, non-identifying location data is collected, there is g
     let GEO_CACHE = null;
     let GEO_CACHE_TS = 0;
     const GEO_CACHE_TTL_MS = 10 * 60 * 1000;
+
     async function getGeoCoarse(){
       const now = Date.now();
       if (GEO_CACHE && (now - GEO_CACHE_TS) < GEO_CACHE_TTL_MS) return GEO_CACHE;
@@ -609,7 +608,7 @@ Because only approximate, non-identifying location data is collected, there is g
 
         if (myToken !== recalcToken) return;
 
-        setDebug(data); // ✅ show raw response
+        setDebug(data);
 
         const tables = Array.isArray(data.tables) ? data.tables : [];
         const apoes = tables.map(t => t.apoe).filter(Boolean);
@@ -648,7 +647,6 @@ Because only approximate, non-identifying location data is collected, there is g
       }
     }
 
-    // Map height sync
     function syncMapHeightToOptionBlock(){
       const block = document.getElementById("designInputsBlock");
       const mapEl = document.getElementById("map");
@@ -662,6 +660,7 @@ Because only approximate, non-identifying location data is collected, there is g
         if (marker) map.panTo(marker.getPosition());
       }
     }
+
     function setupHeightSync(){
       const block = document.getElementById("designInputsBlock");
       if (!block) return;
@@ -689,7 +688,6 @@ Because only approximate, non-identifying location data is collected, there is g
       });
     }
 
-    // Suggestions submit
     function getVisitorId(){
       const key = "nz_tool_visitor_id";
       let id = localStorage.getItem(key);
