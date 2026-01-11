@@ -10,7 +10,6 @@
     body { font-family: Arial, sans-serif; margin: 20px; }
 
     #pageTitle { text-align:center; margin: 0 0 16px 0; }
-
     .content-wrap{ width:100%; max-width:1400px; margin:0 auto; }
 
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
@@ -56,7 +55,6 @@
       flex: 1 1 auto;
     }
 
-    /* Results */
     .results-wrap{
       width:100%;
       margin-top:16px;
@@ -110,7 +108,6 @@
     }
     .loading-overlay.show{ display:flex; }
 
-    /* Coming soon box */
     .coming-soon-box{
       margin-top: 14px;
       padding: 12px;
@@ -123,7 +120,6 @@
       opacity: 0.8;
     }
 
-    /* Suggestions collapsible */
     details.suggestions-details{
       margin-top:18px;
       width:100%;
@@ -166,6 +162,40 @@
     }
     #suggestionMsg{ margin-top:8px; color:#666; }
 
+    /* Debug panel */
+    details.debug-details{
+      margin-top: 12px;
+      width: 100%;
+      border: 1px dashed #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+      overflow: hidden;
+    }
+    details.debug-details > summary{
+      list-style:none;
+      cursor:pointer;
+      padding:10px 12px;
+      font-weight:700;
+      user-select:none;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    details.debug-details > summary::-webkit-details-marker{ display:none; }
+    .debug-body{ padding:10px 12px; border-top:1px dashed #ccc; }
+    pre#debugPre{
+      margin:0;
+      font-size:12px;
+      white-space:pre-wrap;
+      word-break:break-word;
+      background:#fff;
+      border:1px solid #eee;
+      border-radius:6px;
+      padding:10px;
+      max-height: 280px;
+      overflow:auto;
+    }
+
     /* Consent modals */
     .modal-backdrop{
       position:fixed; inset:0;
@@ -177,7 +207,6 @@
       padding:18px;
     }
     .modal-backdrop.show{ display:flex; }
-
     .modal{
       width:min(820px, 100%);
       background:#fff;
@@ -236,7 +265,6 @@
       line-height:1;
     }
 
-    /* Lock site until accepted */
     body.consent-locked .content-wrap{
       pointer-events:none;
       user-select:none;
@@ -308,9 +336,19 @@
       <div id="roundedCoordsBar"></div>
       <div id="specialNotice"></div>
       <div id="tablesGrid"></div>
+
+      <!-- Debug panel -->
+      <details class="debug-details" id="debugDetails">
+        <summary>
+          <span>Debug: Last lookup response</span>
+          <span id="debugSymbol">+</span>
+        </summary>
+        <div class="debug-body">
+          <pre id="debugPre">{}</pre>
+        </div>
+      </details>
     </div>
 
-    <!-- Coming soon -->
     <div class="coming-soon-box">Horizontal Design Action Coefficient - Coming Soon</div>
 
     <!-- Suggestions -->
@@ -392,9 +430,6 @@ Because only approximate, non-identifying location data is collected, there is g
   </script>
 
   <script>
-    /**************************************************************
-     * STATE
-     **************************************************************/
     let map, marker, autocomplete;
     let selectedLat = null, selectedLng = null;
     let selectedSiteClass = "";
@@ -403,6 +438,14 @@ Because only approximate, non-identifying location data is collected, there is g
 
     let recalcToken = 0;
     const pageStartMs = Date.now();
+
+    // Debug helpers
+    const DEBUG_ENABLED = true;
+    function setDebug(obj){
+      if (!DEBUG_ENABLED) return;
+      const pre = document.getElementById("debugPre");
+      if (pre) pre.textContent = JSON.stringify(obj || {}, null, 2);
+    }
 
     function hasAllInputs(){
       return Number.isFinite(selectedLat) &&
@@ -472,9 +515,6 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     async function postWebApp(payloadObj){
-      if (!WEB_APP_URL || WEB_APP_URL.indexOf("script.google.com") === -1) {
-        throw new Error("WEB_APP_URL is missing/invalid.");
-      }
       const body = new URLSearchParams();
       body.set("payload", JSON.stringify(payloadObj));
 
@@ -491,13 +531,10 @@ Because only approximate, non-identifying location data is collected, there is g
       return json;
     }
 
-    /**************************************************************
-     * GEO (coarse) fetch + cache
-     **************************************************************/
+    // GEO cache
     let GEO_CACHE = null;
     let GEO_CACHE_TS = 0;
     const GEO_CACHE_TTL_MS = 10 * 60 * 1000;
-
     async function getGeoCoarse(){
       const now = Date.now();
       if (GEO_CACHE && (now - GEO_CACHE_TS) < GEO_CACHE_TTL_MS) return GEO_CACHE;
@@ -506,7 +543,6 @@ Because only approximate, non-identifying location data is collected, there is g
         const res = await fetch(GEO_URL, { cache: "no-store" });
         const txt = await res.text();
         const obj = JSON.parse(txt);
-
         GEO_CACHE = {
           geoCountry: obj.geoCountry || obj.country || "",
           geoRegion:  obj.geoRegion  || obj.region  || "",
@@ -515,7 +551,6 @@ Because only approximate, non-identifying location data is collected, there is g
       } catch(e){
         GEO_CACHE = { geoCountry:"", geoRegion:"", geoCity:"" };
       }
-
       GEO_CACHE_TS = now;
       return GEO_CACHE;
     }
@@ -544,9 +579,7 @@ Because only approximate, non-identifying location data is collected, there is g
             extra,
             { tsClient: new Date().toISOString() }
           ));
-        } catch(e){
-          // swallow
-        }
+        } catch(e){}
       })();
     }
 
@@ -576,11 +609,21 @@ Because only approximate, non-identifying location data is collected, there is g
 
         if (myToken !== recalcToken) return;
 
+        setDebug(data); // ✅ show raw response
+
         const tables = Array.isArray(data.tables) ? data.tables : [];
+        const apoes = tables.map(t => t.apoe).filter(Boolean);
 
         if (!tables.length) {
+          showSpecialNotice("Lookup returned 0 tables for this selection.");
           logEvent("results_generated", { displayedTablesCount: 0 });
           return;
+        }
+
+        if (tables.length === 1) {
+          showSpecialNotice(`Lookup returned 1 table (APOE: ${apoes[0] || "unknown"}).`);
+        } else {
+          hideSpecialNotice();
         }
 
         const roundedBar = document.getElementById("roundedCoordsBar");
@@ -597,16 +640,15 @@ Because only approximate, non-identifying location data is collected, there is g
 
       } catch(err){
         console.error(err);
-        showSpecialNotice("Lookup failed. Please try again (check Web App URL / deployment).");
+        setDebug({ error: String(err) });
+        showSpecialNotice("Lookup failed. Check WEB_APP_URL / deployment. See Debug panel.");
         logEvent("error", { message: String(err) });
       } finally {
         if (myToken === recalcToken) showLoading(false);
       }
     }
 
-    /**************************************************************
-     * Map height sync
-     **************************************************************/
+    // Map height sync
     function syncMapHeightToOptionBlock(){
       const block = document.getElementById("designInputsBlock");
       const mapEl = document.getElementById("map");
@@ -620,7 +662,6 @@ Because only approximate, non-identifying location data is collected, there is g
         if (marker) map.panTo(marker.getPosition());
       }
     }
-
     function setupHeightSync(){
       const block = document.getElementById("designInputsBlock");
       if (!block) return;
@@ -634,9 +675,6 @@ Because only approximate, non-identifying location data is collected, there is g
       window.addEventListener("resize", syncMapHeightToOptionBlock);
     }
 
-    /**************************************************************
-     * Buttons
-     **************************************************************/
     function wireSingleSelectButtons(containerId, setter, buttonType){
       const buttons = document.querySelectorAll(`#${containerId} button`);
       buttons.forEach(btn => {
@@ -644,18 +682,14 @@ Because only approximate, non-identifying location data is collected, there is g
           buttons.forEach(b => b.classList.remove("selected"));
           btn.classList.add("selected");
           setter(btn.dataset.value);
-
           logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
-
           syncMapHeightToOptionBlock();
           recalc();
         });
       });
     }
 
-    /**************************************************************
-     * Suggestions submit -> mode="suggestion"
-     **************************************************************/
+    // Suggestions submit
     function getVisitorId(){
       const key = "nz_tool_visitor_id";
       let id = localStorage.getItem(key);
@@ -700,30 +734,31 @@ Because only approximate, non-identifying location data is collected, there is g
       });
     }
 
-    /**************************************************************
-     * Consent modals (every new session)
-     **************************************************************/
+    // Consent
     const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
-
     function showConsentModal(){
       document.getElementById("consentModal").classList.add("show");
       document.getElementById("learnMoreModal").classList.remove("show");
       document.body.classList.add("consent-locked");
     }
-
     function hideConsentModal(){
       document.getElementById("consentModal").classList.remove("show");
       document.getElementById("learnMoreModal").classList.remove("show");
       document.body.classList.remove("consent-locked");
     }
-
     function initConsent(){
-      const details = document.getElementById("suggestionsDetails");
-      if (details) details.open = false;
+      const suggestions = document.getElementById("suggestionsDetails");
+      const sSym = document.getElementById("suggestionsSymbol");
+      if (suggestions) suggestions.open = false;
+      if (suggestions && sSym){
+        suggestions.addEventListener("toggle", () => sSym.textContent = suggestions.open ? "−" : "+");
+      }
 
-      const sym = document.getElementById("suggestionsSymbol");
-      if (details && sym){
-        details.addEventListener("toggle", () => sym.textContent = details.open ? "−" : "+");
+      const dbg = document.getElementById("debugDetails");
+      const dSym = document.getElementById("debugSymbol");
+      if (dbg) dbg.open = false;
+      if (dbg && dSym){
+        dbg.addEventListener("toggle", () => dSym.textContent = dbg.open ? "−" : "+");
       }
 
       const accepted = sessionStorage.getItem(CONSENT_SESSION_KEY) === "true";
@@ -751,9 +786,7 @@ Because only approximate, non-identifying location data is collected, there is g
       });
     }
 
-    /**************************************************************
-     * Google Maps
-     **************************************************************/
+    // Maps
     function setMarker(lat,lng){
       const pos = { lat, lng };
       if (marker) marker.setMap(null);
@@ -774,12 +807,9 @@ Because only approximate, non-identifying location data is collected, there is g
         selectedLat = e.latLng.lat();
         selectedLng = e.latLng.lng();
         setMarker(selectedLat, selectedLng);
-
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
         logEvent("location_selected", { locationMethod: "map_click", lat: selectedLat, lng: selectedLng });
-
         recalc();
       });
 
@@ -812,22 +842,16 @@ Because only approximate, non-identifying location data is collected, there is g
 
       document.getElementById("useMyLocationBtn").addEventListener("click", () => {
         if (!navigator.geolocation) return;
-
         navigator.geolocation.getCurrentPosition((pos) => {
           selectedLat = pos.coords.latitude;
           selectedLng = pos.coords.longitude;
           setMarker(selectedLat, selectedLng);
           map.setZoom(14);
-
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-
           logEvent("location_selected", { locationMethod: "my_location", lat: selectedLat, lng: selectedLng });
-
           recalc();
-        }, () => {
-          logEvent("location_failed", { locationMethod: "my_location", reason: "permission_denied" });
-        });
+        }, () => logEvent("location_failed", { locationMethod: "my_location", reason: "permission_denied" }));
       });
 
       wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
@@ -843,7 +867,6 @@ Because only approximate, non-identifying location data is collected, there is g
     window.initMap = initMap;
 
     (function loadGoogleMaps(){
-      if (window.google && window.google.maps) return;
       const s = document.createElement("script");
       s.src = "https://maps.googleapis.com/maps/api/js"
         + "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY)
