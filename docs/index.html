@@ -121,6 +121,16 @@
     }
     .loading-overlay.show{ display:flex; }
 
+    /* Special-case message card (inside tables area) */
+    .special-case-card{
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 14px;
+      background: #fafafa;
+      font-weight: 800;
+      text-align: center;
+    }
+
     /* Suggestions (collapsible) */
     details.suggestions-details{
       margin-top: 18px;
@@ -141,20 +151,19 @@
       align-items:center;
       justify-content: space-between;
     }
+
     .coming-soon-box{
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #f5f5f5;
-  color: #666;
-  font-weight: 700;
-  text-align: center;
-  opacity: 0.8;
-}
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f5f5f5;
+      color: #666;
+      font-weight: 700;
+      text-align: center;
+      opacity: 0.8;
+    }
 
-
-    
     details.suggestions-details > summary::-webkit-details-marker { display:none; }
     .suggestions-body{
       padding: 14px;
@@ -338,7 +347,7 @@
     </div>
 
     <div class="coming-soon-box">
-    Horizontal Design Action Coefficient – Coming Soon
+      Horizontal Design Action Coefficient – Coming Soon
     </div>
 
     <!-- Suggestions (collapsed by default) -->
@@ -402,7 +411,7 @@ This information is collected in accordance with the Privacy Act 2020 (New Zeala
 We do not collect precise location data, do not track individuals, and do not use location information to identify you.
 Location information is handled in aggregated form and may be processed by trusted third-party service providers solely for the purposes described above.
 ________________________________________
-Key Privacy Principles 
+Key Privacy Principles
 In line with the NZ Privacy Act:
 • We only collect information that is necessary for the operation and improvement of the tool
 • Information is collected lawfully and fairly
@@ -651,6 +660,29 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
+     * Special case: IL=4 and WorkingLife=100 => message in tables area
+     **************************************************************/
+    function isSpecialCaseSelected(){
+      return (String(selectedImportanceLevel) === "4") && (String(selectedWorkingLife) === "100");
+    }
+
+    function showSpecialCaseInTablesArea(){
+      const grid = document.getElementById("tablesGrid");
+      if (!grid) return;
+
+      applyTablesGridColumns(1);
+      grid.innerHTML = `
+        <div class="table-card">
+          <div class="special-case-card">Refer to NZS1170.1 table 3.3</div>
+        </div>
+      `;
+
+      // Hide rounded bar for this case (optional, but keeps UI clean)
+      const bar = document.getElementById("roundedCoordsBar");
+      if (bar) { bar.style.display = "none"; bar.textContent = ""; }
+    }
+
+    /**************************************************************
      * Align map height to option block height
      **************************************************************/
     function syncMapHeightToOptionBlock(){
@@ -855,6 +887,13 @@ Because only approximate, non-identifying location data is collected, there is g
     function renderTablesFullWidth(filtered){
       if (!hasAllInputs()) return;
 
+      // Safety: if special case is selected, show message and stop
+      if (isSpecialCaseSelected()) {
+        clearResults();
+        showSpecialCaseInTablesArea();
+        return;
+      }
+
       if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
         clearResults();
         return;
@@ -876,6 +915,13 @@ Because only approximate, non-identifying location data is collected, there is g
 
       clearResults();
       if (!hasAllInputs()) return;
+
+      // ✅ Special case: IL=4 + "100 years or more" => show message inside tables area
+      if (isSpecialCaseSelected()) {
+        showLoading(false);
+        showSpecialCaseInTablesArea();
+        return;
+      }
 
       showLoading(true);
 
@@ -904,6 +950,12 @@ Because only approximate, non-identifying location data is collected, there is g
           buttons.forEach(b => b.classList.remove("selected"));
           btn.classList.add("selected");
           setter(btn.dataset.value);
+
+          // Optional "instant" UI update (recalc runs anyway)
+          if (hasAllInputs() && isSpecialCaseSelected()) {
+            showSpecialCaseInTablesArea();
+          }
+
           syncMapHeightToOptionBlock();
           recalc();
         });
