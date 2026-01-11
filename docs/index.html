@@ -6,29 +6,39 @@
   <title>TS1170.5 site parameter finder</title>
 
   <style>
+    /* Make borders/padding not change overall width (important for right-edge alignment) */
     *, *::before, *::after { box-sizing: border-box; }
+
     body { font-family: Arial, sans-serif; margin: 20px; }
 
-    #pageTitle { text-align:center; margin: 0 0 16px 0; }
+    /* Shared container: map + results + suggestions share the same right edge */
+    .content-wrap{
+      width: 100%;
+      max-width: 1400px;   /* adjust or remove if you truly want infinite width */
+      margin: 0 auto;
+    }
 
-    .content-wrap{ width:100%; max-width:1400px; margin:0 auto; }
-
+    /* Search row */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
-    #coords { font-weight:bold; margin-bottom:12px; }
+    /* Coords line sits ABOVE the grid so it doesn't break alignment */
+    #coords { font-weight: bold; margin-bottom: 12px; }
 
-    .main-grid { display:flex; gap:16px; align-items:stretch; width:100%; }
-    .left-panel { flex: 0 0 520px; max-width:520px; width:100%; }
-    .right-panel { flex: 1 1 auto; min-width:320px; display:flex; }
+    /* Two-column layout */
+    .main-grid { display:flex; gap:16px; align-items: stretch; width:100%; }
+    .left-panel { flex: 0 0 520px; max-width: 520px; width: 100%; }
+    .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
+
     @media (max-width: 980px){
       .main-grid { flex-direction: column; }
-      .left-panel { max-width:100%; flex-basis:auto; }
-      .right-panel { width:100%; }
+      .left-panel { max-width: 100%; flex-basis: auto; }
+      .right-panel { width: 100%; }
     }
 
-    .option-block{
+    /* Inputs */
+    .option-block {
       padding:15px;
       border:1px solid #ddd;
       border-radius:6px;
@@ -39,245 +49,108 @@
     .row label { font-weight:bold; display:block; margin-bottom:6px; }
 
     .option-buttons button{
-      padding:8px 12px; margin:4px;
-      border:1px solid #aaa; border-radius:4px;
-      background:#fff; cursor:pointer;
-      transition: background .15s, color .15s, border-color .15s;
+      padding:8px 12px; margin:4px; border:1px solid #aaa; border-radius:4px;
+      background:#fff; cursor:pointer; transition: background .15s, color .15s, border-color .15s;
     }
-    .option-buttons button.selected{
-      background:#007bff; color:#fff; border-color:#007bff;
-    }
+    .option-buttons button.selected{ background:#007bff; color:#fff; border-color:#007bff; }
 
-    #map{
-      width:100%;
-      min-height:280px;
+    /* Map (height is synced in JS to match option-block height) */
+    #map {
+      width: 100%;
       border:1px solid #ccc;
       border-radius:6px;
+      min-height: 280px;
       flex: 1 1 auto;
     }
 
-    /* Results */
+    /* Results section full width (shares right edge with map because it's inside .content-wrap) */
     .results-wrap{
-      width:100%;
-      margin-top:16px;
-      padding:12px;
-      border:1px solid #ddd;
-      border-radius:8px;
-      background:#fff;
-      position:relative;
+      width: 100%;
+      margin-top: 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      position: relative;
+      padding: 12px;
     }
-    #roundedCoordsBar{
-      display:none;
-      font-weight:700;
+
+    #roundedCoordsBar {
+      display:none; /* only show after successful tables */
       color:#666;
-      margin-bottom:10px;
-    }
-    #specialNotice{
-      display:none;
-      padding:12px;
-      border:1px solid #ddd;
-      border-radius:8px;
-      background:#fafafa;
-      font-weight:800;
-      margin-bottom:10px;
+      margin-bottom: 10px;
+      font-weight: 700;
     }
 
-    #tablesGrid{ display:grid; gap:12px; width:100%; }
+    /* Grid for tables across full width */
+    #tablesGrid{
+      display: grid;
+      gap: 12px;
+      width: 100%;
+    }
     .table-card{
-      width:100%;
-      overflow-x:auto;
-      border:1px solid #eee;
-      border-radius:8px;
-      padding:8px;
-      background:#fff;
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
     }
-    .sc-table { width:100%; border-collapse:collapse; background:#fff; font-size:14px; }
-    .sc-table th, .sc-table td { border:2px solid #000; padding:8px; text-align:center; vertical-align:middle; white-space:nowrap; }
-    .sc-table thead th { font-weight:700; }
-    .sc-table .left-head { width:220px; text-align:left; }
-    .sc-table .left-cell { text-align:left; font-weight:700; }
-    .sc-table .subhead { font-weight:700; }
 
+    .sc-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+    .sc-table th, .sc-table td { border: 2px solid #000; padding: 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
+    .sc-table thead th { font-weight: 700; }
+    .sc-table .left-head { width: 220px; text-align:left; }
+    .sc-table .left-cell { text-align:left; font-weight:700; }
+    .sc-table .subhead { font-weight: 700; }
+
+    /* Loading overlay (no pending calc text) */
     .loading-overlay{
-      position:absolute; inset:0;
+      position:absolute;
+      inset:0;
       background: rgba(255,255,255,0.85);
       display:none;
       align-items:center;
       justify-content:center;
       border-radius:8px;
-      z-index:2;
-      font-weight:700;
+      z-index: 2;
+      font-weight: 700;
     }
     .loading-overlay.show{ display:flex; }
 
-    /* Coming soon box */
-    .coming-soon-box{
-      margin-top: 14px;
-      padding: 12px;
+    /* Suggestions (right edge aligned because it shares the same container width) */
+    .suggestions-wrap{
+      margin-top: 18px;
+      padding: 14px;
       border: 1px solid #ddd;
       border-radius: 8px;
-      background: #f5f5f5;
-      color: #666;
-      font-weight: 700;
-      text-align: center;
-      opacity: 0.8;
+      background: #fafafa;
+      width: 100%;
     }
-
-    /* Suggestions collapsible */
-    details.suggestions-details{
-      margin-top:18px;
-      width:100%;
-      border:1px solid #ddd;
-      border-radius:8px;
-      background:#fafafa;
-      padding:0;
-      overflow:hidden;
-    }
-    details.suggestions-details > summary{
-      list-style:none;
-      cursor:pointer;
-      padding:14px;
-      font-weight:700;
-      user-select:none;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-    }
-    details.suggestions-details > summary::-webkit-details-marker { display:none; }
-    .suggestions-body{ padding:14px; border-top:1px solid #ddd; }
     #suggestionText{
-      width:100%;
-      min-height:110px;
-      resize:vertical;
-      padding:10px;
-      border:1px solid #ccc;
-      border-radius:6px;
-      font-family:inherit;
-      font-size:14px;
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
     }
     #submitSuggestionBtn{
-      display:inline-block;
-      margin-top:10px;
-      padding:10px 14px;
-      border:1px solid #aaa;
-      border-radius:6px;
-      background:#fff;
-      cursor:pointer;
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 14px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
     }
-    #suggestionMsg{ margin-top:8px; color:#666; }
-
-    /* Debug panel */
-    details.debug-details{
-      margin-top: 12px;
-      width: 100%;
-      border: 1px dashed #ccc;
-      border-radius: 8px;
-      background: #fafafa;
-      overflow: hidden;
-    }
-    details.debug-details > summary{
-      list-style:none;
-      cursor:pointer;
-      padding:10px 12px;
-      font-weight:700;
-      user-select:none;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    details.debug-details > summary::-webkit-details-marker{ display:none; }
-    .debug-body{ padding:10px 12px; border-top:1px dashed #ccc; }
-    pre#debugPre{
-      margin:0;
-      font-size:12px;
-      white-space:pre-wrap;
-      word-break:break-word;
-      background:#fff;
-      border:1px solid #eee;
-      border-radius:6px;
-      padding:10px;
-      max-height: 280px;
-      overflow:auto;
-    }
-
-    /* Consent modals */
-    .modal-backdrop{
-      position:fixed; inset:0;
-      background:rgba(0,0,0,0.55);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:9999;
-      padding:18px;
-    }
-    .modal-backdrop.show{ display:flex; }
-    .modal{
-      width:min(820px, 100%);
-      background:#fff;
-      border-radius:12px;
-      border:1px solid #ddd;
-      box-shadow:0 20px 60px rgba(0,0,0,0.25);
-      overflow:hidden;
-      position:relative;
-    }
-    .modal-header{
-      padding:14px 16px;
-      border-bottom:1px solid #eee;
-      font-weight:800;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-    }
-    .modal-title{ font-size:16px; }
-    .modal-body{
-      padding:16px;
-      max-height:min(60vh, 520px);
-      overflow:auto;
-      white-space:pre-line;
-      line-height:1.35;
-      font-size:14px;
-    }
-    .modal-footer{
-      padding:14px 16px;
-      border-top:1px solid #eee;
-      display:flex;
-      gap:10px;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-    }
-    .btn{
-      padding:10px 14px;
-      border:1px solid #aaa;
-      border-radius:8px;
-      background:#fff;
-      cursor:pointer;
-      font-weight:700;
-    }
-    .btn.primary{ background:#007bff; border-color:#007bff; color:#fff; }
-    .btn.danger{ border-color:#c00; color:#c00; }
-    .close-x{
-      width:34px; height:34px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border:1px solid #ddd;
-      border-radius:8px;
-      background:#fff;
-      cursor:pointer;
-      font-weight:900;
-      line-height:1;
-    }
-
-    body.consent-locked .content-wrap{
-      pointer-events:none;
-      user-select:none;
-    }
+    #suggestionMsg{ margin-top: 8px; color:#666; }
   </style>
 </head>
 
-<body class="consent-locked">
-  <h2 id="pageTitle">TS1170.5 site parameter finder</h2>
+<body>
+  <h2>TS1170.5 site parameter finder</h2>
 
   <div class="content-wrap">
     <div class="search-wrap">
@@ -285,6 +158,7 @@
       <button id="useMyLocationBtn" type="button">Use my location</button>
     </div>
 
+    <!-- ✅ moved here so it doesn't break option-block/map alignment -->
     <div id="coords">Choose a location (search or click the map)</div>
 
     <div class="main-grid">
@@ -333,116 +207,160 @@
       </div>
     </div>
 
+    <!-- Full-width results -->
     <div class="results-wrap">
       <div class="loading-overlay" id="loadingOverlay">Loading…</div>
       <div id="roundedCoordsBar"></div>
-      <div id="specialNotice"></div>
       <div id="tablesGrid"></div>
-
-      <details class="debug-details" id="debugDetails">
-        <summary>
-          <span>Debug: Last lookup response</span>
-          <span id="debugSymbol">+</span>
-        </summary>
-        <div class="debug-body">
-          <pre id="debugPre">{}</pre>
-        </div>
-      </details>
     </div>
 
-    <div class="coming-soon-box">Horizontal Design Action Coefficient - Coming Soon</div>
-
-    <details class="suggestions-details" id="suggestionsDetails">
-      <summary>
-        <span>Suggestions</span>
-        <span id="suggestionsSymbol" style="font-weight:700; color:#666;">+</span>
-      </summary>
-      <div class="suggestions-body">
-        <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
-        <div>
-          <button id="submitSuggestionBtn" type="button">Submit</button>
-        </div>
-        <div id="suggestionMsg"></div>
+    <div class="suggestions-wrap">
+      <div style="font-weight:700; margin-bottom:8px;">Suggestions</div>
+      <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
+      <div>
+        <button id="submitSuggestionBtn" type="button">Submit</button>
       </div>
-    </details>
-  </div>
-
-  <!-- Consent Modal -->
-  <div class="modal-backdrop show" id="consentModal">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
-      <div class="modal-header">
-        <div class="modal-title" id="consentTitle">Notice & Consent</div>
-        <div style="width:34px;"></div>
-      </div>
-      <div class="modal-body">
-TS1170.5 Site Parameter Finder is made available without charge and in good faith. It is agreed by the user that no liability for its use, applicability or accuracy is accepted by the author. Professional care and judgement must be exercised, with relevant design knowledge and skill applied by the use.
-This site uses essential cookies and collects approximate location data (country/region/city) for analytics and improvement.
-      </div>
-      <div class="modal-footer">
-        <button class="btn primary" id="btnAccept">Accept & Continue</button>
-        <button class="btn danger" id="btnExit">Exit</button>
-        <button class="btn" id="btnLearnMore">Learn more</button>
-      </div>
+      <div id="suggestionMsg"></div>
     </div>
   </div>
 
-  <!-- Learn More Modal -->
-  <div class="modal-backdrop" id="learnMoreModal">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="learnMoreTitle">
-      <div class="modal-header">
-        <div class="modal-title" id="learnMoreTitle">Location Information</div>
-        <button class="close-x" id="btnLearnMoreClose" aria-label="Close">×</button>
-      </div>
-      <div class="modal-body">
-Location Information (NZ Privacy Act 2020)
-This website collects approximate location information (such as country, region, or city) derived from your IP address.
-This information is collected in accordance with the Privacy Act 2020 (New Zealand) and is used for legitimate purposes, including:
-• Understanding how the tool is used across different regions
-• Improving performance and reliability
-• Anonymous usage analytics
-We do not collect precise location data, do not track individuals, and do not use location information to identify you.
-Location information is handled in aggregated form and may be processed by trusted third-party service providers solely for the purposes described above.
-________________________________________
-Key Privacy Principles 
-In line with the NZ Privacy Act:
-• We only collect information that is necessary for the operation and improvement of the tool
-• Information is collected lawfully and fairly
-• Data is used only for the purposes it was collected
-• Reasonable steps are taken to protect the information
-________________________________________
-Your Rights
-Under the Privacy Act 2020, you have the right to:
-• Request access to personal information held about you
-• Request correction of that information, if applicable
-Because only approximate, non-identifying location data is collected, there is generally no personal information that can be linked to an individual user.
-      </div>
-    </div>
-  </div>
-
+  <!-- =========================================================
+    CSP-SAFE ANALYTICS MODULE (unchanged)
+  ========================================================= -->
   <script>
-    /**************************************************************
-     * CONFIG (REQUIRED)
-     **************************************************************/
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxo5yBcaRzIyD1Mv4B5YE4pBYxls9RXb4IIV0wa44yUJ2clIXcD_wn5iag1ZQwnsayV/exec"; // must end in /exec
-    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
-    const GEO_URL = "/geo";
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx-EhAFBwzePEVis6XLepGjvdypLR1CK_ZstX3UJhtIcJvF1yCH9LIuB8NRkuF-r__s/exec";
+    window.GEO_URL = "/geo";
+    window.ANALYTICS_DEBUG = true;
+
+    (function () {
+      var VISITOR_KEY = "nz_tool_visitor_id";
+      function dbg() { if (!window.ANALYTICS_DEBUG) return; console.log.apply(console, ["[analytics]"].concat([].slice.call(arguments))); }
+      function getVisitor() {
+        var id = localStorage.getItem(VISITOR_KEY);
+        var isNew = false;
+        if (!id) {
+          isNew = true;
+          id = (window.crypto && crypto.randomUUID) ? ("v_" + crypto.randomUUID()) : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+          localStorage.setItem(VISITOR_KEY, id);
+        }
+        return { id: id, isNew: isNew };
+      }
+      function safeGeoObject(g) { return { geoProvider:(g&&g.geoProvider)?g.geoProvider:"cloudflare", geoCountry:(g&&g.geoCountry)?g.geoCountry:"", geoRegion:(g&&g.geoRegion)?g.geoRegion:"", geoCity:(g&&g.geoCity)?g.geoCity:"" }; }
+      function getGeo() {
+        var url = window.GEO_URL || "/geo";
+        return fetch(url, { cache: "no-store" })
+          .then(function (r) { return r.text().then(function (t) { try { return safeGeoObject(JSON.parse(t)); } catch (e) { return safeGeoObject(null); } }); })
+          .catch(function () { return safeGeoObject(null); });
+      }
+      function postToAppsScript(payloadObj) {
+        var url = window.WEB_APP_URL;
+        if (!url || url.indexOf("script.google.com") === -1) return Promise.resolve({ status: 0, text: "WEB_APP_URL missing/invalid" });
+        var body = new URLSearchParams();
+        body.set("payload", JSON.stringify(payloadObj));
+        return fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: body.toString() })
+          .then(function (res) { return res.text().then(function (text) { dbg("POST", res.status, text); return { status: res.status, text: text }; }); })
+          .catch(function (e) { return { status: 0, text: String(e) }; });
+      }
+      function logEvent(eventName, extra) {
+        if (!extra) extra = {};
+        var dnt = (navigator.doNotTrack === "1" || window.doNotTrack === "1");
+        if (dnt) return Promise.resolve({ status: 0, text: "DNT enabled" });
+        var v = getVisitor();
+        return getGeo().then(function (geo) {
+          var payload = { visitorId:v.id, isNew:v.isNew, event:String(eventName||""), page:location.pathname||"", userAgent:navigator.userAgent||"", tsClient:new Date().toISOString(),
+            geoProvider:geo.geoProvider, geoCountry:geo.geoCountry, geoRegion:geo.geoRegion, geoCity:geo.geoCity };
+          for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k]; }
+          return postToAppsScript(payload);
+        });
+      }
+      window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
+    })();
   </script>
 
   <script>
+    /**************************************************************
+     * CONFIG
+     **************************************************************/
+    window.GEO_URL = "geo";
+    const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
+    const SHEET1_NAME = "Sheet1";
+    const SHEET2_NAME = "Sheet2";
+    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+
+    const SHEET1_LAT_COL_INDEX = 0;
+    const SHEET1_LNG_COL_INDEX = 1;
+    const SHEET1_APOE_COL_INDEX = 2;
+
+    const SHEET1_SITECLASS_COLS = {
+      I:   { PGA: 3,  Sa: 4,  Tc: 5  },
+      II:  { PGA: 6,  Sa: 7,  Tc: 8  },
+      III: { PGA: 9,  Sa: 10, Tc: 11 },
+      IV:  { PGA: 12, Sa: 13, Tc: 14 },
+      V:   { PGA: 15, Sa: 16, Tc: 17 },
+      VI:  { PGA: 18, Sa: 19, Tc: 20 },
+    };
+
+    const SHEET2_WORKINGLIFE_COL_INDEX = 0;
+    const SHEET2_IMPORTANCE_COL_INDEX = 1;
+    const SHEET2_STRING_COLS = [2, 3, 4];
+    const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
+
+    const WORKING_LIFE_LABEL = {
+      construction: "Construction equipment",
+      lt6months: "Less than 6 months",
+      "5": "5 years",
+      "25": "25 years",
+      "50": "50 years",
+      "100": "100 years or more"
+    };
+
+    /**************************************************************
+     * STATE
+     **************************************************************/
     let map, marker, autocomplete;
     let selectedLat = null, selectedLng = null;
     let selectedSiteClass = "";
     let selectedImportanceLevel = "";
     let selectedWorkingLife = "";
+    let matchedSheet1Rows = [];
+    let sheet2MatchOptions = [];
 
-    let recalcToken = 0;
-    const pageStartMs = Date.now();
+    function round1(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return null;
+      return Math.round(num * 10) / 10;
+    }
 
-    const DEBUG_ENABLED = true;
-    function setDebug(obj){
-      if (!DEBUG_ENABLED) return;
-      const pre = document.getElementById("debugPre");
-      if (pre) pre.textContent = JSON.stringify(obj || {}, null, 2);
+    function analyticsExtraBase() {
+      const lat = selectedLat;
+      const lng = selectedLng;
+      return {
+        siteClass: selectedSiteClass || "",
+        importanceLevel: selectedImportanceLevel || "",
+        workingLife: selectedWorkingLife || "",
+        roundedLatLng: (Number.isFinite(lat) && Number.isFinite(lng))
+          ? `${round1(lat)},${round1(lng)}`
+          : ""
+      };
+    }
+
+    function logEvent(eventName, extra = {}) {
+      if (!window.SiteAnalytics || typeof window.SiteAnalytics.logEvent !== "function") return;
+      return window.SiteAnalytics.logEvent(eventName, Object.assign({}, analyticsExtraBase(), extra));
+    }
+
+    function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
+    function eqLoose(a, b){
+      const sa = normalize(a), sb = normalize(b);
+      if (sa === sb) return true;
+      const na = Number(sa), nb = Number(sb);
+      if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
+      return sa.toLowerCase() === sb.toLowerCase();
+    }
+    function safeCell(v) {
+      if (v === null || v === undefined || String(v).trim() === "") return "";
+      const n = Number(v);
+      return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
     }
 
     function hasAllInputs(){
@@ -453,208 +371,38 @@ Because only approximate, non-identifying location data is collected, there is g
              !!selectedImportanceLevel;
     }
 
+    function setRoundedBar(){
+      const el = document.getElementById("roundedCoordsBar");
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.style.display="none"; el.textContent = ""; return; }
+      const rLat = round1(selectedLat);
+      const rLng = round1(selectedLng);
+      el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)}, ${rLng.toFixed(1)}</b>`;
+    }
+
     function showLoading(show){
       document.getElementById("loadingOverlay").classList.toggle("show", !!show);
     }
 
-    function hideSpecialNotice(){
-      const n = document.getElementById("specialNotice");
-      n.style.display = "none";
-      n.textContent = "";
-    }
-
-    function showSpecialNotice(text){
-      const n = document.getElementById("specialNotice");
-      n.textContent = text;
-      n.style.display = "block";
-    }
-
     function clearResults(){
       document.getElementById("tablesGrid").innerHTML = "";
-      const rounded = document.getElementById("roundedCoordsBar");
-      rounded.style.display = "none";
-      rounded.textContent = "";
-      hideSpecialNotice();
+      const el = document.getElementById("roundedCoordsBar");
+      el.style.display = "none";
+      el.textContent = "";
     }
 
-    function applyTablesGridColumns(n){
-      const grid = document.getElementById("tablesGrid");
-      if (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
-      else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
-      else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
-      else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
-    }
-
-    function buildTableHTML(t){
-      return `
-        <table class="sc-table">
-          <thead>
-            <tr>
-              <th class="left-head">${t.title || ""}</th>
-              <th colspan="3">Site Class ${t.siteClass || ""}</th>
-            </tr>
-            <tr>
-              <th class="subhead left-head">apoe</th>
-              <th class="subhead">PGA</th>
-              <th class="subhead">Sa,s</th>
-              <th class="subhead">Tc</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="left-cell">${t.apoe || "(APOE blank)"}</td>
-              <td>${t.pga ?? ""}</td>
-              <td>${t.sa ?? ""}</td>
-              <td>${t.tc ?? ""}</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
-    }
-
-    async function postWebApp(payloadObj){
-      const body = new URLSearchParams();
-      body.set("payload", JSON.stringify(payloadObj));
-
-      const res = await fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
-      });
-
-      const text = await res.text();
-      let json;
-      try { json = JSON.parse(text); } catch(e){ throw new Error("Non-JSON response: " + text.slice(0,200)); }
-      if (!res.ok || json.ok === false) throw new Error(json.error || ("HTTP " + res.status));
-      return json;
-    }
-
-    // GEO cache
-    let GEO_CACHE = null;
-    let GEO_CACHE_TS = 0;
-    const GEO_CACHE_TTL_MS = 10 * 60 * 1000;
-
-    async function getGeoCoarse(){
-      const now = Date.now();
-      if (GEO_CACHE && (now - GEO_CACHE_TS) < GEO_CACHE_TTL_MS) return GEO_CACHE;
-
-      try{
-        const res = await fetch(GEO_URL, { cache: "no-store" });
-        const txt = await res.text();
-        const obj = JSON.parse(txt);
-        GEO_CACHE = {
-          geoCountry: obj.geoCountry || obj.country || "",
-          geoRegion:  obj.geoRegion  || obj.region  || "",
-          geoCity:    obj.geoCity    || obj.city    || ""
-        };
-      } catch(e){
-        GEO_CACHE = { geoCountry:"", geoRegion:"", geoCity:"" };
-      }
-      GEO_CACHE_TS = now;
-      return GEO_CACHE;
-    }
-
-    function analyticsBase(){
-      const rLat = Number.isFinite(selectedLat) ? (Math.round(selectedLat*10)/10).toFixed(1) : "";
-      const rLng = Number.isFinite(selectedLng) ? (Math.round(selectedLng*10)/10).toFixed(1) : "";
-      return {
-        siteClass: selectedSiteClass || "",
-        importanceLevel: selectedImportanceLevel || "",
-        workingLife: selectedWorkingLife || "",
-        roundedLatLng: (rLat && rLng) ? `${rLat},${rLng}` : "",
-        page: location.pathname || "",
-        userAgent: navigator.userAgent || ""
-      };
-    }
-
-    function logEvent(name, extra = {}){
-      (async () => {
-        try{
-          const geo = await getGeoCoarse();
-          await postWebApp(Object.assign(
-            { mode: "analytics", event: String(name || "") },
-            analyticsBase(),
-            geo,
-            extra,
-            { tsClient: new Date().toISOString() }
-          ));
-        } catch(e){}
-      })();
-    }
-
-    window.addEventListener("load", () => logEvent("page_load", {}));
-    window.addEventListener("beforeunload", () => {
-      const seconds = Math.max(0, Math.round((Date.now() - pageStartMs)/1000));
-      logEvent("page_exit", { timeOnPageSeconds: seconds });
-    });
-
-    async function recalc(){
-      const myToken = ++recalcToken;
-
-      clearResults();
-      if (!hasAllInputs()) return;
-
-      showLoading(true);
-
-      try{
-        const data = await postWebApp({
-          mode: "lookup",
-          lat: selectedLat,
-          lng: selectedLng,
-          siteClass: selectedSiteClass,
-          importanceLevel: selectedImportanceLevel,
-          workingLife: selectedWorkingLife
-        });
-
-        if (myToken !== recalcToken) return;
-
-        setDebug(data);
-
-        const tables = Array.isArray(data.tables) ? data.tables : [];
-        const apoes = tables.map(t => t.apoe).filter(Boolean);
-
-        if (!tables.length) {
-          showSpecialNotice("Lookup returned 0 tables for this selection.");
-          logEvent("results_generated", { displayedTablesCount: 0 });
-          return;
-        }
-
-        if (tables.length === 1) {
-          showSpecialNotice(`Lookup returned 1 table (APOE: ${apoes[0] || "unknown"}).`);
-        } else {
-          hideSpecialNotice();
-        }
-
-        const roundedBar = document.getElementById("roundedCoordsBar");
-        roundedBar.innerHTML = `Rounded (1dp) match key: <b>${data.roundedKey || ""}</b>`;
-        roundedBar.style.display = "";
-
-        applyTablesGridColumns(tables.length);
-
-        document.getElementById("tablesGrid").innerHTML = tables
-          .map(t => `<div class="table-card">${buildTableHTML(t)}</div>`)
-          .join("");
-
-        logEvent("results_generated", { displayedTablesCount: tables.length });
-
-      } catch(err){
-        console.error(err);
-        setDebug({ error: String(err) });
-        showSpecialNotice("Lookup failed. Check WEB_APP_URL / deployment. See Debug panel.");
-        logEvent("error", { message: String(err) });
-      } finally {
-        if (myToken === recalcToken) showLoading(false);
-      }
-    }
-
+    /**************************************************************
+     * ✅ Fix alignment: option-block and map top+bottom match
+     **************************************************************/
     function syncMapHeightToOptionBlock(){
       const block = document.getElementById("designInputsBlock");
       const mapEl = document.getElementById("map");
       if (!block || !mapEl) return;
 
+      // exact pixel match of the option block
       const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
       mapEl.style.height = h + "px";
 
+      // trigger google maps resize after height change
       if (window.google && google.maps && map) {
         google.maps.event.trigger(map, "resize");
         if (marker) map.panTo(marker.getPosition());
@@ -665,37 +413,255 @@ Because only approximate, non-identifying location data is collected, there is g
       const block = document.getElementById("designInputsBlock");
       if (!block) return;
 
+      // initial + after layout
       requestAnimationFrame(syncMapHeightToOptionBlock);
 
       if ("ResizeObserver" in window) {
         const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
         ro.observe(block);
       }
-      window.addEventListener("resize", syncMapHeightToOptionBlock);
+
+      window.addEventListener("resize", () => syncMapHeightToOptionBlock());
+    }
+
+    /**************************************************************
+     * Tables layout rules:
+     * 1-3 tables => 1 row across full width (n columns)
+     * 4 tables   => 2 rows x 2 columns across full width
+     **************************************************************/
+    function applyTablesGridColumns(n){
+      const grid = document.getElementById("tablesGrid");
+      if (!grid) return;
+
+      if (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
+    }
+
+    /**************************************************************
+     * GOOGLE SHEETS (GVIZ)
+     **************************************************************/
+    function gvizUrl(sheetName, query){
+      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
+      const params = new URLSearchParams();
+      params.set("sheet", sheetName);
+      params.set("tq", query);
+      return `${base}?${params.toString()}`;
+    }
+
+    async function fetchSheetAs2DArray(sheetName, query){
+      const url = gvizUrl(sheetName, query);
+      const res = await fetch(url);
+      const text = await res.text();
+      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+      const data = JSON.parse(jsonText);
+      const cols = data.table.cols.length;
+      const rows = data.table.rows || [];
+      return rows.map(r => {
+        const arr = new Array(cols).fill(null);
+        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
+        return arr;
+      });
+    }
+
+    async function step1_findAllSheet1RowsMatching1dp(){
+      matchedSheet1Rows = [];
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+
+      const rows = await fetchSheetAs2DArray(SHEET1_NAME, "select *");
+      if (!rows.length) return;
+
+      const targetLat1 = round1(selectedLat);
+      const targetLng1 = round1(selectedLng);
+
+      for (const row of rows) {
+        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
+        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) matchedSheet1Rows.push({ row });
+      }
+    }
+
+    async function step2_getTitlesAndStringsFromSheet2(){
+      sheet2MatchOptions = [];
+      if (!selectedWorkingLife || !selectedImportanceLevel) return;
+
+      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
+      if (!sheet2.length) return;
+
+      const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
+      const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
+      const headerish = firstA.includes("working") || firstB.includes("importance");
+
+      const headerRow = headerish ? sheet2[0] : null;
+      const dataRows = headerish ? sheet2.slice(1) : sheet2;
+
+      const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+
+      const matchRow = dataRows.find(r =>
+        eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
+        eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
+      );
+
+      if (!matchRow) { sheet2MatchOptions = []; return; }
+
+      sheet2MatchOptions = SHEET2_STRING_COLS
+        .map((colIdx) => {
+          const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
+          const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
+          const value = normalize(matchRow[colIdx]);
+          return { title, value };
+        })
+        .filter(x => x.value.length > 0);
+    }
+
+    function isOneOver500(apoe){
+      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
+      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
+    }
+
+    function step3_filterMatchedSheet1Rows(){
+      if (!matchedSheet1Rows.length) return [];
+      if (!sheet2MatchOptions.length) return [];
+
+      const out = [];
+      const seen = new Set();
+
+      for (const item of matchedSheet1Rows) {
+        const sheet1Row = item.row;
+        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
+        if (!apoe) continue;
+
+        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
+        if (!match) continue;
+
+        const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        out.push({ sheet1Row, apoe, matchTitle: match.title });
+      }
+
+      const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
+      if (hasULS) {
+        const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
+        if (oneOver500Item && oneOver500Item.row) {
+          const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
+          const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
+          }
+        }
+      }
+
+      return out;
+    }
+
+    function buildThreeRowTable(sheet1Row, apoe, matchTitle){
+      const sc = selectedSiteClass;
+      const idx = SHEET1_SITECLASS_COLS[sc];
+      const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
+      const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
+      const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
+
+      return `
+        <table class="sc-table">
+          <thead>
+            <tr>
+              <th class="left-head">${topLeft}</th>
+              <th colspan="3">Site Class ${sc}</th>
+            </tr>
+            <tr>
+              <th class="subhead left-head">apoe</th>
+              <th class="subhead">PGA</th>
+              <th class="subhead">Sa,s</th>
+              <th class="subhead">Tc</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="left-cell">${apoe || "(APOE blank)"}</td>
+              <td>${pga}</td>
+              <td>${sa}</td>
+              <td>${tc}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderTablesFullWidth(filtered){
+      if (!hasAllInputs()) return;
+
+      if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
+        clearResults();
+        return;
+      }
+
+      const rounded = document.getElementById("roundedCoordsBar");
+      const grid = document.getElementById("tablesGrid");
+
+      setRoundedBar();
+      rounded.style.display = "";
+
+      applyTablesGridColumns(filtered.length);
+
+      grid.innerHTML = filtered.map(x =>
+        `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
+      ).join("");
+    }
+
+    let recalcToken = 0;
+
+    async function recalc(){
+      const myToken = ++recalcToken;
+
+      showLoading(true);
+      clearResults();
+
+      try {
+        if (!hasAllInputs()) return;
+
+        await step1_findAllSheet1RowsMatching1dp();
+        if (myToken !== recalcToken) return;
+
+        await step2_getTitlesAndStringsFromSheet2();
+        if (myToken !== recalcToken) return;
+
+        const filtered = step3_filterMatchedSheet1Rows();
+        if (myToken !== recalcToken) return;
+
+        renderTablesFullWidth(filtered);
+
+        await logEvent("results_generated", {
+          matchedSheet1RowsCount: matchedSheet1Rows.length,
+          displayedTablesCount: filtered.length
+        });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (myToken === recalcToken) showLoading(false);
+      }
     }
 
     function wireSingleSelectButtons(containerId, setter, buttonType){
       const buttons = document.querySelectorAll(`#${containerId} button`);
       buttons.forEach(btn => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", async () => {
           buttons.forEach(b => b.classList.remove("selected"));
           btn.classList.add("selected");
           setter(btn.dataset.value);
-          logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
+
+          // ✅ Keep alignment perfect after any wrap/height change
           syncMapHeightToOptionBlock();
-          recalc();
+
+          await logEvent("button_click", { buttonType, buttonValue: btn.dataset.value });
+          await recalc();
         });
       });
-    }
-
-    function getVisitorId(){
-      const key = "nz_tool_visitor_id";
-      let id = localStorage.getItem(key);
-      if (!id) {
-        id = (crypto.randomUUID) ? ("v_" + crypto.randomUUID()) : ("v_" + Date.now());
-        localStorage.setItem(key, id);
-      }
-      return id;
     }
 
     function wireSuggestions(){
@@ -711,20 +677,34 @@ Because only approximate, non-identifying location data is collected, there is g
         btn.disabled = true;
         btn.textContent = "Submitting…";
 
-        try{
-          await postWebApp({
-            mode: "suggestion",
+        try {
+          const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"", isNew:false };
+          const payload = Object.assign({}, analyticsExtraBase(), {
+            event: "suggestion_submit",
             suggestionText: text,
-            visitorId: getVisitorId(),
-            page: location.pathname || ""
+            visitorId: v.id || "",
+            isNew: !!v.isNew,
+            page: location.pathname || "",
+            userAgent: navigator.userAgent || "",
+            tsClient: new Date().toISOString()
           });
+
+          const body = new URLSearchParams();
+          body.set("payload", JSON.stringify(payload));
+
+          const res = await fetch(window.WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            body: body.toString()
+          });
+
+          if (!res.ok) { msg.textContent = `Submit failed (${res.status}).`; return; }
+
           textarea.value = "";
           msg.textContent = "Thanks — suggestion submitted.";
-          logEvent("suggestion_submitted", {});
-        } catch(err){
-          console.error(err);
+        } catch (e) {
+          console.error(e);
           msg.textContent = "Submit failed (check console).";
-          logEvent("suggestion_failed", { message: String(err) });
         } finally {
           btn.disabled = false;
           btn.textContent = "Submit";
@@ -732,62 +712,9 @@ Because only approximate, non-identifying location data is collected, there is g
       });
     }
 
-    // Consent
-    const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
-    function showConsentModal(){
-      document.getElementById("consentModal").classList.add("show");
-      document.getElementById("learnMoreModal").classList.remove("show");
-      document.body.classList.add("consent-locked");
-    }
-    function hideConsentModal(){
-      document.getElementById("consentModal").classList.remove("show");
-      document.getElementById("learnMoreModal").classList.remove("show");
-      document.body.classList.remove("consent-locked");
-    }
-    function initConsent(){
-      const suggestions = document.getElementById("suggestionsDetails");
-      const sSym = document.getElementById("suggestionsSymbol");
-      if (suggestions) suggestions.open = false;
-      if (suggestions && sSym){
-        suggestions.addEventListener("toggle", () => sSym.textContent = suggestions.open ? "−" : "+");
-      }
-
-      const dbg = document.getElementById("debugDetails");
-      const dSym = document.getElementById("debugSymbol");
-      if (dbg) dbg.open = false;
-      if (dbg && dSym){
-        dbg.addEventListener("toggle", () => dSym.textContent = dbg.open ? "−" : "+");
-      }
-
-      const accepted = sessionStorage.getItem(CONSENT_SESSION_KEY) === "true";
-      if (!accepted) showConsentModal();
-      else hideConsentModal();
-
-      document.getElementById("btnAccept").addEventListener("click", () => {
-        sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
-        hideConsentModal();
-        logEvent("consent_accepted", {});
-      });
-
-      document.getElementById("btnExit").addEventListener("click", () => {
-        window.location.href = "https://www.standards.govt.nz/shop/snz-ts-1170-52025";
-      });
-
-      document.getElementById("btnLearnMore").addEventListener("click", () => {
-        document.getElementById("consentModal").classList.remove("show");
-        document.getElementById("learnMoreModal").classList.add("show");
-      });
-
-      document.getElementById("btnLearnMoreClose").addEventListener("click", () => {
-        document.getElementById("learnMoreModal").classList.remove("show");
-        document.getElementById("consentModal").classList.add("show");
-      });
-    }
-
-    // Maps
     function setMarker(lat,lng){
-      const pos = { lat, lng };
-      if (marker) marker.setMap(null);
+      const pos = {lat, lng};
+      if(marker) marker.setMap(null);
       marker = new google.maps.Marker({ map, position: pos });
       map.panTo(pos);
     }
@@ -798,17 +725,16 @@ Because only approximate, non-identifying location data is collected, there is g
         zoom: 6
       });
 
+      // ✅ Start and keep sync
       setupHeightSync();
       syncMapHeightToOptionBlock();
 
-      map.addListener("click", (e) => {
+      map.addListener("click", async (e) => {
         selectedLat = e.latLng.lat();
         selectedLng = e.latLng.lng();
         setMarker(selectedLat, selectedLng);
-        document.getElementById("coords").textContent =
-          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-        logEvent("location_selected", { locationMethod: "map_click", lat: selectedLat, lng: selectedLng });
-        recalc();
+        document.getElementById("coords").textContent = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+        await recalc();
       });
 
       autocomplete = new google.maps.places.Autocomplete(
@@ -816,7 +742,7 @@ Because only approximate, non-identifying location data is collected, there is g
         { componentRestrictions: { country: "nz" } }
       );
 
-      autocomplete.addListener("place_changed", () => {
+      autocomplete.addListener("place_changed", async () => {
         const place = autocomplete.getPlace();
         if (!place.geometry || !place.geometry.location) return;
 
@@ -828,43 +754,38 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
-        logEvent("location_selected", {
-          locationMethod: "address_search",
-          address: place.formatted_address || "",
-          lat: selectedLat,
-          lng: selectedLng
-        });
-
-        recalc();
+        await recalc();
       });
 
       document.getElementById("useMyLocationBtn").addEventListener("click", () => {
         if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition((pos) => {
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
           selectedLat = pos.coords.latitude;
           selectedLng = pos.coords.longitude;
           setMarker(selectedLat, selectedLng);
           map.setZoom(14);
+
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-          logEvent("location_selected", { locationMethod: "my_location", lat: selectedLat, lng: selectedLng });
-          recalc();
-        }, () => logEvent("location_failed", { locationMethod: "my_location", reason: "permission_denied" }));
+
+          await recalc();
+        });
       });
 
       wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v, "site_class");
       wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v, "importance_level");
       wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v, "working_life");
-
       wireSuggestions();
-      clearResults();
+
       showLoading(false);
+      clearResults();
     }
 
-    window.addEventListener("load", initConsent);
     window.initMap = initMap;
 
     (function loadGoogleMaps(){
+      if (window.google && window.google.maps) return;
       const s = document.createElement("script");
       s.src = "https://maps.googleapis.com/maps/api/js"
         + "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY)
