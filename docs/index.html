@@ -516,6 +516,16 @@ Because only approximate, non-identifying location data is collected, there is g
 
   <script>
     /**************************************************************
+     * Safe logging helper — ensures events actually get sent to Sheet3
+     **************************************************************/
+    function safeLog(eventName, extra){
+      try{
+        if (!window.SiteAnalytics || !window.SiteAnalytics.logEvent) return;
+        window.SiteAnalytics.logEvent(eventName, extra || {}).catch(() => {});
+      } catch(e){}
+    }
+
+    /**************************************************************
      * CONFIG (GVIZ lookup)
      **************************************************************/
     const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
@@ -989,6 +999,15 @@ Because only approximate, non-identifying location data is collected, there is g
           btn.classList.add("selected");
           setter(btn.dataset.value);
 
+          // ✅ Log option selections to Sheet3
+          safeLog("option_select", {
+            group: containerId,
+            value: btn.dataset.value,
+            siteClass: selectedSiteClass,
+            importanceLevel: selectedImportanceLevel,
+            workingLife: selectedWorkingLife
+          });
+
           if (hasAllInputs() && isSpecialCaseSelected()) {
             showSpecialCaseInTablesArea();
           }
@@ -1017,6 +1036,10 @@ Because only approximate, non-identifying location data is collected, there is g
 
         try {
           const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"" };
+
+          // ✅ Log suggestion click
+          safeLog("suggestion_submit_click", { length: text.length });
+
           const payload = {
             event: "suggestion_submit",
             suggestionText: text,
@@ -1048,7 +1071,7 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Consent modal logic + collapsible suggestions + pageviews
+     * Consent modal logic + collapsible suggestions + pageviews + logging
      **************************************************************/
     function showConsentModal(){
       document.getElementById("consentModal").classList.add("show");
@@ -1071,10 +1094,13 @@ Because only approximate, non-identifying location data is collected, there is g
       if (!accepted) showConsentModal();
       else hideConsentModal();
 
-      // If already accepted (refresh), count once per session
+      // If already accepted (refresh), count once per session and log page view
       if (accepted && sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
         sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
         incrementAndFetchPageViews();
+
+        // ✅ Log page view (Sheet3)
+        safeLog("page_view", { title: document.title || "" });
       }
 
       document.getElementById("btnAccept").addEventListener("click", () => {
@@ -1085,18 +1111,24 @@ Because only approximate, non-identifying location data is collected, there is g
           sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
           incrementAndFetchPageViews();
         }
+
+        // ✅ Log page view on accept (Sheet3)
+        safeLog("page_view", { title: document.title || "" });
       });
 
       document.getElementById("btnExit").addEventListener("click", () => {
+        safeLog("exit_click", {});
         window.location.href = "https://www.standards.govt.nz/shop/snz-ts-1170-52025";
       });
 
       document.getElementById("btnLearnMore").addEventListener("click", () => {
+        safeLog("learn_more_open", {});
         document.getElementById("consentModal").classList.remove("show");
         document.getElementById("learnMoreModal").classList.add("show");
       });
 
       document.getElementById("btnLearnMoreClose").addEventListener("click", () => {
+        safeLog("learn_more_close", {});
         document.getElementById("learnMoreModal").classList.remove("show");
         document.getElementById("consentModal").classList.add("show");
       });
@@ -1135,6 +1167,10 @@ Because only approximate, non-identifying location data is collected, there is g
         setMarker(selectedLat, selectedLng);
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+        // ✅ Log map click (Sheet3)
+        safeLog("map_click", { lat: selectedLat, lng: selectedLng });
+
         recalc();
       });
 
@@ -1155,11 +1191,21 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
+        // ✅ Log address selection (Sheet3)
+        safeLog("address_select", {
+          lat: selectedLat,
+          lng: selectedLng,
+          address: place.formatted_address || ""
+        });
+
         recalc();
       });
 
       document.getElementById("useMyLocationBtn").addEventListener("click", () => {
         if (!navigator.geolocation) return;
+
+        safeLog("use_my_location_click", {});
+
         navigator.geolocation.getCurrentPosition((pos) => {
           selectedLat = pos.coords.latitude;
           selectedLng = pos.coords.longitude;
@@ -1167,7 +1213,13 @@ Because only approximate, non-identifying location data is collected, there is g
           map.setZoom(14);
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+          // ✅ Log use my location (Sheet3)
+          safeLog("use_my_location", { lat: selectedLat, lng: selectedLng });
+
           recalc();
+        }, (err) => {
+          safeLog("use_my_location_error", { code: err && err.code, message: err && err.message });
         });
       });
 
