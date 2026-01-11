@@ -13,7 +13,7 @@
 
     .content-wrap{
       width: 100%;
-      max-width: 1400px; /* remove if you want full width */
+      max-width: 1400px;
       margin: 0 auto;
     }
 
@@ -131,6 +131,18 @@
       text-align: center;
     }
 
+    .coming-soon-box{
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f5f5f5;
+      color: #666;
+      font-weight: 700;
+      text-align: center;
+      opacity: 0.8;
+    }
+
     /* Suggestions (collapsible) */
     details.suggestions-details{
       margin-top: 18px;
@@ -151,19 +163,6 @@
       align-items:center;
       justify-content: space-between;
     }
-
-    .coming-soon-box{
-      margin-top: 14px;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #f5f5f5;
-      color: #666;
-      font-weight: 700;
-      text-align: center;
-      opacity: 0.8;
-    }
-
     details.suggestions-details > summary::-webkit-details-marker { display:none; }
     .suggestions-body{
       padding: 14px;
@@ -189,6 +188,15 @@
       cursor: pointer;
     }
     #suggestionMsg{ margin-top: 8px; color:#666; }
+
+    /* Page view counter */
+    .pageviews{
+      margin-top: 14px;
+      text-align: center;
+      color:#666;
+      font-weight: 700;
+      font-size: 13px;
+    }
 
     /* Consent modal (blocks site until accepted) */
     .modal-backdrop{
@@ -226,7 +234,7 @@
       padding: 16px;
       max-height: min(60vh, 520px);
       overflow: auto;
-      white-space: pre-line; /* preserve line breaks */
+      white-space: pre-line;
       line-height: 1.35;
       font-size: 14px;
     }
@@ -276,7 +284,7 @@
     body.consent-locked .content-wrap{
       pointer-events: none;
       user-select: none;
-      filter: blur(0px); /* keep sharp; pointer-events is enough */
+      filter: blur(0px);
     }
   </style>
 </head>
@@ -365,6 +373,12 @@
       </div>
     </details>
 
+    <!-- Page Views -->
+    <div class="pageviews" id="pageViewCounter">
+      Views today: <span id="pageViewsToday">—</span> &nbsp;|&nbsp;
+      Total views: <span id="pageViewsTotal">—</span>
+    </div>
+
   </div>
 
   <!-- ======================
@@ -374,7 +388,6 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
       <div class="modal-header">
         <div class="modal-title" id="consentTitle">Notice & Consent</div>
-        <!-- no X close for main modal (must accept or exit) -->
         <div style="width:34px;"></div>
       </div>
 
@@ -541,10 +554,44 @@ Because only approximate, non-identifying location data is collected, there is g
     };
 
     /**************************************************************
+     * Page view counter (Today + Total) — counted once per session
+     **************************************************************/
+    const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
+    const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
+
+    async function incrementAndFetchPageViews(){
+      const todayEl = document.getElementById("pageViewsToday");
+      const totalEl = document.getElementById("pageViewsTotal");
+      if (todayEl) todayEl.textContent = "…";
+      if (totalEl) totalEl.textContent = "…";
+
+      try{
+        const url = String(window.WEB_APP_URL || "").trim();
+        if (!url) throw new Error("WEB_APP_URL not set");
+
+        const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
+        const data = await res.json();
+
+        if (todayEl) todayEl.textContent = (data && typeof data.today === "number") ? String(data.today) : "—";
+        if (totalEl) totalEl.textContent = (data && typeof data.total === "number") ? String(data.total) : "—";
+      } catch(e){
+        console.warn("Counter failed:", e);
+        if (todayEl) todayEl.textContent = "—";
+        if (totalEl) totalEl.textContent = "—";
+      }
+    }
+
+    /**************************************************************
      * Sheet1 bucket cache (10 minutes)
      **************************************************************/
     const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000;
     const sheet1BucketCache = new Map(); // key -> {ts, rows}
+
+    function round1(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return null;
+      return Math.round(num * 10) / 10;
+    }
 
     function bucketKeyFromLatLng(lat, lng){
       const rLat = round1(lat);
@@ -595,12 +642,6 @@ Because only approximate, non-identifying location data is collected, there is g
     let sheet2MatchOptions = [];
 
     let recalcToken = 0;
-
-    function round1(n){
-      const num = Number(n);
-      if (!Number.isFinite(num)) return null;
-      return Math.round(num * 10) / 10;
-    }
 
     function hasAllInputs(){
       return Number.isFinite(selectedLat) &&
@@ -673,11 +714,10 @@ Because only approximate, non-identifying location data is collected, there is g
       applyTablesGridColumns(1);
       grid.innerHTML = `
         <div class="table-card">
-          <div class="special-case-card">Refer to AS/NZS1170.0-2002 Section 3.4 Table 3.3</div>
+          <div class="special-case-card">Refer to NZS1170.1 table 3.3</div>
         </div>
       `;
 
-      // Hide rounded bar for this case (optional, but keeps UI clean)
       const bar = document.getElementById("roundedCoordsBar");
       if (bar) { bar.style.display = "none"; bar.textContent = ""; }
     }
@@ -777,7 +817,7 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Step 2: Sheet2 strings (kept as-is)
+     * Step 2: Sheet2 strings
      **************************************************************/
     async function step2_getTitlesAndStringsFromSheet2(){
       sheet2MatchOptions = [];
@@ -887,7 +927,6 @@ Because only approximate, non-identifying location data is collected, there is g
     function renderTablesFullWidth(filtered){
       if (!hasAllInputs()) return;
 
-      // Safety: if special case is selected, show message and stop
       if (isSpecialCaseSelected()) {
         clearResults();
         showSpecialCaseInTablesArea();
@@ -916,7 +955,6 @@ Because only approximate, non-identifying location data is collected, there is g
       clearResults();
       if (!hasAllInputs()) return;
 
-      // ✅ Special case: IL=4 + "100 years or more" => show message inside tables area
       if (isSpecialCaseSelected()) {
         showLoading(false);
         showSpecialCaseInTablesArea();
@@ -951,7 +989,6 @@ Because only approximate, non-identifying location data is collected, there is g
           btn.classList.add("selected");
           setter(btn.dataset.value);
 
-          // Optional "instant" UI update (recalc runs anyway)
           if (hasAllInputs() && isSpecialCaseSelected()) {
             showSpecialCaseInTablesArea();
           }
@@ -1011,10 +1048,8 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Consent modal logic + collapsible suggestions
+     * Consent modal logic + collapsible suggestions + pageviews
      **************************************************************/
-    const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
-
     function showConsentModal(){
       document.getElementById("consentModal").classList.add("show");
       document.getElementById("learnMoreModal").classList.remove("show");
@@ -1036,9 +1071,20 @@ Because only approximate, non-identifying location data is collected, there is g
       if (!accepted) showConsentModal();
       else hideConsentModal();
 
+      // If already accepted (refresh), count once per session
+      if (accepted && sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
+        sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
+        incrementAndFetchPageViews();
+      }
+
       document.getElementById("btnAccept").addEventListener("click", () => {
         sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
         hideConsentModal();
+
+        if (sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
+          sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
+          incrementAndFetchPageViews();
+        }
       });
 
       document.getElementById("btnExit").addEventListener("click", () => {
