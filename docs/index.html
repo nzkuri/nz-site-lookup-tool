@@ -7,8 +7,8 @@
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-
     body { font-family: Arial, sans-serif; margin: 20px; }
+
     #pageTitle { text-align: center; margin: 0 0 16px 0; }
 
     .content-wrap{
@@ -17,12 +17,14 @@
       margin: 0 auto;
     }
 
+    /* Search row */
     .search-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; width:100%; }
     #addressInput { flex: 1 1 520px; width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; }
     #useMyLocationBtn { padding:10px; border:1px solid #aaa; border-radius:6px; background:#fff; cursor:pointer; }
 
     #coords { font-weight:bold; margin-bottom:12px; }
 
+    /* Two-column */
     .main-grid { display:flex; gap:16px; align-items:stretch; width:100%; }
     .left-panel { flex: 0 0 520px; max-width: 520px; width:100%; }
     .right-panel { flex: 1 1 auto; min-width: 320px; display:flex; }
@@ -66,6 +68,7 @@
       flex: 1 1 auto;
     }
 
+    /* Results */
     .results-wrap{
       width: 100%;
       margin-top: 16px;
@@ -118,13 +121,30 @@
     }
     .loading-overlay.show{ display:flex; }
 
-    .suggestions-wrap{
+    /* Suggestions (collapsible) */
+    details.suggestions-details{
       margin-top: 18px;
-      padding: 14px;
+      width: 100%;
       border: 1px solid #ddd;
       border-radius: 8px;
       background: #fafafa;
-      width: 100%;
+      padding: 0;
+      overflow: hidden;
+    }
+    details.suggestions-details > summary{
+      list-style: none;
+      cursor: pointer;
+      padding: 14px;
+      font-weight: 700;
+      user-select: none;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+    }
+    details.suggestions-details > summary::-webkit-details-marker { display:none; }
+    .suggestions-body{
+      padding: 14px;
+      border-top: 1px solid #ddd;
     }
     #suggestionText{
       width: 100%;
@@ -146,10 +166,99 @@
       cursor: pointer;
     }
     #suggestionMsg{ margin-top: 8px; color:#666; }
+
+    /* Consent modal (blocks site until accepted) */
+    .modal-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 18px;
+    }
+    .modal-backdrop.show{ display:flex; }
+
+    .modal{
+      width: min(820px, 100%);
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      overflow: hidden;
+      position: relative;
+    }
+    .modal-header{
+      padding: 14px 16px;
+      border-bottom: 1px solid #eee;
+      font-weight: 800;
+      display:flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .modal-title{ font-size: 16px; }
+    .modal-body{
+      padding: 16px;
+      max-height: min(60vh, 520px);
+      overflow: auto;
+      white-space: pre-line; /* preserve line breaks */
+      line-height: 1.35;
+      font-size: 14px;
+    }
+    .modal-footer{
+      padding: 14px 16px;
+      border-top: 1px solid #eee;
+      display:flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .btn{
+      padding: 10px 14px;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn.primary{
+      background: #007bff;
+      border-color: #007bff;
+      color: #fff;
+    }
+    .btn.danger{
+      border-color: #c00;
+      color: #c00;
+    }
+
+    /* Learn more modal close (top right) */
+    .close-x{
+      width: 34px;
+      height: 34px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 900;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    /* Block interaction with site until consent */
+    body.consent-locked .content-wrap{
+      pointer-events: none;
+      user-select: none;
+      filter: blur(0px); /* keep sharp; pointer-events is enough */
+    }
   </style>
 </head>
 
-<body>
+<body class="consent-locked">
   <h2 id="pageTitle">TS1170.5 site parameter finder</h2>
 
   <div class="content-wrap">
@@ -214,16 +323,81 @@
       <div id="tablesGrid"></div>
     </div>
 
-    <!-- Suggestions -->
-    <div class="suggestions-wrap">
-      <div style="font-weight:700; margin-bottom:8px;">Suggestions</div>
-      <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
-      <div>
-        <button id="submitSuggestionBtn" type="button">Submit</button>
+    <!-- Suggestions (collapsed by default) -->
+    <details class="suggestions-details" id="suggestionsDetails">
+      <summary>
+        <span>Suggestions</span>
+        <span style="font-weight:700; color:#666;">+</span>
+      </summary>
+      <div class="suggestions-body">
+        <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
+        <div>
+          <button id="submitSuggestionBtn" type="button">Submit</button>
+        </div>
+        <div id="suggestionMsg"></div>
       </div>
-      <div id="suggestionMsg"></div>
-    </div>
+    </details>
 
+  </div>
+
+  <!-- ======================
+       Consent Modal (Main)
+  ======================= -->
+  <div class="modal-backdrop show" id="consentModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="consentTitle">Notice & Consent</div>
+        <!-- no X close for main modal (must accept or exit) -->
+        <div style="width:34px;"></div>
+      </div>
+
+      <div class="modal-body" id="consentText">
+TS1170.5 Site Parameter Finder is made available without charge and in good faith. It is agreed by the user that no liability for its use, applicability or accuracy is accepted by the author. Professional care and judgement must be exercised, with relevant design knowledge and skill applied by the use.
+This site uses essential cookies and collects approximate location data (country/region/city) for analytics and improvement.
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn primary" id="btnAccept">Accept & Continue</button>
+        <button class="btn danger" id="btnExit">Exit</button>
+        <button class="btn" id="btnLearnMore">Learn more</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================
+       Learn More Modal
+  ======================= -->
+  <div class="modal-backdrop" id="learnMoreModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="learnMoreTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="learnMoreTitle">Location Information</div>
+        <button class="close-x" id="btnLearnMoreClose" aria-label="Close">×</button>
+      </div>
+
+      <div class="modal-body" id="learnMoreText">
+Location Information (NZ Privacy Act 2020)
+This website collects approximate location information (such as country, region, or city) derived from your IP address.
+This information is collected in accordance with the Privacy Act 2020 (New Zealand) and is used for legitimate purposes, including:
+• Understanding how the tool is used across different regions
+• Improving performance and reliability
+• Anonymous usage analytics
+We do not collect precise location data, do not track individuals, and do not use location information to identify you.
+Location information is handled in aggregated form and may be processed by trusted third-party service providers solely for the purposes described above.
+________________________________________
+Key Privacy Principles 
+In line with the NZ Privacy Act:
+• We only collect information that is necessary for the operation and improvement of the tool
+• Information is collected lawfully and fairly
+• Data is used only for the purposes it was collected
+• Reasonable steps are taken to protect the information
+________________________________________
+Your Rights
+Under the Privacy Act 2020, you have the right to:
+• Request access to personal information held about you
+• Request correction of that information, if applicable
+Because only approximate, non-identifying location data is collected, there is generally no personal information that can be linked to an individual user.
+      </div>
+    </div>
   </div>
 
   <!-- =========================================================
@@ -236,7 +410,6 @@
 
     (function () {
       var VISITOR_KEY = "nz_tool_visitor_id";
-
       function getVisitor() {
         var id = localStorage.getItem(VISITOR_KEY);
         var isNew = false;
@@ -308,7 +481,6 @@
     const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
     const SHEET1_NAME = "Sheet1";
     const SHEET2_NAME = "Sheet2";
-
     const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
 
     // Sheet1: A=Lat, B=Lng, C=APOE
@@ -342,9 +514,9 @@
     };
 
     /**************************************************************
-     * ✅ NEW: Sheet1 bucket cache (10 minutes)
+     * Sheet1 bucket cache (10 minutes)
      **************************************************************/
-    const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000; // 10 mins
+    const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000;
     const sheet1BucketCache = new Map(); // key -> {ts, rows}
 
     function bucketKeyFromLatLng(lat, lng){
@@ -357,11 +529,9 @@
     function getBucketCache(key){
       if (!key) return null;
 
-      // 1) in-memory
       const mem = sheet1BucketCache.get(key);
       if (mem && (Date.now() - mem.ts) < SHEET1_BUCKET_CACHE_TTL_MS) return mem.rows;
 
-      // 2) localStorage (survives refresh)
       try{
         const raw = localStorage.getItem("sheet1_bucket_cache_" + key);
         if (!raw) return null;
@@ -369,7 +539,6 @@
         if (!obj || !obj.ts || !Array.isArray(obj.rows)) return null;
         if ((Date.now() - obj.ts) >= SHEET1_BUCKET_CACHE_TTL_MS) return null;
 
-        // promote to memory
         sheet1BucketCache.set(key, { ts: obj.ts, rows: obj.rows });
         return obj.rows;
       } catch(e){
@@ -383,9 +552,7 @@
       sheet1BucketCache.set(key, payload);
       try{
         localStorage.setItem("sheet1_bucket_cache_" + key, JSON.stringify(payload));
-      } catch(e){
-        // ignore quota errors
-      }
+      } catch(e){}
     }
 
     /**************************************************************
@@ -397,8 +564,8 @@
     let selectedImportanceLevel = "";
     let selectedWorkingLife = "";
 
-    let matchedSheet1Rows = [];     // cached bucket rows filtered to exact 1dp
-    let sheet2MatchOptions = [];    // strings from Sheet2
+    let matchedSheet1Rows = [];
+    let sheet2MatchOptions = [];
 
     let recalcToken = 0;
 
@@ -522,10 +689,7 @@
     }
 
     /**************************************************************
-     * ✅ UPDATED STEP 1:
-     * - First check cache by 1dp key
-     * - If miss/expired, fetch only bucket rows (±0.05) from Sheet1 using WHERE
-     * - Filter exact 1dp match and cache for 10 minutes
+     * Step 1: cached bucket lookup (10 mins) + WHERE query
      **************************************************************/
     async function step1_findAllSheet1RowsMatching1dp(){
       matchedSheet1Rows = [];
@@ -533,44 +697,37 @@
 
       const key = bucketKeyFromLatLng(selectedLat, selectedLng);
 
-      const cachedRows = getBucketCache(key);
-      if (cachedRows) {
-        matchedSheet1Rows = cachedRows.map(r => ({ row: r }));
+      const cached = getBucketCache(key);
+      if (cached) {
+        matchedSheet1Rows = cached.map(r => ({ row: r }));
         return;
       }
 
       const targetLat1 = round1(selectedLat);
       const targetLng1 = round1(selectedLng);
 
-      // Bucket range for the 1dp bin
       const latMin = targetLat1 - 0.05;
       const latMax = targetLat1 + 0.05;
       const lngMin = targetLng1 - 0.05;
       const lngMax = targetLng1 + 0.05;
 
-      // ✅ GViz query: pull ONLY rows in the bucket instead of 26,800 rows
       const q = `select * where A >= ${latMin} and A < ${latMax} and B >= ${lngMin} and B < ${lngMax}`;
       const bucketRows = await fetchSheetAs2DArray(SHEET1_NAME, q);
 
-      // Exact 1dp match safety filter
       const exact = [];
       for (const row of bucketRows) {
         const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
         const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) {
-          exact.push(row);
-        }
+        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) exact.push(row);
       }
 
-      // Cache the exact rows for 10 minutes
       setBucketCache(key, exact);
-
       matchedSheet1Rows = exact.map(r => ({ row: r }));
     }
 
     /**************************************************************
-     * STEP 2: match Sheet2 row, get C/D/E strings
+     * Step 2: Sheet2 strings (kept as-is)
      **************************************************************/
     async function step2_getTitlesAndStringsFromSheet2(){
       sheet2MatchOptions = [];
@@ -605,9 +762,6 @@
         .filter(x => x.value.length > 0);
     }
 
-    /**************************************************************
-     * STEP 3: filter Sheet1 by APOE matching C/D/E
-     **************************************************************/
     function step3_filterMatchedSheet1Rows(){
       if (!matchedSheet1Rows.length) return [];
       if (!sheet2MatchOptions.length) return [];
@@ -708,7 +862,6 @@
       showLoading(true);
 
       try {
-        // ✅ Step1 will now be instant for 10 mins if same rounded bucket
         await step1_findAllSheet1RowsMatching1dp();
         if (myToken !== recalcToken) return;
 
@@ -740,7 +893,7 @@
     }
 
     /**************************************************************
-     * Suggestions submit -> Sheet6 (same web app)
+     * Suggestions submit (kept)
      **************************************************************/
     function wireSuggestions(){
       const textarea = document.getElementById("suggestionText");
@@ -785,6 +938,60 @@
           btn.textContent = "Submit";
         }
       });
+    }
+
+    /**************************************************************
+     * Consent modal logic + collapsible suggestions
+     **************************************************************/
+    const CONSENT_KEY = "ts1170_5_consent_accepted_v1";
+
+    function showConsentModal(){
+      document.getElementById("consentModal").classList.add("show");
+      document.getElementById("learnMoreModal").classList.remove("show");
+      document.body.classList.add("consent-locked");
+    }
+
+    function hideConsentModal(){
+      document.getElementById("consentModal").classList.remove("show");
+      document.getElementById("learnMoreModal").classList.remove("show");
+      document.body.classList.remove("consent-locked");
+    }
+
+    function initConsent(){
+      // Suggestions collapsed on load
+      const details = document.getElementById("suggestionsDetails");
+      if (details) details.open = false;
+
+      const accepted = localStorage.getItem(CONSENT_KEY) === "true";
+      if (!accepted) showConsentModal();
+      else hideConsentModal();
+
+      document.getElementById("btnAccept").addEventListener("click", () => {
+        localStorage.setItem(CONSENT_KEY, "true");
+        hideConsentModal();
+      });
+
+      document.getElementById("btnExit").addEventListener("click", () => {
+        window.location.href = "https://www.standards.govt.nz/shop/snz-ts-1170-52025";
+      });
+
+      document.getElementById("btnLearnMore").addEventListener("click", () => {
+        document.getElementById("consentModal").classList.remove("show");
+        document.getElementById("learnMoreModal").classList.add("show");
+      });
+
+      document.getElementById("btnLearnMoreClose").addEventListener("click", () => {
+        document.getElementById("learnMoreModal").classList.remove("show");
+        document.getElementById("consentModal").classList.add("show");
+      });
+
+      // Keep the +/- indicator in the summary
+      if (details) {
+        details.addEventListener("toggle", () => {
+          const sym = details.querySelector("summary span:last-child");
+          if (sym) sym.textContent = details.open ? "−" : "+";
+        });
+      }
     }
 
     /**************************************************************
@@ -856,6 +1063,9 @@
       clearResults();
       showLoading(false);
     }
+
+    // init consent & UI
+    window.addEventListener("load", initConsent);
 
     window.initMap = initMap;
 
