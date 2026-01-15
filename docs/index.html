@@ -3,114 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-
-  <!-- =========================
-       SEO CORE
-  ========================== -->
-  <title>NZS TS1170.5 Site Parameter Finder (TS 1170.5)</title>
-  <meta name="description" content="Free NZS 1170 seismic site parameters tool. Search an NZ address or click the map to apply TS 1170.5 site class, importance level, and design working life inputs and view matched seismic parameters." />
-  <link rel="canonical" href="https://YOUR-DOMAIN-HERE/ts1170-5-site-parameter-finder" />
-  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <meta name="theme-color" content="#ffffff" />
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="NZS 1170.5 Site Parameter Finder (TS 1170.5) | NZ Seismic Tool" />
-  <meta property="og:description" content="Search an NZ address or click the map to apply TS 1170.5 site class, importance level, and design working life inputs and view matched seismic parameters." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://YOUR-DOMAIN-HERE/ts1170-5-site-parameter-finder" />
-  <!-- If you have a social preview image, add it here -->
-  <!-- <meta property="og:image" content="https://YOUR-DOMAIN-HERE/og-image.png" /> -->
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="NZS 1170.5 Site Parameter Finder (TS 1170.5) | NZ Seismic Tool" />
-  <meta name="twitter:description" content="Free NZS 1170 seismic site parameters tool for New Zealand engineers. Apply site class, importance level and working life with TS 1170.5." />
-
-  <!-- =========================
-       SCHEMA (JSON-LD)
-       - SoftwareApplication + FAQ
-  ========================== -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "NZS 1170.5 Site Parameter Finder (TS 1170.5)",
-    "applicationCategory": "EngineeringApplication",
-    "operatingSystem": "Web",
-    "isAccessibleForFree": true,
-    "description": "A web tool for New Zealand structural engineers to help apply NZS 1170 seismic loading by using TS 1170.5 site class, importance level and design working life inputs to view matched seismic parameters.",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "NZD" }
-  }
-  </script>
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "What does this NZS 1170.5 site parameter finder do?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "It helps apply NZS 1170 seismic design inputs in practice by allowing you to choose a New Zealand location and set site class, importance level and design working life to view matched TS 1170.5-related parameters."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Is this the official NZS 1170 / TS 1170.5 standard?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "No. This is an independent tool intended to assist engineering workflows. You must refer to the official standards and apply professional judgement."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Does the tool collect precise location data?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "No. The site may collect approximate location data such as country/region/city derived from IP address for analytics and improvement. It does not collect precise device GPS location unless you choose 'Use my location'."
-        }
-      }
-    ]
-  }
-  </script>
+  <title>TS1170.5 site parameter finder</title>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; margin: 20px; color:#111; }
-    a { color: inherit; }
-    #pageTitle { text-align: center; margin: 0 0 8px 0; }
-    #pageSubTitle { text-align:center; margin: 0 0 16px 0; color:#555; font-weight:600; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+
+    #pageTitle { text-align: center; margin: 0 0 16px 0; }
 
     .content-wrap{
       width: 100%;
       max-width: 1400px;
       margin: 0 auto;
-    }
-
-    /* SEO intro (indexable copy) */
-    .seo-intro{
-      margin: 0 auto 14px auto;
-      max-width: 1100px;
-      line-height: 1.4;
-      color: #222;
-      font-size: 14px;
-    }
-    .seo-intro strong{ font-weight:800; }
-    .seo-badges{
-      display:flex; flex-wrap:wrap; gap:8px;
-      justify-content:center;
-      margin: 10px 0 6px 0;
-    }
-    .badge{
-      font-size: 12px;
-      padding: 6px 10px;
-      border: 1px solid #ddd;
-      border-radius: 999px;
-      background:#fafafa;
-      color:#444;
-      font-weight:700;
     }
 
     /* Search row */
@@ -238,22 +142,6 @@
       text-align: center;
       opacity: 0.8;
     }
-
-    /* SEO content block */
-    .seo-block{
-      margin-top: 18px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 14px;
-      background: #fafafa;
-      line-height: 1.45;
-      color:#222;
-      font-size: 14px;
-    }
-    .seo-block h2{ margin: 0 0 8px 0; font-size: 16px; }
-    .seo-block h3{ margin: 14px 0 6px 0; font-size: 14px; }
-    .seo-block ul{ margin: 8px 0 0 18px; }
-    .fineprint{ color:#555; font-size: 13px; margin-top: 10px; }
 
     /* Suggestions (collapsible) */
     details.suggestions-details{
@@ -402,32 +290,12 @@
 </head>
 
 <body class="consent-locked">
-  <!-- H1 is the SEO headline -->
-  <h1 id="pageTitle">NZS 1170.5 Site Parameter Finder (TS 1170.5)</h1>
-  <div id="pageSubTitle">New Zealand seismic site class & parameters tool for structural engineers</div>
-
-  <div class="seo-badges" aria-hidden="true">
-    <div class="badge">NZS 1170 seismic loading</div>
-    <div class="badge">TS 1170.5 site class</div>
-    <div class="badge">Importance level</div>
-    <div class="badge">Design working life</div>
-    <div class="badge">Map + address lookup</div>
-  </div>
+  <h2 id="pageTitle">TS1170.5 site parameter finder</h2>
 
   <div class="content-wrap">
 
-    <!-- Indexable intro copy for Google -->
-    <div class="seo-intro">
-      <p>
-        This <strong>NZS 1170.5 site parameter finder</strong> is a free web tool intended to help New Zealand structural engineers
-        apply <strong>NZS 1170 seismic</strong> design inputs in practice. Choose a project location (address search or map click),
-        then set <strong>site class</strong>, <strong>importance level</strong>, and <strong>design working life</strong> to view matched outputs
-        aligned with <strong>TS 1170.5</strong>.
-      </p>
-    </div>
-
     <div class="search-wrap">
-      <input id="addressInput" placeholder="Search address (NZ only)" aria-label="Search New Zealand address" />
+      <input id="addressInput" placeholder="Search address (NZ only)" />
       <button id="useMyLocationBtn" type="button">Use my location</button>
     </div>
 
@@ -436,10 +304,10 @@
     <div class="main-grid">
       <div class="left-panel">
         <div class="option-block" id="designInputsBlock">
-          <h2 style="margin:0 0 10px 0;">Design inputs</h2>
+          <h3>Design Inputs</h3>
 
           <div class="row">
-            <label>Site class (TS 1170.5)</label>
+            <label>Site Class</label>
             <div class="option-buttons" id="siteClassOptions">
               <button type="button" data-value="I">I</button>
               <button type="button" data-value="II">II</button>
@@ -451,7 +319,7 @@
           </div>
 
           <div class="row">
-            <label>Importance level (NZS 1170)</label>
+            <label>Importance Level</label>
             <div class="option-buttons" id="importanceLevelOptions">
               <button type="button" data-value="1">1</button>
               <button type="button" data-value="2">2</button>
@@ -461,7 +329,7 @@
           </div>
 
           <div class="row" style="margin-bottom:0;">
-            <label>Design working life (NZS 1170)</label>
+            <label>Design Working Life</label>
             <div class="option-buttons" id="workingLifeOptions">
               <button type="button" data-value="construction">Construction equipment</button>
               <button type="button" data-value="lt6months">Less than 6 months</button>
@@ -471,3 +339,916 @@
               <button type="button" data-value="100">100 years or more</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-wrap">
+      <div class="loading-overlay" id="loadingOverlay">Loading…</div>
+      <div id="roundedCoordsBar"></div>
+      <div id="tablesGrid"></div>
+    </div>
+
+    <div class="coming-soon-box">
+      Horizontal Design Action Coefficient – Coming Soon
+    </div>
+
+    <!-- Suggestions (collapsed by default) -->
+    <details class="suggestions-details" id="suggestionsDetails">
+      <summary>
+        <span>Suggestions</span>
+        <span style="font-weight:700; color:#666;">+</span>
+      </summary>
+      <div class="suggestions-body">
+        <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
+        <div>
+          <button id="submitSuggestionBtn" type="button">Submit</button>
+        </div>
+        <div id="suggestionMsg"></div>
+      </div>
+    </details>
+
+    <!-- Page Views -->
+    <div class="pageviews" id="pageViewCounter">
+      Views today: <span id="pageViewsToday">—</span> &nbsp;|&nbsp;
+      Total views: <span id="pageViewsTotal">—</span>
+    </div>
+
+  </div>
+
+  <!-- ======================
+       Consent Modal (Main)
+  ======================= -->
+  <div class="modal-backdrop show" id="consentModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="consentTitle">Notice & Consent</div>
+        <div style="width:34px;"></div>
+      </div>
+
+      <div class="modal-body" id="consentText">
+TS1170.5 Site Parameter Finder is made available without charge and in good faith. It is agreed by the user that no liability for its use, applicability or accuracy is accepted by the author. Professional care and judgement must be exercised, with relevant design knowledge and skill applied by the use.
+This site uses essential cookies and collects approximate location data (country/region/city) for analytics and improvement.
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn primary" id="btnAccept">Accept & Continue</button>
+        <button class="btn danger" id="btnExit">Exit</button>
+        <button class="btn" id="btnLearnMore">Learn more</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================
+       Learn More Modal
+  ======================= -->
+  <div class="modal-backdrop" id="learnMoreModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="learnMoreTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="learnMoreTitle">Location Information</div>
+        <button class="close-x" id="btnLearnMoreClose" aria-label="Close">×</button>
+      </div>
+
+      <div class="modal-body" id="learnMoreText">
+Location Information (NZ Privacy Act 2020)
+This website collects approximate location information (such as country, region, or city) derived from your IP address.
+This information is collected in accordance with the Privacy Act 2020 (New Zealand) and is used for legitimate purposes, including:
+• Understanding how the tool is used across different regions
+• Improving performance and reliability
+• Anonymous usage analytics
+We do not collect precise location data, do not track individuals, and do not use location information to identify you.
+Location information is handled in aggregated form and may be processed by trusted third-party service providers solely for the purposes described above.
+________________________________________
+Key Privacy Principles
+In line with the NZ Privacy Act:
+• We only collect information that is necessary for the operation and improvement of the tool
+• Information is collected lawfully and fairly
+• Data is used only for the purposes it was collected
+• Reasonable steps are taken to protect the information
+________________________________________
+Your Rights
+Under the Privacy Act 2020, you have the right to:
+• Request access to personal information held about you
+• Request correction of that information, if applicable
+Because only approximate, non-identifying location data is collected, there is generally no personal information that can be linked to an individual user.
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+    CSP-SAFE ANALYTICS MODULE (kept)
+  ========================================================= -->
+  <script>
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzLBlnIdN2i78Sax2ClS20UYFtrjoMlSFijpfP2r-YcNxBJZdZv1vMWCuN3czhCOftV/exec";
+    window.GEO_URL = "/geo";
+    window.ANALYTICS_DEBUG = false;
+
+    (function () {
+      var VISITOR_KEY = "nz_tool_visitor_id";
+      function getVisitor() {
+        var id = localStorage.getItem(VISITOR_KEY);
+        var isNew = false;
+        if (!id) {
+          isNew = true;
+          id = (window.crypto && crypto.randomUUID)
+            ? ("v_" + crypto.randomUUID())
+            : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+          localStorage.setItem(VISITOR_KEY, id);
+        }
+        return { id: id, isNew: isNew };
+      }
+
+      function safeGeoObject(g) {
+        return {
+          geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
+          geoCountry: (g && g.geoCountry) ? g.geoCountry : "",
+          geoRegion: (g && g.geoRegion) ? g.geoRegion : "",
+          geoCity: (g && g.geoCity) ? g.geoCity : ""
+        };
+      }
+
+      function getGeo() {
+        var url = window.GEO_URL || "/geo";
+        return fetch(url, { cache: "no-store" })
+          .then(r => r.text().then(t => { try { return safeGeoObject(JSON.parse(t)); } catch(e){ return safeGeoObject(null); } }))
+          .catch(() => safeGeoObject(null));
+      }
+
+      function postToAppsScript(payloadObj) {
+        var url = window.WEB_APP_URL;
+        var body = new URLSearchParams();
+        body.set("payload", JSON.stringify(payloadObj));
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body: body.toString()
+        }).then(res => res.text());
+      }
+
+      function logEvent(eventName, extra) {
+        extra = extra || {};
+        var v = getVisitor();
+        return getGeo().then(function (geo) {
+          var payload = Object.assign({
+            visitorId: v.id,
+            isNew: v.isNew,
+            event: String(eventName || ""),
+            page: location.pathname || "",
+            userAgent: navigator.userAgent || "",
+            tsClient: new Date().toISOString(),
+            geoProvider: geo.geoProvider,
+            geoCountry: geo.geoCountry,
+            geoRegion: geo.geoRegion,
+            geoCity: geo.geoCity
+          }, extra);
+          return postToAppsScript(payload);
+        });
+      }
+
+      window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
+    })();
+  </script>
+
+  <script>
+    /**************************************************************
+     * Safe logging helper — ensures events actually get sent to Sheet3
+     **************************************************************/
+    function safeLog(eventName, extra){
+      try{
+        if (!window.SiteAnalytics || !window.SiteAnalytics.logEvent) return;
+        window.SiteAnalytics.logEvent(eventName, extra || {}).catch(() => {});
+      } catch(e){}
+    }
+
+    /**************************************************************
+     * CONFIG (GVIZ lookup)
+     **************************************************************/
+    const SHEET_ID = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
+    const SHEET1_NAME = "Sheet1";
+    const SHEET2_NAME = "Sheet2";
+    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+
+    // Sheet1: A=Lat, B=Lng, C=APOE
+    const SHEET1_LAT_COL_INDEX = 0;
+    const SHEET1_LNG_COL_INDEX = 1;
+    const SHEET1_APOE_COL_INDEX = 2;
+
+    // Site class column indices in Sheet1
+    const SHEET1_SITECLASS_COLS = {
+      I:   { PGA: 3,  Sa: 4,  Tc: 5  },
+      II:  { PGA: 6,  Sa: 7,  Tc: 8  },
+      III: { PGA: 9,  Sa: 10, Tc: 11 },
+      IV:  { PGA: 12, Sa: 13, Tc: 14 },
+      V:   { PGA: 15, Sa: 16, Tc: 17 },
+      VI:  { PGA: 18, Sa: 19, Tc: 20 },
+    };
+
+    // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
+    const SHEET2_WORKINGLIFE_COL_INDEX = 0;
+    const SHEET2_IMPORTANCE_COL_INDEX = 1;
+    const SHEET2_STRING_COLS = [2, 3, 4];
+    const SHEET2_FALLBACK_TITLES = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
+
+    const WORKING_LIFE_LABEL = {
+      construction: "Construction equipment",
+      lt6months: "Less than 6 months",
+      "5": "5 years",
+      "25": "25 years",
+      "50": "50 years",
+      "100": "100 years or more"
+    };
+
+    /**************************************************************
+     * Page view counter (Today + Total) — counted once per session
+     **************************************************************/
+    const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
+    const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
+
+    async function incrementAndFetchPageViews(){
+      const todayEl = document.getElementById("pageViewsToday");
+      const totalEl = document.getElementById("pageViewsTotal");
+      if (todayEl) todayEl.textContent = "…";
+      if (totalEl) totalEl.textContent = "…";
+
+      try{
+        const url = String(window.WEB_APP_URL || "").trim();
+        if (!url) throw new Error("WEB_APP_URL not set");
+
+        const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
+        const data = await res.json();
+
+        if (todayEl) todayEl.textContent = (data && typeof data.today === "number") ? String(data.today) : "—";
+        if (totalEl) totalEl.textContent = (data && typeof data.total === "number") ? String(data.total) : "—";
+      } catch(e){
+        console.warn("Counter failed:", e);
+        if (todayEl) todayEl.textContent = "—";
+        if (totalEl) totalEl.textContent = "—";
+      }
+    }
+
+    /**************************************************************
+     * Sheet1 bucket cache (10 minutes)
+     **************************************************************/
+    const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000;
+    const sheet1BucketCache = new Map(); // key -> {ts, rows}
+
+    function round1(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return null;
+      return Math.round(num * 10) / 10;
+    }
+
+    function bucketKeyFromLatLng(lat, lng){
+      const rLat = round1(lat);
+      const rLng = round1(lng);
+      if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) return "";
+      return `${rLat.toFixed(1)},${rLng.toFixed(1)}`;
+    }
+
+    function getBucketCache(key){
+      if (!key) return null;
+
+      const mem = sheet1BucketCache.get(key);
+      if (mem && (Date.now() - mem.ts) < SHEET1_BUCKET_CACHE_TTL_MS) return mem.rows;
+
+      try{
+        const raw = localStorage.getItem("sheet1_bucket_cache_" + key);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !obj.ts || !Array.isArray(obj.rows)) return null;
+        if ((Date.now() - obj.ts) >= SHEET1_BUCKET_CACHE_TTL_MS) return null;
+
+        sheet1BucketCache.set(key, { ts: obj.ts, rows: obj.rows });
+        return obj.rows;
+      } catch(e){
+        return null;
+      }
+    }
+
+    function setBucketCache(key, rows){
+      if (!key) return;
+      const payload = { ts: Date.now(), rows: rows };
+      sheet1BucketCache.set(key, payload);
+      try{
+        localStorage.setItem("sheet1_bucket_cache_" + key, JSON.stringify(payload));
+      } catch(e){}
+    }
+
+    /**************************************************************
+     * STATE
+     **************************************************************/
+    let map, marker, autocomplete;
+    let selectedLat = null, selectedLng = null;
+    let selectedSiteClass = "";
+    let selectedImportanceLevel = "";
+    let selectedWorkingLife = "";
+
+    let matchedSheet1Rows = [];
+    let sheet2MatchOptions = [];
+
+    let recalcToken = 0;
+
+    function hasAllInputs(){
+      return Number.isFinite(selectedLat) &&
+             Number.isFinite(selectedLng) &&
+             !!selectedSiteClass &&
+             !!selectedWorkingLife &&
+             !!selectedImportanceLevel;
+    }
+
+    function showLoading(show){
+      document.getElementById("loadingOverlay").classList.toggle("show", !!show);
+    }
+
+    function clearResults(){
+      document.getElementById("tablesGrid").innerHTML = "";
+      const bar = document.getElementById("roundedCoordsBar");
+      bar.style.display = "none";
+      bar.textContent = "";
+    }
+
+    function applyTablesGridColumns(n){
+      const grid = document.getElementById("tablesGrid");
+      if (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else grid.style.gridTemplateColumns = "repeat(1, 1fr)";
+    }
+
+    function normalize(v){ if (v === null || v === undefined) return ""; return String(v).trim(); }
+
+    function eqLoose(a, b){
+      const sa = normalize(a);
+      const sb = normalize(b);
+      if (sa === sb) return true;
+      const na = Number(sa), nb = Number(sb);
+      if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
+      return sa.toLowerCase() === sb.toLowerCase();
+    }
+
+    function safeCell(v) {
+      if (v === null || v === undefined || String(v).trim() === "") return "";
+      const n = Number(v);
+      return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
+    }
+
+    function isOneOver500(apoe){
+      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
+      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
+    }
+
+    function setRoundedBar(){
+      const el = document.getElementById("roundedCoordsBar");
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) { el.style.display="none"; el.textContent=""; return; }
+      const rLat = round1(selectedLat);
+      const rLng = round1(selectedLng);
+      el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)},${rLng.toFixed(1)}</b>`;
+    }
+
+    /**************************************************************
+     * Special case: IL=4 and WorkingLife=100 => message in tables area
+     **************************************************************/
+    function isSpecialCaseSelected(){
+      return (String(selectedImportanceLevel) === "4") && (String(selectedWorkingLife) === "100");
+    }
+
+    function showSpecialCaseInTablesArea(){
+      const grid = document.getElementById("tablesGrid");
+      if (!grid) return;
+
+      applyTablesGridColumns(1);
+      grid.innerHTML = `
+        <div class="table-card">
+          <div class="special-case-card">Refer to NZS1170.1 table 3.3</div>
+        </div>
+      `;
+
+      const bar = document.getElementById("roundedCoordsBar");
+      if (bar) { bar.style.display = "none"; bar.textContent = ""; }
+    }
+
+    /**************************************************************
+     * Align map height to option block height
+     **************************************************************/
+    function syncMapHeightToOptionBlock(){
+      const block = document.getElementById("designInputsBlock");
+      const mapEl = document.getElementById("map");
+      if (!block || !mapEl) return;
+
+      const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
+      mapEl.style.height = h + "px";
+
+      if (window.google && google.maps && map) {
+        google.maps.event.trigger(map, "resize");
+        if (marker) map.panTo(marker.getPosition());
+      }
+    }
+
+    function setupHeightSync(){
+      const block = document.getElementById("designInputsBlock");
+      if (!block) return;
+
+      requestAnimationFrame(syncMapHeightToOptionBlock);
+
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
+        ro.observe(block);
+      }
+      window.addEventListener("resize", syncMapHeightToOptionBlock);
+    }
+
+    /**************************************************************
+     * GVIZ helpers
+     **************************************************************/
+    function gvizUrl(sheetName, query){
+      const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
+      const params = new URLSearchParams();
+      params.set("sheet", sheetName);
+      params.set("tq", query);
+      return `${base}?${params.toString()}`;
+    }
+
+    async function fetchSheetAs2DArray(sheetName, query){
+      const url = gvizUrl(sheetName, query);
+      const res = await fetch(url);
+      const text = await res.text();
+      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+      const data = JSON.parse(jsonText);
+      const cols = data.table.cols.length;
+      const rows = data.table.rows || [];
+      return rows.map(r => {
+        const arr = new Array(cols).fill(null);
+        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
+        return arr;
+      });
+    }
+
+    /**************************************************************
+     * Step 1: cached bucket lookup (10 mins) + WHERE query
+     **************************************************************/
+    async function step1_findAllSheet1RowsMatching1dp(){
+      matchedSheet1Rows = [];
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+
+      const key = bucketKeyFromLatLng(selectedLat, selectedLng);
+
+      const cached = getBucketCache(key);
+      if (cached) {
+        matchedSheet1Rows = cached.map(r => ({ row: r }));
+        return;
+      }
+
+      const targetLat1 = round1(selectedLat);
+      const targetLng1 = round1(selectedLng);
+
+      const latMin = targetLat1 - 0.05;
+      const latMax = targetLat1 + 0.05;
+      const lngMin = targetLng1 - 0.05;
+      const lngMax = targetLng1 + 0.05;
+
+      const q = `select * where A >= ${latMin} and A < ${latMax} and B >= ${lngMin} and B < ${lngMax}`;
+      const bucketRows = await fetchSheetAs2DArray(SHEET1_NAME, q);
+
+      const exact = [];
+      for (const row of bucketRows) {
+        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
+        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) exact.push(row);
+      }
+
+      setBucketCache(key, exact);
+      matchedSheet1Rows = exact.map(r => ({ row: r }));
+    }
+
+    /**************************************************************
+     * Step 2: Sheet2 strings
+     **************************************************************/
+    async function step2_getTitlesAndStringsFromSheet2(){
+      sheet2MatchOptions = [];
+      if (!selectedWorkingLife || !selectedImportanceLevel) return;
+
+      const sheet2 = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
+      if (!sheet2.length) return;
+
+      const firstA = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
+      const firstB = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
+      const headerish = firstA.includes("working") || firstB.includes("importance");
+
+      const headerRow = headerish ? sheet2[0] : null;
+      const dataRows = headerish ? sheet2.slice(1) : sheet2;
+
+      const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+
+      const matchRow = dataRows.find(r =>
+        eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
+        eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX], selectedImportanceLevel)
+      );
+
+      if (!matchRow) { sheet2MatchOptions = []; return; }
+
+      sheet2MatchOptions = SHEET2_STRING_COLS
+        .map((colIdx) => {
+          const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
+          const title = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
+          const value = normalize(matchRow[colIdx]);
+          return { title, value };
+        })
+        .filter(x => x.value.length > 0);
+    }
+
+    function step3_filterMatchedSheet1Rows(){
+      if (!matchedSheet1Rows.length) return [];
+      if (!sheet2MatchOptions.length) return [];
+
+      const out = [];
+      const seen = new Set();
+
+      for (const item of matchedSheet1Rows) {
+        const sheet1Row = item.row;
+        const apoe = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
+        if (!apoe) continue;
+
+        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
+        if (!match) continue;
+
+        const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        out.push({ sheet1Row, apoe, matchTitle: match.title });
+      }
+
+      const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
+      if (hasULS) {
+        const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
+        if (oneOver500Item && oneOver500Item.row) {
+          const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
+          const key = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
+          }
+        }
+      }
+
+      return out;
+    }
+
+    function buildThreeRowTable(sheet1Row, apoe, matchTitle){
+      const sc = selectedSiteClass;
+      const idx = SHEET1_SITECLASS_COLS[sc];
+      const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
+      const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
+      const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
+
+      return `
+        <table class="sc-table">
+          <thead>
+            <tr>
+              <th class="left-head">${topLeft}</th>
+              <th colspan="3">Site Class ${sc}</th>
+            </tr>
+            <tr>
+              <th class="subhead left-head">apoe</th>
+              <th class="subhead">PGA</th>
+              <th class="subhead">Sa,s</th>
+              <th class="subhead">Tc</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="left-cell">${apoe || "(APOE blank)"}</td>
+              <td>${pga}</td>
+              <td>${sa}</td>
+              <td>${tc}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderTablesFullWidth(filtered){
+      if (!hasAllInputs()) return;
+
+      if (isSpecialCaseSelected()) {
+        clearResults();
+        showSpecialCaseInTablesArea();
+        return;
+      }
+
+      if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length) {
+        clearResults();
+        return;
+      }
+
+      setRoundedBar();
+      const rounded = document.getElementById("roundedCoordsBar");
+      rounded.style.display = "";
+
+      applyTablesGridColumns(filtered.length);
+
+      document.getElementById("tablesGrid").innerHTML = filtered.map(x =>
+        `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
+      ).join("");
+    }
+
+    async function recalc(){
+      const myToken = ++recalcToken;
+
+      clearResults();
+      if (!hasAllInputs()) return;
+
+      if (isSpecialCaseSelected()) {
+        showLoading(false);
+        showSpecialCaseInTablesArea();
+        return;
+      }
+
+      showLoading(true);
+
+      try {
+        await step1_findAllSheet1RowsMatching1dp();
+        if (myToken !== recalcToken) return;
+
+        await step2_getTitlesAndStringsFromSheet2();
+        if (myToken !== recalcToken) return;
+
+        const filtered = step3_filterMatchedSheet1Rows();
+        if (myToken !== recalcToken) return;
+
+        renderTablesFullWidth(filtered);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (myToken === recalcToken) showLoading(false);
+      }
+    }
+
+    function wireSingleSelectButtons(containerId, setter){
+      const buttons = document.querySelectorAll(`#${containerId} button`);
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          buttons.forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          setter(btn.dataset.value);
+
+          // ✅ Log option selections to Sheet3
+          safeLog("option_select", {
+            group: containerId,
+            value: btn.dataset.value,
+            siteClass: selectedSiteClass,
+            importanceLevel: selectedImportanceLevel,
+            workingLife: selectedWorkingLife
+          });
+
+          if (hasAllInputs() && isSpecialCaseSelected()) {
+            showSpecialCaseInTablesArea();
+          }
+
+          syncMapHeightToOptionBlock();
+          recalc();
+        });
+      });
+    }
+
+    /**************************************************************
+     * Suggestions submit (kept)
+     **************************************************************/
+    function wireSuggestions(){
+      const textarea = document.getElementById("suggestionText");
+      const btn = document.getElementById("submitSuggestionBtn");
+      const msg = document.getElementById("suggestionMsg");
+
+      btn.addEventListener("click", async () => {
+        const text = (textarea.value || "").trim();
+        msg.textContent = "";
+        if (!text) { msg.textContent = "Please type a suggestion first."; return; }
+
+        btn.disabled = true;
+        btn.textContent = "Submitting…";
+
+        try {
+          const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"" };
+
+          // ✅ Log suggestion click
+          safeLog("suggestion_submit_click", { length: text.length });
+
+          const payload = {
+            event: "suggestion_submit",
+            suggestionText: text,
+            visitorId: v.id || "",
+            page: location.pathname || ""
+          };
+
+          const body = new URLSearchParams();
+          body.set("payload", JSON.stringify(payload));
+
+          const res = await fetch(window.WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            body: body.toString()
+          });
+
+          if (!res.ok) { msg.textContent = `Submit failed (${res.status}).`; return; }
+
+          textarea.value = "";
+          msg.textContent = "Thanks — suggestion submitted.";
+        } catch (e) {
+          console.error(e);
+          msg.textContent = "Submit failed (check console).";
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Submit";
+        }
+      });
+    }
+
+    /**************************************************************
+     * Consent modal logic + collapsible suggestions + pageviews + logging
+     **************************************************************/
+    function showConsentModal(){
+      document.getElementById("consentModal").classList.add("show");
+      document.getElementById("learnMoreModal").classList.remove("show");
+      document.body.classList.add("consent-locked");
+    }
+
+    function hideConsentModal(){
+      document.getElementById("consentModal").classList.remove("show");
+      document.getElementById("learnMoreModal").classList.remove("show");
+      document.body.classList.remove("consent-locked");
+    }
+
+    function initConsent(){
+      // Suggestions collapsed on load
+      const details = document.getElementById("suggestionsDetails");
+      if (details) details.open = false;
+
+      const accepted = sessionStorage.getItem(CONSENT_SESSION_KEY) === "true";
+      if (!accepted) showConsentModal();
+      else hideConsentModal();
+
+      // If already accepted (refresh), count once per session and log page view
+      if (accepted && sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
+        sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
+        incrementAndFetchPageViews();
+
+        // ✅ Log page view (Sheet3)
+        safeLog("page_view", { title: document.title || "" });
+      }
+
+      document.getElementById("btnAccept").addEventListener("click", () => {
+        sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
+        hideConsentModal();
+
+        if (sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
+          sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
+          incrementAndFetchPageViews();
+        }
+
+        // ✅ Log page view on accept (Sheet3)
+        safeLog("page_view", { title: document.title || "" });
+      });
+
+      document.getElementById("btnExit").addEventListener("click", () => {
+        safeLog("exit_click", {});
+        window.location.href = "https://www.standards.govt.nz/shop/snz-ts-1170-52025";
+      });
+
+      document.getElementById("btnLearnMore").addEventListener("click", () => {
+        safeLog("learn_more_open", {});
+        document.getElementById("consentModal").classList.remove("show");
+        document.getElementById("learnMoreModal").classList.add("show");
+      });
+
+      document.getElementById("btnLearnMoreClose").addEventListener("click", () => {
+        safeLog("learn_more_close", {});
+        document.getElementById("learnMoreModal").classList.remove("show");
+        document.getElementById("consentModal").classList.add("show");
+      });
+
+      // Keep the +/- indicator in the summary
+      if (details) {
+        details.addEventListener("toggle", () => {
+          const sym = details.querySelector("summary span:last-child");
+          if (sym) sym.textContent = details.open ? "−" : "+";
+        });
+      }
+    }
+
+    /**************************************************************
+     * Google Maps + Places
+     **************************************************************/
+    function setMarker(lat,lng){
+      const pos = {lat, lng};
+      if(marker) marker.setMap(null);
+      marker = new google.maps.Marker({ map, position: pos });
+      map.panTo(pos);
+    }
+
+    function initMap(){
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: -41.2865, lng: 174.7762 },
+        zoom: 6
+      });
+
+      setupHeightSync();
+      syncMapHeightToOptionBlock();
+
+      map.addListener("click", (e) => {
+        selectedLat = e.latLng.lat();
+        selectedLng = e.latLng.lng();
+        setMarker(selectedLat, selectedLng);
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+        // ✅ Log map click (Sheet3)
+        safeLog("map_click", { lat: selectedLat, lng: selectedLng });
+
+        recalc();
+      });
+
+      autocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("addressInput"),
+        { componentRestrictions: { country: "nz" } }
+      );
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) return;
+
+        selectedLat = place.geometry.location.lat();
+        selectedLng = place.geometry.location.lng();
+        setMarker(selectedLat, selectedLng);
+        map.setZoom(14);
+
+        document.getElementById("coords").textContent =
+          `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
+
+        // ✅ Log address selection (Sheet3)
+        safeLog("address_select", {
+          lat: selectedLat,
+          lng: selectedLng,
+          address: place.formatted_address || ""
+        });
+
+        recalc();
+      });
+
+      document.getElementById("useMyLocationBtn").addEventListener("click", () => {
+        if (!navigator.geolocation) return;
+
+        safeLog("use_my_location_click", {});
+
+        navigator.geolocation.getCurrentPosition((pos) => {
+          selectedLat = pos.coords.latitude;
+          selectedLng = pos.coords.longitude;
+          setMarker(selectedLat, selectedLng);
+          map.setZoom(14);
+          document.getElementById("coords").textContent =
+            `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+          // ✅ Log use my location (Sheet3)
+          safeLog("use_my_location", { lat: selectedLat, lng: selectedLng });
+
+          recalc();
+        }, (err) => {
+          safeLog("use_my_location_error", { code: err && err.code, message: err && err.message });
+        });
+      });
+
+      wireSingleSelectButtons("siteClassOptions", v => selectedSiteClass = v);
+      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
+      wireSingleSelectButtons("workingLifeOptions", v => selectedWorkingLife = v);
+      wireSuggestions();
+
+      clearResults();
+      showLoading(false);
+    }
+
+    // init consent & UI
+    window.addEventListener("load", initConsent);
+
+    window.initMap = initMap;
+
+    (function loadGoogleMaps(){
+      if (window.google && window.google.maps) return;
+      const s = document.createElement("script");
+      s.src = "https://maps.googleapis.com/maps/api/js"
+        + "?key=" + encodeURIComponent(GOOGLE_MAPS_KEY)
+        + "&callback=initMap"
+        + "&libraries=places";
+      s.async = true;
+      s.defer = true;
+      s.onerror = () => console.error("Google Maps failed to load.");
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
