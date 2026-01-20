@@ -563,12 +563,12 @@ Because only approximate, non-identifying location data is collected, there is g
 
     // Site class column indices in Sheet1
     const SHEET1_SITECLASS_COLS = {
-      I:   { PGA: 3,  Sa: 4,  Tc: 5  },
-      II:  { PGA: 6,  Sa: 7,  Tc: 8  },
-      III: { PGA: 9,  Sa: 10, Tc: 11 },
-      IV:  { PGA: 12, Sa: 13, Tc: 14 },
-      V:   { PGA: 15, Sa: 16, Tc: 17 },
-      VI:  { PGA: 18, Sa: 19, Tc: 20 },
+      I:   { PGA: 3,  Sa: 4,  Tc: 5, Td: 6},
+      II:  { PGA: 7,  Sa: 8,  Tc: 9, Td: 10},
+      III: { PGA: 11,  Sa: 12, Tc: 13, Td: 14},
+      IV:  { PGA: 15, Sa: 16, Tc: 17, Td: 18},
+      V:   { PGA: 19, Sa: 20, Tc: 21, Td: 22},
+      VI:  { PGA: 23, Sa: 24, Tc: 25, Td:26},
     };
 
     // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
@@ -929,6 +929,7 @@ Because only approximate, non-identifying location data is collected, there is g
       const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
       const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
       const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+      const td  = idx ? safeCell(sheet1Row[idx.Td])  : "";
       const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
 
       return `
@@ -943,6 +944,7 @@ Because only approximate, non-identifying location data is collected, there is g
               <th class="subhead">PGA</th>
               <th class="subhead">Sa,s</th>
               <th class="subhead">Tc</th>
+              <th calss="subhead">Td<th>
             </tr>
           </thead>
           <tbody>
@@ -951,6 +953,7 @@ Because only approximate, non-identifying location data is collected, there is g
               <td>${pga}</td>
               <td>${sa}</td>
               <td>${tc}</td>
+              <td>${td}</td>
             </tr>
           </tbody>
         </table>
