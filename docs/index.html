@@ -1131,6 +1131,7 @@ async function incrementAndFetchPageViews(){
     }
 
     function initConsent(){
+      console.log("initConsent() ran");
       // Suggestions collapsed on load
       const details = document.getElementById("suggestionsDetails");
       if (details) details.open = false;
