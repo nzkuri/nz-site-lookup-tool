@@ -1123,6 +1123,9 @@ Because only approximate, non-identifying location data is collected, there is g
       // If already accepted (refresh), count once per session and log page view
       if (accepted && sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
         sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
+        document.getElementById("pageViewsToday").textContent = "…";
+        document.getElementById("pageViewsTotal").textContent = "…";
+
         incrementAndFetchPageViews();
 
         // ✅ Log page view (Sheet3)
@@ -1135,6 +1138,9 @@ Because only approximate, non-identifying location data is collected, there is g
 
         if (sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
           sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
+          document.getElementById("pageViewsToday").textContent = "…";
+          document.getElementById("pageViewsTotal").textContent = "…";
+
           incrementAndFetchPageViews();
         }
 
