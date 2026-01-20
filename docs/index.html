@@ -593,6 +593,7 @@ Because only approximate, non-identifying location data is collected, there is g
     const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
 
 async function incrementAndFetchPageViews(){
+  console.log("incrementAndFetchPageViews() called", new Date().toISOString());
   const todayEl = document.getElementById("pageViewsToday");
   const totalEl = document.getElementById("pageViewsTotal");
   if (todayEl) todayEl.textContent = "…";
