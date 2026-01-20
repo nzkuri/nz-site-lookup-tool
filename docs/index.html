@@ -397,7 +397,7 @@
     </details>
 
     <!-- Page Views -->
-    <div class="pageviews" id="pageViewCounter">
+    <div class="s" id="Counter">
       Views today: <span id="pageViewsToday">—</span> &nbsp;|&nbsp;
       Total views: <span id="pageViewsTotal">—</span>
     </div>
@@ -591,7 +591,7 @@ Because only approximate, non-identifying location data is collected, there is g
      * Page view counter (Today + Total) — counted once per session
      **************************************************************/
     const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
-    const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
+    //const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
 
 async function incrementAndFetchPageViews(){
   console.log("incrementAndFetchPageViews() called", new Date().toISOString());
@@ -1141,28 +1141,21 @@ async function incrementAndFetchPageViews(){
       else hideConsentModal();
 
       // If already accepted (refresh), count once per session and log page view
-      if (accepted && sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
-        sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
-        document.getElementById("pageViewsToday").textContent = "…";
-        document.getElementById("pageViewsTotal").textContent = "…";
+      if (accepted) {
+      console.log("Counting page view on load/refresh");
+      incrementAndFetchPageViews();
 
-        incrementAndFetchPageViews();
-
-        // ✅ Log page view (Sheet3)
-        safeLog("page_view", { title: document.title || "" });
+      // Log page view (Sheet3)
+      safeLog("page_view", { title: document.title || "" });
       }
 
       document.getElementById("btnAccept").addEventListener("click", () => {
         sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
         hideConsentModal();
 
-        if (sessionStorage.getItem(PAGEVIEW_COUNTED_SESSION_KEY) !== "true") {
-          sessionStorage.setItem(PAGEVIEW_COUNTED_SESSION_KEY, "true");
-          document.getElementById("pageViewsToday").textContent = "…";
-          document.getElementById("pageViewsTotal").textContent = "…";
+      console.log("Counting page view on Accept");
+      incrementAndFetchPageViews();  
 
-          incrementAndFetchPageViews();
-        }
 
         // ✅ Log page view on accept (Sheet3)
         safeLog("page_view", { title: document.title || "" });
