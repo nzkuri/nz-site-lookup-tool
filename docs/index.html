@@ -592,27 +592,44 @@ Because only approximate, non-identifying location data is collected, there is g
     const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
     const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
 
-    async function incrementAndFetchPageViews(){
-      const todayEl = document.getElementById("pageViewsToday");
-      const totalEl = document.getElementById("pageViewsTotal");
-      if (todayEl) todayEl.textContent = "…";
-      if (totalEl) totalEl.textContent = "…";
+async function incrementAndFetchPageViews(){
+  const todayEl = document.getElementById("pageViewsToday");
+  const totalEl = document.getElementById("pageViewsTotal");
+  if (todayEl) todayEl.textContent = "…";
+  if (totalEl) totalEl.textContent = "…";
 
-      try{
-        const url = String(window.WEB_APP_URL || "").trim();
-        if (!url) throw new Error("WEB_APP_URL not set");
+  try{
+    const url = String(window.WEB_APP_URL || "").trim();
+    if (!url) throw new Error("WEB_APP_URL not set");
 
-        const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
-        const data = await res.json();
+    const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
 
-        if (todayEl) todayEl.textContent = (data && typeof data.today === "number") ? String(data.today) : "—";
-        if (totalEl) totalEl.textContent = (data && typeof data.total === "number") ? String(data.total) : "—";
-      } catch(e){
-        console.warn("Counter failed:", e);
-        if (todayEl) todayEl.textContent = "—";
-        if (totalEl) totalEl.textContent = "—";
-      }
+    // If Apps Script returns HTML (login page / error), this will expose it
+    const raw = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (e) {
+      console.warn("Counter returned non-JSON:", raw.slice(0, 200));
+      throw new Error("Counter returned non-JSON");
     }
+
+    console.log("Counter response:", data);
+
+    if (todayEl) todayEl.textContent =
+      (data && typeof data.today === "number") ? String(data.today) : "—";
+
+    if (totalEl) totalEl.textContent =
+      (data && typeof data.total === "number") ? String(data.total) : "—";
+
+  } catch(e){
+    console.warn("Counter failed:", e);
+    if (todayEl) todayEl.textContent = "—";
+    if (totalEl) totalEl.textContent = "—";
+  }
+}
+
 
     /**************************************************************
      * Sheet1 bucket cache (10 minutes)
