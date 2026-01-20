@@ -1284,7 +1284,11 @@ async function incrementAndFetchPageViews(){
     }
 
     // init consent & UI
-    window.addEventListener("load", initConsent);
+    if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initConsent);
+    } else {
+    initConsent();
+    }
 
     window.initMap = initMap;
 
