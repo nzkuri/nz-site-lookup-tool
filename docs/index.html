@@ -469,7 +469,7 @@ Because only approximate, non-identifying location data is collected, there is g
   ========================================================= -->
   <script>
     console.log("MAIN SCRIPT STARTED");
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzLe9mezvKxRxptfeFspJei2e2bp_lhUkG3HW-IlVcmMcCGK3eiBbehZc8N4uDebgPL/exec";
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWyHA9HID6fJ6xZ0rNE49AzHoSa1RNbaQBxg5_mCUks3A_6gQhiMmPpjmGF5wqoP7o/exec";
     window.GEO_URL = "/geo";
     window.ANALYTICS_DEBUG = false;
 
@@ -695,7 +695,7 @@ async function incrementAndFetchPageViews(){
     let matchedSheet1Rows = [];
     let sheet2MatchOptions = [];
 
-    let recalcToken = 0;
+    let Token = 0;
 
     function hasAllInputs(){
       return Number.isFinite(selectedLat) &&
@@ -1005,40 +1005,47 @@ async function incrementAndFetchPageViews(){
         `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
       ).join("");
     }
-    
-    async function pushDefaultEnvelopeToSheet7(filtered){
+
+    async function pushDefaultEnvelopeToSheet7_fromMatchedRows(){
   if (selectedSiteClass !== "DEFAULT") return;
   if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
 
+  // We want ALL matched Sheet1 rows (from step1 bucket match)
+  const rows = (matchedSheet1Rows || [])
+    .map(x => Array.isArray(x.row) ? x.row : [])
+    .filter(r => r.length);
+
+  // Package raw rows + (optional) computed outputs by APOE for DEFAULT columns
   const idx = SHEET1_SITECLASS_COLS.DEFAULT;
-  if (!idx) return;
+  const apoeToVals = {};
 
-  // Build apoe -> PGA/Sa/Tc/Td from the same rows you render
-  const byApoe = new Map();
-  for (const x of (filtered || [])) {
-    const apoe = normalize(x.apoe);
-    if (!apoe) continue;
+  if (idx) {
+    for (const r of rows) {
+      const apoe = normalize(r[SHEET1_APOE_COL_INDEX]);
+      if (!apoe) continue;
 
-    const key = apoe.toLowerCase();
-    if (byApoe.has(key)) continue;
+      const key = apoe.toLowerCase();
+      // keep first occurrence per APOE (change if you want last/average/etc.)
+      if (apoeToVals[key]) continue;
 
-    const row = x.sheet1Row || [];
-    byApoe.set(key, {
-      apoe,
-      pga: safeCell(row[idx.PGA]),
-      sa:  safeCell(row[idx.Sa]),
-      tc:  safeCell(row[idx.Tc]),
-      td:  safeCell(row[idx.Td]),
-    });
+      apoeToVals[key] = {
+        apoe,
+        pga: safeCell(r[idx.PGA]),
+        sa:  safeCell(r[idx.Sa]),
+        tc:  safeCell(r[idx.Tc]),
+        td:  safeCell(r[idx.Td]),
+      };
+    }
   }
 
   const payload = {
     mode: "defaultEnvelope",
     lat: selectedLat,
     lng: selectedLng,
-    latRounded1dp: round1(selectedLat),
-    lngRounded1dp: round1(selectedLng),
-    results: Array.from(byApoe.values()) // [{apoe,pga,sa,tc,td}, ...]
+    // raw Sheet1 rows to paste into D4:AF10
+    sheet1MatchedRows: rows,
+    // lookup table for APOE -> PGA/Sa/Tc/Td (to fill G13:J19 based on F13:F19)
+    apoeToVals: apoeToVals
   };
 
   const body = new URLSearchParams();
@@ -1051,11 +1058,12 @@ async function incrementAndFetchPageViews(){
   });
 
   const raw = await res.text();
-  if (!res.ok) throw new Error("Sheet7 push failed: " + res.status + " " + raw);
+  if (!res.ok) throw new Error("DefaultEnvelope push failed: " + res.status + " " + raw);
 
-  // Optional: log success
-  safeLog("default_envelope_push_success", { raw: raw.slice(0, 200) });
+  // optional
+  safeLog("default_envelope_push_success", { preview: raw.slice(0, 200) });
 }
+
 
     async function recalc(){
       const myToken = ++recalcToken;
@@ -1072,18 +1080,21 @@ async function incrementAndFetchPageViews(){
       showLoading(true);
 
       try {
-        await step1_findAllSheet1RowsMatching1dp();
-        if (myToken !== recalcToken) return;
+      await step1_findAllSheet1RowsMatching1dp();
+      if (myToken !== recalcToken) return;
 
-        await step2_getTitlesAndStringsFromSheet2();
-        if (myToken !== recalcToken) return;
+      // ✅ NEW: If DEFAULT selected, push ALL matched Sheet1 rows to Sheet7
+      if (selectedSiteClass === "DEFAULT") {
+      try { await pushDefaultEnvelopeToSheet7_fromMatchedRows(); }
+      catch(e){ console.warn(e); }
+      }
+
+      await step2_getTitlesAndStringsFromSheet2();
+      if (myToken !== recalcToken) return;
 
         const filtered = step3_filterMatchedSheet1Rows();
         if (myToken !== recalcToken) return;
         
-        if (selectedSiteClass === "DEFAULT") {
-        try { await pushDefaultEnvelopeToSheet7(filtered); }
-        catch(e){ console.warn(e); }
         }
         renderTablesFullWidth(filtered);
       } catch (err) {
