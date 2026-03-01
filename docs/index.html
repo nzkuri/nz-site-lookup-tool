@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>NZS TS1170.5 Site Parameter Finder </title>
+  <title>NZS TS1170.5 Site Parameter Finder</title>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -13,17 +13,14 @@
 
     /* Intro / disclaimer text under the title */
     .seo-intro{
-    width: 100%;
-    max-width: 1400px;
-    margin: 0 auto 12px auto; /* matches content-wrap centering */
-    text-align: justify;
-    text-justify: inter-word;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto 12px auto;
+      text-align: justify;
+      text-justify: inter-word;
     }
+    .seo-intro p{ margin: 0; }
 
-    .seo-intro p{
-    margin: 0;
-    }
-    
     .content-wrap{
       width: 100%;
       max-width: 1400px;
@@ -202,15 +199,6 @@
     }
     #suggestionMsg{ margin-top: 8px; color:#666; }
 
-    /* Page view counter */
-    .pageviews{
-      margin-top: 14px;
-      text-align: center;
-      color:#666;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
     /* Consent modal (blocks site until accepted) */
     .modal-backdrop{
       position: fixed;
@@ -250,8 +238,6 @@
       white-space: pre-line;
       line-height: 1.35;
       font-size: 14px;
-
-      
     }
     .modal-footer{
       padding: 14px 16px;
@@ -301,11 +287,21 @@
       user-select: none;
       filter: blur(0px);
     }
+
+    /* Counter styling (your div uses class="s") */
+    .s{
+      margin-top: 14px;
+      text-align: center;
+      color:#666;
+      font-weight: 700;
+      font-size: 13px;
+    }
   </style>
 </head>
 
 <body class="consent-locked">
   <h2 id="pageTitle">TS1170.5 site parameter finder</h2>
+
   <div class="content-wrap">
     <div class="seo-intro">
       <p>
@@ -315,7 +311,6 @@
         aligned with TS1170.5.
       </p>
     </div>
-  
 
     <div class="search-wrap">
       <input id="addressInput" placeholder="Search address (NZ only)" />
@@ -408,6 +403,7 @@
   <!-- ======================
        Consent Modal (Main)
   ======================= -->
+  <!-- NOTE: keeping 'show' so it blocks until JS decides -->
   <div class="modal-backdrop show" id="consentModal">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
       <div class="modal-header">
@@ -465,7 +461,7 @@ Because only approximate, non-identifying location data is collected, there is g
   </div>
 
   <!-- =========================================================
-    CSP-SAFE ANALYTICS MODULE (kept)
+    CSP-SAFE ANALYTICS MODULE
   ========================================================= -->
   <script>
     console.log("MAIN SCRIPT STARTED");
@@ -565,13 +561,13 @@ Because only approximate, non-identifying location data is collected, there is g
 
     // Site class column indices in Sheet1
     const SHEET1_SITECLASS_COLS = {
-      I:   { PGA: 5,  Sa: 6,  Tc: 7, Td: 8},
-      II:  { PGA: 9,  Sa: 10,  Tc: 11, Td: 12},
-      III: { PGA: 13,  Sa: 14, Tc: 15, Td: 16},
-      IV:  { PGA: 17, Sa: 18, Tc: 19, Td: 20},
-      V:   { PGA: 21, Sa: 22, Tc: 23, Td: 24},
-      VI:  { PGA: 25, Sa: 26, Tc: 27, Td:28},
-      DEFAULT: { PGA: 25, Sa: 26, Tc: 27, Td: 28 }      
+      I:   { PGA: 5,  Sa: 6,  Tc: 7,  Td: 8 },
+      II:  { PGA: 9,  Sa: 10, Tc: 11, Td: 12 },
+      III: { PGA: 13, Sa: 14, Tc: 15, Td: 16 },
+      IV:  { PGA: 17, Sa: 18, Tc: 19, Td: 20 },
+      V:   { PGA: 21, Sa: 22, Tc: 23, Td: 24 },
+      VI:  { PGA: 25, Sa: 26, Tc: 27, Td: 28 },
+      DEFAULT: { PGA: 25, Sa: 26, Tc: 27, Td: 28 }
     };
 
     // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
@@ -590,50 +586,45 @@ Because only approximate, non-identifying location data is collected, there is g
     };
 
     /**************************************************************
-     * Page view counter (Today + Total) — counted once per session
+     * Page view counter (Today + Total)
      **************************************************************/
     const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
-    //const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
 
-async function incrementAndFetchPageViews(){
-  console.log("incrementAndFetchPageViews() called", new Date().toISOString());
-  const todayEl = document.getElementById("pageViewsToday");
-  const totalEl = document.getElementById("pageViewsTotal");
-  if (todayEl) todayEl.textContent = "…";
-  if (totalEl) totalEl.textContent = "…";
+    async function incrementAndFetchPageViews(){
+      console.log("incrementAndFetchPageViews() called", new Date().toISOString());
+      const todayEl = document.getElementById("pageViewsToday");
+      const totalEl = document.getElementById("pageViewsTotal");
+      if (todayEl) todayEl.textContent = "…";
+      if (totalEl) totalEl.textContent = "…";
 
-  try{
-    const url = String(window.WEB_APP_URL || "").trim();
-    if (!url) throw new Error("WEB_APP_URL not set");
+      try{
+        const url = String(window.WEB_APP_URL || "").trim();
+        if (!url) throw new Error("WEB_APP_URL not set");
 
-    const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
+        const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
+        const raw = await res.text();
 
-    // If Apps Script returns HTML (login page / error), this will expose it
-    const raw = await res.text();
+        let data;
+        try { data = JSON.parse(raw); }
+        catch (e) {
+          console.warn("Counter returned non-JSON:", raw.slice(0, 200));
+          throw new Error("Counter returned non-JSON");
+        }
 
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch (e) {
-      console.warn("Counter returned non-JSON:", raw.slice(0, 200));
-      throw new Error("Counter returned non-JSON");
+        console.log("Counter response:", data);
+
+        if (todayEl) todayEl.textContent =
+          (data && typeof data.today === "number") ? String(data.today) : "—";
+
+        if (totalEl) totalEl.textContent =
+          (data && typeof data.total === "number") ? String(data.total) : "—";
+
+      } catch(e){
+        console.warn("Counter failed:", e);
+        if (todayEl) todayEl.textContent = "—";
+        if (totalEl) totalEl.textContent = "—";
+      }
     }
-
-    console.log("Counter response:", data);
-
-    if (todayEl) todayEl.textContent =
-      (data && typeof data.today === "number") ? String(data.today) : "—";
-
-    if (totalEl) totalEl.textContent =
-      (data && typeof data.total === "number") ? String(data.total) : "—";
-
-  } catch(e){
-    console.warn("Counter failed:", e);
-    if (todayEl) todayEl.textContent = "—";
-    if (totalEl) totalEl.textContent = "—";
-  }
-}
-
 
     /**************************************************************
      * Sheet1 bucket cache (10 minutes)
@@ -695,7 +686,8 @@ async function incrementAndFetchPageViews(){
     let matchedSheet1Rows = [];
     let sheet2MatchOptions = [];
 
-    let Token = 0;
+    // ✅ FIX #1: correct token name used by recalc()
+    let recalcToken = 0;
 
     function hasAllInputs(){
       return Number.isFinite(selectedLat) &&
@@ -965,7 +957,7 @@ async function incrementAndFetchPageViews(){
               <th class="subhead">PGA</th>
               <th class="subhead">Sa,s</th>
               <th class="subhead">Tc</th>
-              <th calss="subhead">Td</th>
+              <th class="subhead">Td</th>
             </tr>
           </thead>
           <tbody>
@@ -1006,65 +998,64 @@ async function incrementAndFetchPageViews(){
       ).join("");
     }
 
+    /**************************************************************
+     * DEFAULT ENVELOPE push: send matched Sheet1 rows + APOE lookup
+     **************************************************************/
     async function pushDefaultEnvelopeToSheet7_fromMatchedRows(){
-  if (selectedSiteClass !== "DEFAULT") return;
-  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+      if (selectedSiteClass !== "DEFAULT") return;
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
 
-  // We want ALL matched Sheet1 rows (from step1 bucket match)
-  const rows = (matchedSheet1Rows || [])
-    .map(x => Array.isArray(x.row) ? x.row : [])
-    .filter(r => r.length);
+      const rows = (matchedSheet1Rows || [])
+        .map(x => Array.isArray(x.row) ? x.row : [])
+        .filter(r => r.length);
 
-  // Package raw rows + (optional) computed outputs by APOE for DEFAULT columns
-  const idx = SHEET1_SITECLASS_COLS.DEFAULT;
-  const apoeToVals = {};
+      const idx = SHEET1_SITECLASS_COLS.DEFAULT;
+      const apoeToVals = {};
 
-  if (idx) {
-    for (const r of rows) {
-      const apoe = normalize(r[SHEET1_APOE_COL_INDEX]);
-      if (!apoe) continue;
+      if (idx) {
+        for (const r of rows) {
+          const apoe = normalize(r[SHEET1_APOE_COL_INDEX]);
+          if (!apoe) continue;
 
-      const key = apoe.toLowerCase();
-      // keep first occurrence per APOE (change if you want last/average/etc.)
-      if (apoeToVals[key]) continue;
+          const key = apoe.toLowerCase();
+          if (apoeToVals[key]) continue;
 
-      apoeToVals[key] = {
-        apoe,
-        pga: safeCell(r[idx.PGA]),
-        sa:  safeCell(r[idx.Sa]),
-        tc:  safeCell(r[idx.Tc]),
-        td:  safeCell(r[idx.Td]),
+          apoeToVals[key] = {
+            apoe,
+            pga: safeCell(r[idx.PGA]),
+            sa:  safeCell(r[idx.Sa]),
+            tc:  safeCell(r[idx.Tc]),
+            td:  safeCell(r[idx.Td]),
+          };
+        }
+      }
+
+      const payload = {
+        mode: "defaultEnvelope",
+        lat: selectedLat,
+        lng: selectedLng,
+        sheet1MatchedRows: rows,
+        apoeToVals: apoeToVals
       };
+
+      const body = new URLSearchParams();
+      body.set("payload", JSON.stringify(payload));
+
+      const res = await fetch(window.WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      });
+
+      const raw = await res.text();
+      if (!res.ok) throw new Error("DefaultEnvelope push failed: " + res.status + " " + raw);
+
+      safeLog("default_envelope_push_success", { preview: raw.slice(0, 200) });
     }
-  }
 
-  const payload = {
-    mode: "defaultEnvelope",
-    lat: selectedLat,
-    lng: selectedLng,
-    // raw Sheet1 rows to paste into D4:AF10
-    sheet1MatchedRows: rows,
-    // lookup table for APOE -> PGA/Sa/Tc/Td (to fill G13:J19 based on F13:F19)
-    apoeToVals: apoeToVals
-  };
-
-  const body = new URLSearchParams();
-  body.set("payload", JSON.stringify(payload));
-
-  const res = await fetch(window.WEB_APP_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body: body.toString()
-  });
-
-  const raw = await res.text();
-  if (!res.ok) throw new Error("DefaultEnvelope push failed: " + res.status + " " + raw);
-
-  // optional
-  safeLog("default_envelope_push_success", { preview: raw.slice(0, 200) });
-}
-
-
+    /**************************************************************
+     * ✅ FIX #2: recalc() rewritten (braces + scope fixed)
+     **************************************************************/
     async function recalc(){
       const myToken = ++recalcToken;
 
@@ -1080,23 +1071,23 @@ async function incrementAndFetchPageViews(){
       showLoading(true);
 
       try {
-      await step1_findAllSheet1RowsMatching1dp();
-      if (myToken !== recalcToken) return;
+        await step1_findAllSheet1RowsMatching1dp();
+        if (myToken !== recalcToken) return;
 
-      // ✅ NEW: If DEFAULT selected, push ALL matched Sheet1 rows to Sheet7
-      if (selectedSiteClass === "DEFAULT") {
-      try { await pushDefaultEnvelopeToSheet7_fromMatchedRows(); }
-      catch(e){ console.warn(e); }
-      }
+        // If DEFAULT selected, push ALL matched rows to Sheet7
+        if (selectedSiteClass === "DEFAULT") {
+          try { await pushDefaultEnvelopeToSheet7_fromMatchedRows(); }
+          catch(e){ console.warn(e); }
+        }
 
-      await step2_getTitlesAndStringsFromSheet2();
-      if (myToken !== recalcToken) return;
+        await step2_getTitlesAndStringsFromSheet2();
+        if (myToken !== recalcToken) return;
 
         const filtered = step3_filterMatchedSheet1Rows();
         if (myToken !== recalcToken) return;
-        
-        }
+
         renderTablesFullWidth(filtered);
+
       } catch (err) {
         console.error(err);
       } finally {
@@ -1112,7 +1103,6 @@ async function incrementAndFetchPageViews(){
           btn.classList.add("selected");
           setter(btn.dataset.value);
 
-          // ✅ Log option selections to Sheet3
           safeLog("option_select", {
             group: containerId,
             value: btn.dataset.value,
@@ -1132,7 +1122,7 @@ async function incrementAndFetchPageViews(){
     }
 
     /**************************************************************
-     * Suggestions submit (kept)
+     * Suggestions submit
      **************************************************************/
     function wireSuggestions(){
       const textarea = document.getElementById("suggestionText");
@@ -1150,7 +1140,6 @@ async function incrementAndFetchPageViews(){
         try {
           const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"" };
 
-          // ✅ Log suggestion click
           safeLog("suggestion_submit_click", { length: text.length });
 
           const payload = {
@@ -1200,7 +1189,7 @@ async function incrementAndFetchPageViews(){
 
     function initConsent(){
       console.log("initConsent() ran");
-      // Suggestions collapsed on load
+
       const details = document.getElementById("suggestionsDetails");
       if (details) details.open = false;
 
@@ -1208,24 +1197,19 @@ async function incrementAndFetchPageViews(){
       if (!accepted) showConsentModal();
       else hideConsentModal();
 
-      // If already accepted (refresh), count once per session and log page view
       if (accepted) {
-      console.log("Counting page view on load/refresh");
-      incrementAndFetchPageViews();
-
-      // Log page view (Sheet3)
-      safeLog("page_view", { title: document.title || "" });
+        console.log("Counting page view on load/refresh");
+        incrementAndFetchPageViews();
+        safeLog("page_view", { title: document.title || "" });
       }
 
       document.getElementById("btnAccept").addEventListener("click", () => {
         sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
         hideConsentModal();
 
-      console.log("Counting page view on Accept");
-      incrementAndFetchPageViews();  
+        console.log("Counting page view on Accept");
+        incrementAndFetchPageViews();
 
-
-        // ✅ Log page view on accept (Sheet3)
         safeLog("page_view", { title: document.title || "" });
       });
 
@@ -1246,7 +1230,6 @@ async function incrementAndFetchPageViews(){
         document.getElementById("consentModal").classList.add("show");
       });
 
-      // Keep the +/- indicator in the summary
       if (details) {
         details.addEventListener("toggle", () => {
           const sym = details.querySelector("summary span:last-child");
@@ -1281,9 +1264,7 @@ async function incrementAndFetchPageViews(){
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
-        // ✅ Log map click (Sheet3)
         safeLog("map_click", { lat: selectedLat, lng: selectedLng });
-
         recalc();
       });
 
@@ -1304,7 +1285,6 @@ async function incrementAndFetchPageViews(){
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
-        // ✅ Log address selection (Sheet3)
         safeLog("address_select", {
           lat: selectedLat,
           lng: selectedLng,
@@ -1327,9 +1307,7 @@ async function incrementAndFetchPageViews(){
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
-          // ✅ Log use my location (Sheet3)
           safeLog("use_my_location", { lat: selectedLat, lng: selectedLng });
-
           recalc();
         }, (err) => {
           safeLog("use_my_location_error", { code: err && err.code, message: err && err.message });
@@ -1347,9 +1325,9 @@ async function incrementAndFetchPageViews(){
 
     // init consent & UI
     if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initConsent);
+      document.addEventListener("DOMContentLoaded", initConsent);
     } else {
-    initConsent();
+      initConsent();
     }
 
     window.initMap = initMap;
