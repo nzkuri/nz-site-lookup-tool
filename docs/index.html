@@ -338,6 +338,7 @@
               <button type="button" data-value="IV">IV</button>
               <button type="button" data-value="V">V</button>
               <button type="button" data-value="VI">VI</button>
+              <button type="button" data-value="DEFAULT">Default Envelope</button>
             </div>
           </div>
 
@@ -468,7 +469,7 @@ Because only approximate, non-identifying location data is collected, there is g
   ========================================================= -->
   <script>
     console.log("MAIN SCRIPT STARTED");
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxNDrmd5S16iylO-tAZoYX5ytw2XnnuWBxwyXN0QZ6UT_vVH84hEnJYpkSVqkdp8opW/exec";
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzLe9mezvKxRxptfeFspJei2e2bp_lhUkG3HW-IlVcmMcCGK3eiBbehZc8N4uDebgPL/exec";
     window.GEO_URL = "/geo";
     window.ANALYTICS_DEBUG = false;
 
@@ -570,6 +571,7 @@ Because only approximate, non-identifying location data is collected, there is g
       IV:  { PGA: 17, Sa: 18, Tc: 19, Td: 20},
       V:   { PGA: 21, Sa: 22, Tc: 23, Td: 24},
       VI:  { PGA: 25, Sa: 26, Tc: 27, Td:28},
+      DEFAULT: { PGA: 25, Sa: 26, Tc: 27, Td: 28 }      
     };
 
     // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
@@ -1003,6 +1005,57 @@ async function incrementAndFetchPageViews(){
         `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
       ).join("");
     }
+    
+    async function pushDefaultEnvelopeToSheet7(filtered){
+  if (selectedSiteClass !== "DEFAULT") return;
+  if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+
+  const idx = SHEET1_SITECLASS_COLS.DEFAULT;
+  if (!idx) return;
+
+  // Build apoe -> PGA/Sa/Tc/Td from the same rows you render
+  const byApoe = new Map();
+  for (const x of (filtered || [])) {
+    const apoe = normalize(x.apoe);
+    if (!apoe) continue;
+
+    const key = apoe.toLowerCase();
+    if (byApoe.has(key)) continue;
+
+    const row = x.sheet1Row || [];
+    byApoe.set(key, {
+      apoe,
+      pga: safeCell(row[idx.PGA]),
+      sa:  safeCell(row[idx.Sa]),
+      tc:  safeCell(row[idx.Tc]),
+      td:  safeCell(row[idx.Td]),
+    });
+  }
+
+  const payload = {
+    mode: "defaultEnvelope",
+    lat: selectedLat,
+    lng: selectedLng,
+    latRounded1dp: round1(selectedLat),
+    lngRounded1dp: round1(selectedLng),
+    results: Array.from(byApoe.values()) // [{apoe,pga,sa,tc,td}, ...]
+  };
+
+  const body = new URLSearchParams();
+  body.set("payload", JSON.stringify(payload));
+
+  const res = await fetch(window.WEB_APP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body: body.toString()
+  });
+
+  const raw = await res.text();
+  if (!res.ok) throw new Error("Sheet7 push failed: " + res.status + " " + raw);
+
+  // Optional: log success
+  safeLog("default_envelope_push_success", { raw: raw.slice(0, 200) });
+}
 
     async function recalc(){
       const myToken = ++recalcToken;
@@ -1027,7 +1080,11 @@ async function incrementAndFetchPageViews(){
 
         const filtered = step3_filterMatchedSheet1Rows();
         if (myToken !== recalcToken) return;
-
+        
+        if (selectedSiteClass === "DEFAULT") {
+        try { await pushDefaultEnvelopeToSheet7(filtered); }
+        catch(e){ console.warn(e); }
+        }
         renderTablesFullWidth(filtered);
       } catch (err) {
         console.error(err);
