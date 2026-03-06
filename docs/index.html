@@ -436,7 +436,7 @@ Because only approximate, non-identifying location data is collected, there is g
   <!-- Analytics Module -->
   <script>
     console.log("MAIN SCRIPT STARTED");
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxW1AATc0mBsG_oA1JjqAubsbIZfqWAxMF05rrAckU3lfSgeHdcMOswUZCLjldwwurw/exec";
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwdbPPFrWXCatRYLpGdOHIxRz6tnZI-rDMAkWQMgCR_0MD8jZUL8eNAWhpY9U0ZoUoP/exec";
     window.GEO_URL = "/geo";
     window.ANALYTICS_DEBUG = false;
 
@@ -979,10 +979,11 @@ Because only approximate, non-identifying location data is collected, there is g
         };
         const body = new URLSearchParams();
         body.set("payload", JSON.stringify(payload));
-        await fetch(window.WEB_APP_URL, {
-          method:  "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body:    body.toString()
+       await fetch(window.WEB_APP_URL, {
+        method:  "POST",
+        mode:    "no-cors",   // required for cross-origin requests to Apps Script
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body:    body.toString()
         });
         console.log("Sheet7 write dispatched for", rows.length, "row(s).");
       } catch(e){
