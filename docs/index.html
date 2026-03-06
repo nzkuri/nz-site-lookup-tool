@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>NZS TS1170.5 Site Parameter Finder</title>
+  <title>NZS TS1170.5 Site Parameter Finder </title>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -13,14 +13,17 @@
 
     /* Intro / disclaimer text under the title */
     .seo-intro{
-      width: 100%;
-      max-width: 1400px;
-      margin: 0 auto 12px auto;
-      text-align: justify;
-      text-justify: inter-word;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto 12px auto; /* matches content-wrap centering */
+    text-align: justify;
+    text-justify: inter-word;
     }
-    .seo-intro p{ margin: 0; }
 
+    .seo-intro p{
+    margin: 0;
+    }
+    
     .content-wrap{
       width: 100%;
       max-width: 1400px;
@@ -199,6 +202,15 @@
     }
     #suggestionMsg{ margin-top: 8px; color:#666; }
 
+    /* Page view counter */
+    .pageviews{
+      margin-top: 14px;
+      text-align: center;
+      color:#666;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
     /* Consent modal (blocks site until accepted) */
     .modal-backdrop{
       position: fixed;
@@ -238,6 +250,8 @@
       white-space: pre-line;
       line-height: 1.35;
       font-size: 14px;
+
+      
     }
     .modal-footer{
       padding: 14px 16px;
@@ -287,21 +301,11 @@
       user-select: none;
       filter: blur(0px);
     }
-
-    /* Counter styling (your div uses class="s") */
-    .s{
-      margin-top: 14px;
-      text-align: center;
-      color:#666;
-      font-weight: 700;
-      font-size: 13px;
-    }
   </style>
 </head>
 
 <body class="consent-locked">
   <h2 id="pageTitle">TS1170.5 site parameter finder</h2>
-
   <div class="content-wrap">
     <div class="seo-intro">
       <p>
@@ -311,6 +315,7 @@
         aligned with TS1170.5.
       </p>
     </div>
+  
 
     <div class="search-wrap">
       <input id="addressInput" placeholder="Search address (NZ only)" />
@@ -333,9 +338,6 @@
               <button type="button" data-value="IV">IV</button>
               <button type="button" data-value="V">V</button>
               <button type="button" data-value="VI">VI</button>
-             <!-- <button type="button" data-value="DEFAULT">Default Envelope</button> -->
-            
-              
             </div>
           </div>
 
@@ -405,7 +407,6 @@
   <!-- ======================
        Consent Modal (Main)
   ======================= -->
-  <!-- NOTE: keeping 'show' so it blocks until JS decides -->
   <div class="modal-backdrop show" id="consentModal">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
       <div class="modal-header">
@@ -463,11 +464,11 @@ Because only approximate, non-identifying location data is collected, there is g
   </div>
 
   <!-- =========================================================
-    CSP-SAFE ANALYTICS MODULE
+    CSP-SAFE ANALYTICS MODULE (kept)
   ========================================================= -->
   <script>
     console.log("MAIN SCRIPT STARTED");
-    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWyHA9HID6fJ6xZ0rNE49AzHoSa1RNbaQBxg5_mCUks3A_6gQhiMmPpjmGF5wqoP7o/exec";
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwM9BhN5M1rWKPv80xlbqzQ4mMO0QSaLUCeTXa9mwT6eYU52_5M8QAqp4HamCGcmlzn/exec";
     window.GEO_URL = "/geo";
     window.ANALYTICS_DEBUG = false;
 
@@ -563,13 +564,12 @@ Because only approximate, non-identifying location data is collected, there is g
 
     // Site class column indices in Sheet1
     const SHEET1_SITECLASS_COLS = {
-      I:   { PGA: 5,  Sa: 6,  Tc: 7,  Td: 8 },
-      II:  { PGA: 9,  Sa: 10, Tc: 11, Td: 12 },
-      III: { PGA: 13, Sa: 14, Tc: 15, Td: 16 },
-      IV:  { PGA: 17, Sa: 18, Tc: 19, Td: 20 },
-      V:   { PGA: 21, Sa: 22, Tc: 23, Td: 24 },
-      VI:  { PGA: 25, Sa: 26, Tc: 27, Td: 28 },
-      DEFAULT: { PGA: 25, Sa: 26, Tc: 27, Td: 28 }
+      I:   { PGA: 5,  Sa: 6,  Tc: 7, Td: 8},
+      II:  { PGA: 9,  Sa: 10,  Tc: 11, Td: 12},
+      III: { PGA: 13,  Sa: 14, Tc: 15, Td: 16},
+      IV:  { PGA: 17, Sa: 18, Tc: 19, Td: 20},
+      V:   { PGA: 21, Sa: 22, Tc: 23, Td: 24},
+      VI:  { PGA: 25, Sa: 26, Tc: 27, Td:28},
     };
 
     // Sheet2: A=WorkingLife, B=ImportanceLevel, C/D/E strings
@@ -588,45 +588,72 @@ Because only approximate, non-identifying location data is collected, there is g
     };
 
     /**************************************************************
-     * Page view counter (Today + Total)
+     * Page view counter (Today + Total) — counted once per session
      **************************************************************/
     const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
+    //const PAGEVIEW_COUNTED_SESSION_KEY = "ts1170_5_pageview_counted_v1";
 
-    async function incrementAndFetchPageViews(){
-      console.log("incrementAndFetchPageViews() called", new Date().toISOString());
-      const todayEl = document.getElementById("pageViewsToday");
-      const totalEl = document.getElementById("pageViewsTotal");
-      if (todayEl) todayEl.textContent = "…";
-      if (totalEl) totalEl.textContent = "…";
-
-      try{
-        const url = String(window.WEB_APP_URL || "").trim();
-        if (!url) throw new Error("WEB_APP_URL not set");
-
-        const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
-        const raw = await res.text();
-
-        let data;
-        try { data = JSON.parse(raw); }
-        catch (e) {
-          console.warn("Counter returned non-JSON:", raw.slice(0, 200));
-          throw new Error("Counter returned non-JSON");
-        }
-
-        console.log("Counter response:", data);
-
-        if (todayEl) todayEl.textContent =
-          (data && typeof data.today === "number") ? String(data.today) : "—";
-
-        if (totalEl) totalEl.textContent =
-          (data && typeof data.total === "number") ? String(data.total) : "—";
-
-      } catch(e){
-        console.warn("Counter failed:", e);
-        if (todayEl) todayEl.textContent = "—";
-        if (totalEl) totalEl.textContent = "—";
-      }
+    async function writeMatchedRowsToSheet8(rows) {
+    if (!rows || !rows.length) return;
+    try {
+      const payload = {
+        event: "write_Sheet7",
+        rows: rows.map(r => r.row), // raw Sheet1 row arrays
+        visitorId: (window.SiteAnalytics && window.SiteAnalytics.getVisitor)
+          ? window.SiteAnalytics.getVisitor().id : ""
+      };
+      const body = new URLSearchParams();
+      body.set("payload", JSON.stringify(payload));
+      await fetch(window.WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: body.toString()
+      });
+    } catch(e) {
+      console.warn("writeMatchedRowsToSheet8 failed:", e);
     }
+  }
+    
+
+  async function incrementAndFetchPageViews(){
+    console.log("incrementAndFetchPageViews() called", new Date().toISOString());
+    const todayEl = document.getElementById("pageViewsToday");
+    const totalEl = document.getElementById("pageViewsTotal");
+    if (todayEl) todayEl.textContent = "…";
+    if (totalEl) totalEl.textContent = "…";
+
+    try{
+      const url = String(window.WEB_APP_URL || "").trim();
+      if (!url) throw new Error("WEB_APP_URL not set");
+
+      const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
+
+    // If Apps Script returns HTML (login page / error), this will expose it
+      const raw = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (e) {
+      console.warn("Counter returned non-JSON:", raw.slice(0, 200));
+      throw new Error("Counter returned non-JSON");
+    }
+
+    console.log("Counter response:", data);
+
+    if (todayEl) todayEl.textContent =
+      (data && typeof data.today === "number") ? String(data.today) : "—";
+
+    if (totalEl) totalEl.textContent =
+      (data && typeof data.total === "number") ? String(data.total) : "—";
+
+  } catch(e){
+    console.warn("Counter failed:", e);
+    if (todayEl) todayEl.textContent = "—";
+    if (totalEl) totalEl.textContent = "—";
+  }
+}
+
 
     /**************************************************************
      * Sheet1 bucket cache (10 minutes)
@@ -688,7 +715,6 @@ Because only approximate, non-identifying location data is collected, there is g
     let matchedSheet1Rows = [];
     let sheet2MatchOptions = [];
 
-    // ✅ FIX #1: correct token name used by recalc()
     let recalcToken = 0;
 
     function hasAllInputs(){
@@ -959,7 +985,7 @@ Because only approximate, non-identifying location data is collected, there is g
               <th class="subhead">PGA</th>
               <th class="subhead">Sa,s</th>
               <th class="subhead">Tc</th>
-              <th class="subhead">Td</th>
+              <th calss="subhead">Td</th>
             </tr>
           </thead>
           <tbody>
@@ -1000,64 +1026,6 @@ Because only approximate, non-identifying location data is collected, there is g
       ).join("");
     }
 
-    /**************************************************************
-     * DEFAULT ENVELOPE push: send matched Sheet1 rows + APOE lookup
-     **************************************************************/
-    async function pushDefaultEnvelopeToSheet7_fromMatchedRows(){
-      if (selectedSiteClass !== "DEFAULT") return;
-      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
-
-      const rows = (matchedSheet1Rows || [])
-        .map(x => Array.isArray(x.row) ? x.row : [])
-        .filter(r => r.length);
-
-      const idx = SHEET1_SITECLASS_COLS.DEFAULT;
-      const apoeToVals = {};
-
-      if (idx) {
-        for (const r of rows) {
-          const apoe = normalize(r[SHEET1_APOE_COL_INDEX]);
-          if (!apoe) continue;
-
-          const key = apoe.toLowerCase();
-          if (apoeToVals[key]) continue;
-
-          apoeToVals[key] = {
-            apoe,
-            pga: safeCell(r[idx.PGA]),
-            sa:  safeCell(r[idx.Sa]),
-            tc:  safeCell(r[idx.Tc]),
-            td:  safeCell(r[idx.Td]),
-          };
-        }
-      }
-
-      const payload = {
-        mode: "defaultEnvelope",
-        lat: selectedLat,
-        lng: selectedLng,
-        sheet1MatchedRows: rows,
-        apoeToVals: apoeToVals
-      };
-
-      const body = new URLSearchParams();
-      body.set("payload", JSON.stringify(payload));
-
-      const res = await fetch(window.WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: body.toString()
-      });
-
-      const raw = await res.text();
-      if (!res.ok) throw new Error("DefaultEnvelope push failed: " + res.status + " " + raw);
-
-      safeLog("default_envelope_push_success", { preview: raw.slice(0, 200) });
-    }
-
-    /**************************************************************
-     * ✅ FIX #2: recalc() rewritten (braces + scope fixed)
-     **************************************************************/
     async function recalc(){
       const myToken = ++recalcToken;
 
@@ -1076,10 +1044,9 @@ Because only approximate, non-identifying location data is collected, there is g
         await step1_findAllSheet1RowsMatching1dp();
         if (myToken !== recalcToken) return;
 
-        // If DEFAULT selected, push ALL matched rows to Sheet7
-        if (selectedSiteClass === "DEFAULT") {
-          try { await pushDefaultEnvelopeToSheet7_fromMatchedRows(); }
-          catch(e){ console.warn(e); }
+        // Write matched rows to Sheet8
+        if (matchedSheet1Rows.length) {
+        writeMatchedRowsToSheet7(matchedSheet1Rows); // fire-and-forget
         }
 
         await step2_getTitlesAndStringsFromSheet2();
@@ -1089,7 +1056,6 @@ Because only approximate, non-identifying location data is collected, there is g
         if (myToken !== recalcToken) return;
 
         renderTablesFullWidth(filtered);
-
       } catch (err) {
         console.error(err);
       } finally {
@@ -1105,6 +1071,7 @@ Because only approximate, non-identifying location data is collected, there is g
           btn.classList.add("selected");
           setter(btn.dataset.value);
 
+          // ✅ Log option selections to Sheet3
           safeLog("option_select", {
             group: containerId,
             value: btn.dataset.value,
@@ -1124,7 +1091,7 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     /**************************************************************
-     * Suggestions submit
+     * Suggestions submit (kept)
      **************************************************************/
     function wireSuggestions(){
       const textarea = document.getElementById("suggestionText");
@@ -1142,6 +1109,7 @@ Because only approximate, non-identifying location data is collected, there is g
         try {
           const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id:"" };
 
+          // ✅ Log suggestion click
           safeLog("suggestion_submit_click", { length: text.length });
 
           const payload = {
@@ -1191,7 +1159,7 @@ Because only approximate, non-identifying location data is collected, there is g
 
     function initConsent(){
       console.log("initConsent() ran");
-
+      // Suggestions collapsed on load
       const details = document.getElementById("suggestionsDetails");
       if (details) details.open = false;
 
@@ -1199,19 +1167,24 @@ Because only approximate, non-identifying location data is collected, there is g
       if (!accepted) showConsentModal();
       else hideConsentModal();
 
+      // If already accepted (refresh), count once per session and log page view
       if (accepted) {
-        console.log("Counting page view on load/refresh");
-        incrementAndFetchPageViews();
-        safeLog("page_view", { title: document.title || "" });
+      console.log("Counting page view on load/refresh");
+      incrementAndFetchPageViews();
+
+      // Log page view (Sheet3)
+      safeLog("page_view", { title: document.title || "" });
       }
 
       document.getElementById("btnAccept").addEventListener("click", () => {
         sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
         hideConsentModal();
 
-        console.log("Counting page view on Accept");
-        incrementAndFetchPageViews();
+      console.log("Counting page view on Accept");
+      incrementAndFetchPageViews();  
 
+
+        // ✅ Log page view on accept (Sheet3)
         safeLog("page_view", { title: document.title || "" });
       });
 
@@ -1232,6 +1205,7 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("consentModal").classList.add("show");
       });
 
+      // Keep the +/- indicator in the summary
       if (details) {
         details.addEventListener("toggle", () => {
           const sym = details.querySelector("summary span:last-child");
@@ -1266,7 +1240,9 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
+        // ✅ Log map click (Sheet3)
         safeLog("map_click", { lat: selectedLat, lng: selectedLng });
+
         recalc();
       });
 
@@ -1287,6 +1263,7 @@ Because only approximate, non-identifying location data is collected, there is g
         document.getElementById("coords").textContent =
           `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)} — ${place.formatted_address || ""}`;
 
+        // ✅ Log address selection (Sheet3)
         safeLog("address_select", {
           lat: selectedLat,
           lng: selectedLng,
@@ -1309,7 +1286,9 @@ Because only approximate, non-identifying location data is collected, there is g
           document.getElementById("coords").textContent =
             `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
+          // ✅ Log use my location (Sheet3)
           safeLog("use_my_location", { lat: selectedLat, lng: selectedLng });
+
           recalc();
         }, (err) => {
           safeLog("use_my_location_error", { code: err && err.code, message: err && err.message });
@@ -1327,9 +1306,9 @@ Because only approximate, non-identifying location data is collected, there is g
 
     // init consent & UI
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initConsent);
+    document.addEventListener("DOMContentLoaded", initConsent);
     } else {
-      initConsent();
+    initConsent();
     }
 
     window.initMap = initMap;
