@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,11 +81,63 @@
       font-size: 12px;
       color: var(--muted);
       line-height: 1.7;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
       padding: 14px 18px;
       border: 1px solid var(--border);
       background: var(--surface);
       border-left: 3px solid var(--border);
+    }
+
+    /* ── Seismograph background strip ── */
+    .seismo-wrap {
+      /* Full viewport width — break out of page-wrap padding */
+      position: relative;
+      left: 50%;
+      right: 50%;
+      margin-left: -50vw;
+      margin-right: -50vw;
+      width: 100vw;
+      height: 80px;
+      margin-bottom: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .seismo-wrap canvas {
+      position: absolute;
+      inset: 0;
+      display: block;
+    }
+    /* Metrics row — inside page-wrap, full width */
+    .seismo-metrics {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding: 5px 0 6px;
+    }
+    .seismo-metric {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      border-right: 1px solid var(--border);
+      padding: 0 8px;
+    }
+    .seismo-metric:last-child { border-right: none; }
+    .seismo-metric-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .seismo-metric-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.06em;
     }
 
     /* ── Search bar ── */
@@ -542,6 +595,30 @@
       aligned with TS1170.5.</p>
     </div>
 
+    <!-- ── Seismograph background strip (mouse-driven) ── -->
+    <div class="seismo-wrap" id="seismoStrip">
+      <canvas id="seismoCanvas"></canvas>
+    </div>
+    <!-- Metrics row -->
+    <div class="seismo-metrics">
+      <div class="seismo-metric">
+        <span class="seismo-metric-label">Velocity</span>
+        <span class="seismo-metric-value" id="sVel">0.0 <span style="font-size:8px;font-weight:400;color:var(--muted)">px/s</span></span>
+      </div>
+      <div class="seismo-metric">
+        <span class="seismo-metric-label">Magnitude</span>
+        <span class="seismo-metric-value" id="sMag">0.0</span>
+      </div>
+      <div class="seismo-metric">
+        <span class="seismo-metric-label">Status</span>
+        <span class="seismo-metric-value" id="sStatus">IDLE</span>
+      </div>
+      <div class="seismo-metric">
+        <span class="seismo-metric-label">Time</span>
+        <span class="seismo-metric-value" id="sTime">00:00:00</span>
+      </div>
+    </div>
+
     <div class="search-wrap">
       <input id="addressInput" placeholder="Search address (NZ only)" />
       <button id="useMyLocationBtn" type="button">⊕ My Location</button>
@@ -681,6 +758,163 @@ Because only approximate, non-identifying location data is collected, there is g
       </div>
     </div>
   </div>
+
+  <!-- ── Seismograph background strip script ── -->
+  <script>
+  (function() {
+    var startTime = Date.now();
+    function initSeismo() {
+      var wrap   = document.getElementById('seismoStrip');
+      var canvas = document.getElementById('seismoCanvas');
+      if (!wrap || !canvas) return;
+
+      var dpr = window.devicePixelRatio || 1;
+      var W = 0, H = 0;
+
+      function resize() {
+        W = window.innerWidth;
+        H = wrap.offsetHeight;
+        canvas.width  = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width  = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      var ctx = canvas.getContext('2d');
+      resize();
+      window.addEventListener('resize', resize);
+
+      var MAX = 3200, buf = new Float32Array(MAX).fill(0), SCROLL = 1.5;
+      var head = 0, mouseVel = 0, smoothVel = 0;
+      var prevX = -1, prevY = -1, t = 0, frame = 0;
+
+      window.addEventListener('mousemove', function(e) {
+        if (prevX < 0) { prevX = e.clientX; prevY = e.clientY; return; }
+        var dx = e.clientX - prevX, dy = e.clientY - prevY;
+        mouseVel = Math.sqrt(dx*dx + dy*dy);
+        prevX = e.clientX; prevY = e.clientY;
+      });
+
+      function draw() {
+        var w = W, h = H;
+        if (!w || !h) { requestAnimationFrame(draw); return; }
+
+        smoothVel = smoothVel * 0.88 + mouseVel * 0.12;
+        mouseVel *= 0.75;
+
+        var micro  = Math.sin(t * 2.1) * 0.55 + Math.sin(t * 5.3) * 0.28;
+        var maxAmp = h * 0.36;
+        var signal = (smoothVel * 0.55 + Math.abs(micro) * 0.7) * Math.sin(t * 8 + smoothVel * 0.2) + micro;
+        buf[head % MAX] = Math.max(-maxAmp, Math.min(maxAmp, signal * (maxAmp / 20)));
+        head++;
+
+        // Transparent background — sits over page bg naturally
+        ctx.clearRect(0, 0, w, h);
+
+        var cy = h / 2;
+
+        // Soft fade edges left & right via gradient overlay prep
+        // Baseline
+        ctx.strokeStyle = 'rgba(0,212,255,0.07)';
+        ctx.lineWidth   = 0.6;
+        ctx.setLineDash([4, 10]);
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Glow trace
+        ctx.beginPath();
+        for (var px = 0; px < w; px++) {
+          var sIdx = ((head-1) - Math.floor((w-px)/SCROLL) + MAX*10) % MAX;
+          px === 0 ? ctx.moveTo(px, cy+buf[sIdx]) : ctx.lineTo(px, cy+buf[sIdx]);
+        }
+        ctx.strokeStyle = 'rgba(0,212,255,0.15)';
+        ctx.lineWidth   = 7;
+        ctx.shadowColor = 'rgba(0,212,255,0.4)';
+        ctx.shadowBlur  = 14;
+        ctx.stroke();
+
+        // Sharp fading trace
+        var grad = ctx.createLinearGradient(0, 0, w, 0);
+        grad.addColorStop(0,    'rgba(0,212,255,0)');
+        grad.addColorStop(0.15, 'rgba(0,212,255,0.15)');
+        grad.addColorStop(0.6,  'rgba(0,212,255,0.6)');
+        grad.addColorStop(1,    'rgba(0,212,255,0.95)');
+        ctx.beginPath();
+        for (var px = 0; px < w; px++) {
+          var sIdx = ((head-1) - Math.floor((w-px)/SCROLL) + MAX*10) % MAX;
+          px === 0 ? ctx.moveTo(px, cy+buf[sIdx]) : ctx.lineTo(px, cy+buf[sIdx]);
+        }
+        ctx.strokeStyle = grad;
+        ctx.lineWidth   = 1.4;
+        ctx.shadowColor = 'rgba(0,212,255,0.7)';
+        ctx.shadowBlur  = 4;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Edge fade masks so trace blends into page seamlessly
+        var fadeL = ctx.createLinearGradient(0, 0, w * 0.08, 0);
+        fadeL.addColorStop(0, 'rgba(10,14,20,1)');
+        fadeL.addColorStop(1, 'rgba(10,14,20,0)');
+        ctx.fillStyle = fadeL; ctx.fillRect(0, 0, w * 0.08, h);
+
+        var fadeR = ctx.createLinearGradient(w * 0.92, 0, w, 0);
+        fadeR.addColorStop(0, 'rgba(10,14,20,0)');
+        fadeR.addColorStop(1, 'rgba(10,14,20,1)');
+        ctx.fillStyle = fadeR; ctx.fillRect(w * 0.92, 0, w * 0.08, h);
+
+        // Pen head
+        var hv = buf[(head-1+MAX)%MAX], penX = w - 2, penY = cy + hv;
+        var pg = ctx.createRadialGradient(penX, penY, 0, penX, penY, 10);
+        pg.addColorStop(0, 'rgba(0,212,255,0.85)');
+        pg.addColorStop(1, 'rgba(0,212,255,0)');
+        ctx.beginPath(); ctx.arc(penX, penY, 10, 0, Math.PI*2);
+        ctx.fillStyle = pg; ctx.fill();
+        ctx.beginPath(); ctx.arc(penX, penY, 2.2, 0, Math.PI*2);
+        ctx.fillStyle = '#00d4ff'; ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 8;
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        // Update metrics every 4 frames
+        frame++;
+        if (frame % 4 === 0) {
+          var mag = Math.min(smoothVel / 18, 9.9);
+          var velEl = document.getElementById('sVel');
+          var magEl = document.getElementById('sMag');
+          var stEl  = document.getElementById('sStatus');
+          var tmEl  = document.getElementById('sTime');
+          if (velEl) velEl.innerHTML = smoothVel.toFixed(1) + ' <span style="font-size:8px;font-weight:400;color:var(--muted)">px/s</span>';
+          if (magEl) magEl.textContent = mag.toFixed(1);
+          if (stEl) {
+            var st, sc;
+            if      (smoothVel < 1)  { st = 'IDLE';     sc = 'var(--muted)'; }
+            else if (smoothVel < 8)  { st = 'LOW';      sc = 'var(--accent)'; }
+            else if (smoothVel < 20) { st = 'MODERATE'; sc = '#a8ff3e'; }
+            else if (smoothVel < 40) { st = 'HIGH';     sc = 'var(--accent2)'; }
+            else                     { st = 'SEVERE';   sc = '#ff3030'; }
+            stEl.textContent = st; stEl.style.color = sc;
+          }
+          if (tmEl) {
+            var elapsed = Math.floor((Date.now() - startTime) / 1000);
+            var hh = String(Math.floor(elapsed/3600)).padStart(2,'0');
+            var mm = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+            var ss = String(elapsed%60).padStart(2,'0');
+            tmEl.textContent = hh+':'+mm+':'+ss;
+          }
+        }
+
+        t += 0.016;
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSeismo);
+    } else {
+      initSeismo();
+    }
+  })();
+  </script>
 
   <!-- ── Analytics Module (unchanged) ── -->
   <script>
@@ -1324,5 +1558,6 @@ Because only approximate, non-identifying location data is collected, there is g
       document.head.appendChild(s);
     })();
   </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"46797d4f8b164cea8e9879caaa204b55","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
