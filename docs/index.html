@@ -665,6 +665,7 @@
     .sat-table .sat-selected { background: rgba(0,212,255,0.07); }
     .sat-table .sat-selected td { color: var(--accent); }
     .sat-table .sat-selected td:first-child { color: var(--accent); }
+    .sat-table .sat-envelope-row td { border-bottom: 1px solid var(--accent); background: rgba(255,255,255,0.04); }
   </style>
 </head>
 
@@ -751,7 +752,7 @@
           <div>
             <label class="row" style="margin-bottom:6px;">Period T (seconds)</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <input id="designPeriodInput" type="number" min="0" max="4" step="0.01"
+              <input id="designPeriodInput" type="number" min="0" max="3" step="0.01"
                 placeholder="e.g. 1.00"
                 style="width:140px; padding:9px 12px; background:var(--bg); border:1px solid var(--border);
                        color:var(--text); font-family:'Space Mono',monospace; font-size:13px; outline:none;
@@ -765,7 +766,7 @@
               </button>
             </div>
             <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:0.08em;">
-              Range: 0 – 4.0 s &nbsp;|&nbsp; Plots vertical marker on Sa(T) graph and returns Sa(T*) below
+              Range: 0 – 3.0 s &nbsp;|&nbsp; Plots vertical marker on Sa(T) graph and returns Sa(T*) below
             </div>
           </div>
         </div>
@@ -1315,6 +1316,7 @@ Because only approximate, non-identifying location data is collected, there is g
         x: {
           type: "linear",
           min: 0,
+          max: 3.0,
           ticks: {
             color: "#5a6a7e",
             font: { family: "'Space Mono', monospace", size: 10 },
@@ -1346,7 +1348,7 @@ Because only approximate, non-identifying location data is collected, there is g
     //   T > Td:           Sa = Sa_s * Tc * Td / T^2            (1/T² decay)
     function buildSpectralCurve(pga, sas, tc, td) {
       const pts = [];
-      const T_MAX = 4.0;
+      const T_MAX = 3.0;
       const N_FINE = 300;
 
       for (let i = 0; i <= N_FINE; i++) {
@@ -1371,7 +1373,7 @@ Because only approximate, non-identifying location data is collected, there is g
 
     // Build envelope (max across all site classes at each T step)
     function buildEnvelopeCurve(classParams) {
-      const T_MAX = 4.0;
+      const T_MAX = 3.0;
       const N_FINE = 300;
       const pts = [];
       for (let i = 0; i <= N_FINE; i++) {
@@ -1567,6 +1569,13 @@ Because only approximate, non-identifying location data is collected, there is g
           normalized: true,
           plugins: {
             ...CHART_DEFAULTS.plugins,
+            legend: {
+              ...CHART_DEFAULTS.plugins.legend,
+              labels: {
+                ...CHART_DEFAULTS.plugins.legend.labels,
+                filter: item => !item.text.startsWith("_dot_"),
+              }
+            },
             tooltip: {
               ...CHART_DEFAULTS.plugins.tooltip,
               filter: item => !item.dataset.label.startsWith("_dot_"),
@@ -1586,6 +1595,7 @@ Because only approximate, non-identifying location data is collected, there is g
     // Build the Sa(T*) results table HTML for a given sheet1Row
     function buildSatTable(sheet1Row, tStar, apoe, matchTitle) {
       if (!Number.isFinite(tStar)) return "";
+
       const rows = SITE_CLASSES_ALL.map(cls => {
         const idx = SHEET1_SITECLASS_COLS[cls];
         if (!idx) return null;
@@ -1600,6 +1610,15 @@ Because only approximate, non-identifying location data is collected, there is g
 
       if (!rows.length) return "";
 
+      // Compute envelope row: max Sa(T*) across all classes; Tc and Td shown as range
+      const envSa = Math.max(...rows.map(r => parseFloat(r.sa)));
+      const tcMin = Math.min(...rows.map(r => parseFloat(r.tc)));
+      const tcMax = Math.max(...rows.map(r => parseFloat(r.tc)));
+      const tdMin = Math.min(...rows.map(r => parseFloat(r.td)));
+      const tdMax = Math.max(...rows.map(r => parseFloat(r.td)));
+      const tcStr = tcMin === tcMax ? tcMin.toFixed(2) : tcMin.toFixed(2) + " – " + tcMax.toFixed(2);
+      const tdStr = tdMin === tdMax ? tdMin.toFixed(2) : tdMin.toFixed(2) + " – " + tdMax.toFixed(2);
+
       const isSelected = cls => cls === selectedSiteClass;
 
       return `
@@ -1613,12 +1632,18 @@ Because only approximate, non-identifying location data is collected, there is g
               <thead>
                 <tr>
                   <th>Site Class</th>
-                  <th>Sa(T*) [g]</th>
+                  <th>Sa(T) [g]</th>
                   <th>Tc (s)</th>
                   <th>Td (s)</th>
                 </tr>
               </thead>
               <tbody>
+                <tr class="sat-envelope-row">
+                  <td style="color:#ffffff; font-weight:700;">Envelope</td>
+                  <td style="color:#ffffff; font-weight:700;">${envSa.toFixed(4)}</td>
+                  <td style="color:var(--muted);">${tcStr}</td>
+                  <td style="color:var(--muted);">${tdStr}</td>
+                </tr>
                 ${rows.map(r => `
                   <tr class="${isSelected(r.cls) ? "sat-selected" : ""}">
                     <td>Class ${r.cls}${isSelected(r.cls) ? " ★" : ""}</td>
@@ -1660,7 +1685,7 @@ Because only approximate, non-identifying location data is collected, there is g
 
       input.addEventListener("input", () => {
         const v = parseFloat(input.value);
-        if (Number.isFinite(v) && v >= 0 && v <= 4.0) {
+        if (Number.isFinite(v) && v >= 0 && v <= 3.0) {
           designPeriodT = v;
         } else {
           designPeriodT = null;
