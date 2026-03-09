@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>NZS TS1170.5 Site Parameter Finder</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
   <style>
     /* ── Design tokens ── */
@@ -81,63 +82,11 @@
       font-size: 12px;
       color: var(--muted);
       line-height: 1.7;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
       padding: 14px 18px;
       border: 1px solid var(--border);
       background: var(--surface);
       border-left: 3px solid var(--border);
-    }
-
-    /* ── Seismograph background strip ── */
-    .seismo-wrap {
-      /* Full viewport width — break out of page-wrap padding */
-      position: relative;
-      left: 50%;
-      right: 50%;
-      margin-left: -50vw;
-      margin-right: -50vw;
-      width: 100vw;
-      height: 80px;
-      margin-bottom: 0;
-      overflow: hidden;
-      pointer-events: none;
-    }
-    .seismo-wrap canvas {
-      position: absolute;
-      inset: 0;
-      display: block;
-    }
-    /* Metrics row — inside page-wrap, full width */
-    .seismo-metrics {
-      display: flex;
-      gap: 0;
-      margin-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-      padding: 5px 0 6px;
-    }
-    .seismo-metric {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      border-right: 1px solid var(--border);
-      padding: 0 8px;
-    }
-    .seismo-metric:last-child { border-right: none; }
-    .seismo-metric-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 8px;
-      letter-spacing: 0.18em;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
-    .seismo-metric-value {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: 0.06em;
     }
 
     /* ── Search bar ── */
@@ -577,6 +526,75 @@
       pointer-events: none;
       user-select: none;
     }
+
+    /* ── Charts section ── */
+    .charts-section {
+      margin-bottom: 14px;
+    }
+
+    .charts-section-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px 20px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+    .chart-card.accent2::before {
+      background: linear-gradient(90deg, var(--accent2), transparent);
+    }
+    .chart-card.accent3::before {
+      background: linear-gradient(90deg, var(--accent3), transparent);
+    }
+
+    .chart-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 700px) {
+      .chart-row-2 { grid-template-columns: 1fr; }
+    }
+
+    .chart-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .chart-label strong { color: var(--accent2); }
+    .chart-label.lbl2 strong { color: var(--accent3); }
+    .chart-label.lbl3 strong { color: var(--accent); }
+    .chart-label.lbl4 strong { color: #a78bfa; }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+    .chart-wrap.tall { height: 320px; }
   </style>
 </head>
 
@@ -593,30 +611,6 @@
       parameters for seismic design. Select a project location (address search or map click), then choose
       the appropriate site class, importance level, and design working life to view matched outputs
       aligned with TS1170.5.</p>
-    </div>
-
-    <!-- ── Seismograph background strip (mouse-driven) ── -->
-    <div class="seismo-wrap" id="seismoStrip">
-      <canvas id="seismoCanvas"></canvas>
-    </div>
-    <!-- Metrics row -->
-    <div class="seismo-metrics">
-      <div class="seismo-metric">
-        <span class="seismo-metric-label">Velocity</span>
-        <span class="seismo-metric-value" id="sVel">0.0 <span style="font-size:8px;font-weight:400;color:var(--muted)">px/s</span></span>
-      </div>
-      <div class="seismo-metric">
-        <span class="seismo-metric-label">Magnitude</span>
-        <span class="seismo-metric-value" id="sMag">0.0</span>
-      </div>
-      <div class="seismo-metric">
-        <span class="seismo-metric-label">Status</span>
-        <span class="seismo-metric-value" id="sStatus">IDLE</span>
-      </div>
-      <div class="seismo-metric">
-        <span class="seismo-metric-label">Time</span>
-        <span class="seismo-metric-value" id="sTime">00:00:00</span>
-      </div>
     </div>
 
     <div class="search-wrap">
@@ -677,6 +671,33 @@
       <div class="loading-overlay" id="loadingOverlay">Loading</div>
       <div id="roundedCoordsBar"></div>
       <div id="tablesGrid"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-section" id="chartsSection" style="display:none;">
+      <div class="charts-grid">
+        <!-- PGA full width -->
+        <div class="chart-card">
+          <div class="chart-label">HAZARD SPECTRA — <strong>PGA</strong> VS APOE (ALL SITE CLASSES)</div>
+          <div class="chart-wrap tall"><canvas id="chartPGA"></canvas></div>
+        </div>
+        <!-- Sa(s) full width -->
+        <div class="chart-card accent2">
+          <div class="chart-label lbl2">HAZARD SPECTRA — <strong>Sa,s</strong> VS APOE (ALL SITE CLASSES)</div>
+          <div class="chart-wrap tall"><canvas id="chartSas"></canvas></div>
+        </div>
+        <!-- Tc and Td side by side -->
+        <div class="chart-row-2">
+          <div class="chart-card accent3">
+            <div class="chart-label lbl3">SPECTRAL SHAPE — <strong>Tc</strong> (CORNER PERIOD) VS APOE</div>
+            <div class="chart-wrap"><canvas id="chartTc"></canvas></div>
+          </div>
+          <div class="chart-card" style="--accent-bar:#a78bfa;">
+            <div class="chart-label lbl4">SPECTRAL SHAPE — <strong>Td</strong> (LONG PERIOD) VS APOE</div>
+            <div class="chart-wrap"><canvas id="chartTd"></canvas></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="coming-soon-box">
@@ -758,163 +779,6 @@ Because only approximate, non-identifying location data is collected, there is g
       </div>
     </div>
   </div>
-
-  <!-- ── Seismograph background strip script ── -->
-  <script>
-  (function() {
-    var startTime = Date.now();
-    function initSeismo() {
-      var wrap   = document.getElementById('seismoStrip');
-      var canvas = document.getElementById('seismoCanvas');
-      if (!wrap || !canvas) return;
-
-      var dpr = window.devicePixelRatio || 1;
-      var W = 0, H = 0;
-
-      function resize() {
-        W = window.innerWidth;
-        H = wrap.offsetHeight;
-        canvas.width  = W * dpr;
-        canvas.height = H * dpr;
-        canvas.style.width  = W + 'px';
-        canvas.style.height = H + 'px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-
-      var ctx = canvas.getContext('2d');
-      resize();
-      window.addEventListener('resize', resize);
-
-      var MAX = 3200, buf = new Float32Array(MAX).fill(0), SCROLL = 1.5;
-      var head = 0, mouseVel = 0, smoothVel = 0;
-      var prevX = -1, prevY = -1, t = 0, frame = 0;
-
-      window.addEventListener('mousemove', function(e) {
-        if (prevX < 0) { prevX = e.clientX; prevY = e.clientY; return; }
-        var dx = e.clientX - prevX, dy = e.clientY - prevY;
-        mouseVel = Math.sqrt(dx*dx + dy*dy);
-        prevX = e.clientX; prevY = e.clientY;
-      });
-
-      function draw() {
-        var w = W, h = H;
-        if (!w || !h) { requestAnimationFrame(draw); return; }
-
-        smoothVel = smoothVel * 0.88 + mouseVel * 0.12;
-        mouseVel *= 0.75;
-
-        var micro  = Math.sin(t * 2.1) * 0.55 + Math.sin(t * 5.3) * 0.28;
-        var maxAmp = h * 0.36;
-        var signal = (smoothVel * 0.55 + Math.abs(micro) * 0.7) * Math.sin(t * 8 + smoothVel * 0.2) + micro;
-        buf[head % MAX] = Math.max(-maxAmp, Math.min(maxAmp, signal * (maxAmp / 20)));
-        head++;
-
-        // Transparent background — sits over page bg naturally
-        ctx.clearRect(0, 0, w, h);
-
-        var cy = h / 2;
-
-        // Soft fade edges left & right via gradient overlay prep
-        // Baseline
-        ctx.strokeStyle = 'rgba(0,212,255,0.07)';
-        ctx.lineWidth   = 0.6;
-        ctx.setLineDash([4, 10]);
-        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Glow trace
-        ctx.beginPath();
-        for (var px = 0; px < w; px++) {
-          var sIdx = ((head-1) - Math.floor((w-px)/SCROLL) + MAX*10) % MAX;
-          px === 0 ? ctx.moveTo(px, cy+buf[sIdx]) : ctx.lineTo(px, cy+buf[sIdx]);
-        }
-        ctx.strokeStyle = 'rgba(0,212,255,0.15)';
-        ctx.lineWidth   = 7;
-        ctx.shadowColor = 'rgba(0,212,255,0.4)';
-        ctx.shadowBlur  = 14;
-        ctx.stroke();
-
-        // Sharp fading trace
-        var grad = ctx.createLinearGradient(0, 0, w, 0);
-        grad.addColorStop(0,    'rgba(0,212,255,0)');
-        grad.addColorStop(0.15, 'rgba(0,212,255,0.15)');
-        grad.addColorStop(0.6,  'rgba(0,212,255,0.6)');
-        grad.addColorStop(1,    'rgba(0,212,255,0.95)');
-        ctx.beginPath();
-        for (var px = 0; px < w; px++) {
-          var sIdx = ((head-1) - Math.floor((w-px)/SCROLL) + MAX*10) % MAX;
-          px === 0 ? ctx.moveTo(px, cy+buf[sIdx]) : ctx.lineTo(px, cy+buf[sIdx]);
-        }
-        ctx.strokeStyle = grad;
-        ctx.lineWidth   = 1.4;
-        ctx.shadowColor = 'rgba(0,212,255,0.7)';
-        ctx.shadowBlur  = 4;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Edge fade masks so trace blends into page seamlessly
-        var fadeL = ctx.createLinearGradient(0, 0, w * 0.08, 0);
-        fadeL.addColorStop(0, 'rgba(10,14,20,1)');
-        fadeL.addColorStop(1, 'rgba(10,14,20,0)');
-        ctx.fillStyle = fadeL; ctx.fillRect(0, 0, w * 0.08, h);
-
-        var fadeR = ctx.createLinearGradient(w * 0.92, 0, w, 0);
-        fadeR.addColorStop(0, 'rgba(10,14,20,0)');
-        fadeR.addColorStop(1, 'rgba(10,14,20,1)');
-        ctx.fillStyle = fadeR; ctx.fillRect(w * 0.92, 0, w * 0.08, h);
-
-        // Pen head
-        var hv = buf[(head-1+MAX)%MAX], penX = w - 2, penY = cy + hv;
-        var pg = ctx.createRadialGradient(penX, penY, 0, penX, penY, 10);
-        pg.addColorStop(0, 'rgba(0,212,255,0.85)');
-        pg.addColorStop(1, 'rgba(0,212,255,0)');
-        ctx.beginPath(); ctx.arc(penX, penY, 10, 0, Math.PI*2);
-        ctx.fillStyle = pg; ctx.fill();
-        ctx.beginPath(); ctx.arc(penX, penY, 2.2, 0, Math.PI*2);
-        ctx.fillStyle = '#00d4ff'; ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 8;
-        ctx.fill(); ctx.shadowBlur = 0;
-
-        // Update metrics every 4 frames
-        frame++;
-        if (frame % 4 === 0) {
-          var mag = Math.min(smoothVel / 18, 9.9);
-          var velEl = document.getElementById('sVel');
-          var magEl = document.getElementById('sMag');
-          var stEl  = document.getElementById('sStatus');
-          var tmEl  = document.getElementById('sTime');
-          if (velEl) velEl.innerHTML = smoothVel.toFixed(1) + ' <span style="font-size:8px;font-weight:400;color:var(--muted)">px/s</span>';
-          if (magEl) magEl.textContent = mag.toFixed(1);
-          if (stEl) {
-            var st, sc;
-            if      (smoothVel < 1)  { st = 'IDLE';     sc = 'var(--muted)'; }
-            else if (smoothVel < 8)  { st = 'LOW';      sc = 'var(--accent)'; }
-            else if (smoothVel < 20) { st = 'MODERATE'; sc = '#a8ff3e'; }
-            else if (smoothVel < 40) { st = 'HIGH';     sc = 'var(--accent2)'; }
-            else                     { st = 'SEVERE';   sc = '#ff3030'; }
-            stEl.textContent = st; stEl.style.color = sc;
-          }
-          if (tmEl) {
-            var elapsed = Math.floor((Date.now() - startTime) / 1000);
-            var hh = String(Math.floor(elapsed/3600)).padStart(2,'0');
-            var mm = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
-            var ss = String(elapsed%60).padStart(2,'0');
-            tmEl.textContent = hh+':'+mm+':'+ss;
-          }
-        }
-
-        t += 0.016;
-        requestAnimationFrame(draw);
-      }
-      draw();
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initSeismo);
-    } else {
-      initSeismo();
-    }
-  })();
-  </script>
 
   <!-- ── Analytics Module (unchanged) ── -->
   <script>
@@ -1109,6 +973,7 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("tablesGrid").innerHTML = "";
       const bar = document.getElementById("roundedCoordsBar");
       bar.style.display = "none"; bar.textContent = "";
+      renderCharts([]);
     }
 
     function applyTablesGridColumns(n){
@@ -1321,6 +1186,151 @@ Because only approximate, non-identifying location data is collected, there is g
       `;
     }
 
+    // ── Chart instances ──
+    const _charts = {};
+
+    const SITE_CLASSES_ALL = ["I","II","III","IV","V","VI"];
+    const CLASS_COLORS = [
+      "#00d4ff", // cyan   – I
+      "#ff6b35", // orange – II
+      "#a8ff3e", // lime   – III
+      "#ff2d9b", // pink   – IV
+      "#ffd700", // gold   – V
+      "#a78bfa", // purple – VI
+    ];
+
+    const CHART_DEFAULTS = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: "#8a9ab0",
+            font: { family: "'Space Mono', monospace", size: 11 },
+            boxWidth: 10,
+            padding: 14,
+          }
+        },
+        tooltip: {
+          backgroundColor: "#111620",
+          borderColor: "#1e2a3a",
+          borderWidth: 1,
+          titleColor: "#00d4ff",
+          bodyColor: "#e8edf3",
+          titleFont: { family: "'Space Mono', monospace", size: 11 },
+          bodyFont: { family: "'Space Mono', monospace", size: 11 },
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#5a6a7e", font: { family: "'Space Mono', monospace", size: 10 } },
+          grid: { color: "rgba(30,42,58,0.9)" },
+        },
+        y: {
+          ticks: { color: "#5a6a7e", font: { family: "'Space Mono', monospace", size: 10 } },
+          grid: { color: "rgba(30,42,58,0.9)" },
+        }
+      }
+    };
+
+    function makeScaleOpts(xLabel, yLabel) {
+      return {
+        x: {
+          ...CHART_DEFAULTS.scales.x,
+          title: { display: true, text: xLabel, color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
+        },
+        y: {
+          ...CHART_DEFAULTS.scales.y,
+          title: { display: true, text: yLabel, color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
+        }
+      };
+    }
+
+    // Build chart datasets: one line per site class, x = apoe labels, y = param value
+    function buildChartDatasets(apoeRows, param) {
+      // apoeRows: array of { apoe, row } sorted by apoe (already filtered for this location)
+      // We show ALL site classes as separate lines
+      return SITE_CLASSES_ALL.map((cls, ci) => {
+        const idx = SHEET1_SITECLASS_COLS[cls];
+        return {
+          label: "Class " + cls,
+          data: apoeRows.map(item => {
+            if (!idx) return null;
+            const v = item.row[idx[param]];
+            const n = parseFloat(v);
+            return Number.isFinite(n) ? n : null;
+          }),
+          borderColor: CLASS_COLORS[ci],
+          backgroundColor: CLASS_COLORS[ci] + "28",
+          pointBackgroundColor: "transparent",
+          pointBorderColor: CLASS_COLORS[ci],
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          tension: 0.3,
+          borderWidth: 2,
+          fill: false,
+        };
+      });
+    }
+
+    function destroyChart(id) {
+      if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+    }
+
+    function makeChart(canvasId, labels, datasets, xLabel, yLabel) {
+      destroyChart(canvasId);
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) return;
+      _charts[canvasId] = new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          ...CHART_DEFAULTS,
+          scales: makeScaleOpts(xLabel, yLabel),
+        }
+      });
+    }
+
+    // Sort apoe strings numerically: "1/2500" → 1/2500 → smallest first (most frequent)
+    function apoeToNum(s) {
+      const m = String(s).match(/1[\/:](\d+)/);
+      return m ? parseInt(m[1], 10) : 99999;
+    }
+
+    function renderCharts(allMatchedRows) {
+      const section = document.getElementById("chartsSection");
+      if (!allMatchedRows || !allMatchedRows.length) {
+        if (section) section.style.display = "none";
+        ["chartPGA","chartSas","chartTc","chartTd"].forEach(destroyChart);
+        return;
+      }
+
+      // De-dup by apoe and sort ascending (1/25 first → 1/2500 last)
+      const seen = new Set();
+      const apoeRows = [];
+      for (const item of allMatchedRows) {
+        const apoe = normalize(item.row[SHEET1_APOE_COL_INDEX]);
+        if (!apoe || seen.has(apoe.toLowerCase())) continue;
+        seen.add(apoe.toLowerCase());
+        apoeRows.push({ apoe, row: item.row });
+      }
+      apoeRows.sort((a, b) => apoeToNum(a.apoe) - apoeToNum(b.apoe));
+
+      if (!apoeRows.length) {
+        if (section) section.style.display = "none";
+        return;
+      }
+
+      if (section) section.style.display = "";
+
+      const labels = apoeRows.map(r => r.apoe);
+
+      makeChart("chartPGA", labels, buildChartDatasets(apoeRows, "PGA"), "APoE",        "PGA (g)");
+      makeChart("chartSas", labels, buildChartDatasets(apoeRows, "Sa"),  "APoE",        "Sa,s (g)");
+      makeChart("chartTc",  labels, buildChartDatasets(apoeRows, "Tc"),  "APoE",        "Tc (s)");
+      makeChart("chartTd",  labels, buildChartDatasets(apoeRows, "Td"),  "APoE",        "Td (s)");
+    }
+
     function renderTablesFullWidth(filtered){
       if (!hasAllInputs()) return;
       if (isSpecialCaseSelected()){ clearResults(); showSpecialCaseInTablesArea(); return; }
@@ -1331,6 +1341,8 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("tablesGrid").innerHTML = filtered.map(x =>
         `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
       ).join("");
+      // Charts — use ALL matched rows for this location (all APoEs), not just filtered
+      renderCharts(matchedSheet1Rows);
     }
 
     async function writeMatchedRowsToSheet7(rows){
@@ -1558,6 +1570,5 @@ Because only approximate, non-identifying location data is collected, there is g
       document.head.appendChild(s);
     })();
   </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"46797d4f8b164cea8e9879caaa204b55","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
