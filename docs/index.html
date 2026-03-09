@@ -617,6 +617,54 @@
       position: relative;
       height: 360px;
     }
+
+    /* ── Sa(T*) results table ── */
+    .sat-results {
+      margin-top: 14px;
+      display: none;
+    }
+    .sat-results.show { display: block; }
+
+    .sat-results-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .sat-results-title strong { color: var(--accent2); }
+
+    .sat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+    }
+    .sat-table th {
+      background: #0a0e14;
+      padding: 9px 12px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      font-weight: 700;
+    }
+    .sat-table th:first-child { text-align: left; }
+    .sat-table td {
+      padding: 9px 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .sat-table td:first-child { text-align: left; color: var(--accent); font-weight: 700; }
+    .sat-table tr:hover td { background: rgba(0,212,255,0.04); }
+    .sat-table .sat-selected { background: rgba(0,212,255,0.07); }
+    .sat-table .sat-selected td { color: var(--accent); }
+    .sat-table .sat-selected td:first-child { color: var(--accent); }
   </style>
 </head>
 
@@ -693,6 +741,35 @@
       <div class="loading-overlay" id="loadingOverlay">Loading</div>
       <div id="roundedCoordsBar"></div>
       <div id="tablesGrid"></div>
+    </div>
+
+    <!-- Design Period Input -->
+    <div class="t-input-section" id="tInputSection" style="display:none;">
+      <div class="option-block" style="margin-bottom:14px;">
+        <h3>Design Period</h3>
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+          <div>
+            <label class="row" style="margin-bottom:6px;">Period T (seconds)</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input id="designPeriodInput" type="number" min="0" max="4" step="0.01"
+                placeholder="e.g. 1.00"
+                style="width:140px; padding:9px 12px; background:var(--bg); border:1px solid var(--border);
+                       color:var(--text); font-family:'Space Mono',monospace; font-size:13px; outline:none;
+                       transition:border-color 0.15s;"
+                onmouseover="" />
+              <button id="clearPeriodBtn" type="button"
+                style="padding:9px 14px; background:var(--surface); border:1px solid var(--border);
+                       color:var(--muted); font-family:'Space Mono',monospace; font-size:11px;
+                       cursor:pointer; letter-spacing:0.06em; transition:all 0.15s;">
+                Clear
+              </button>
+            </div>
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:0.08em;">
+              Range: 0 – 4.0 s &nbsp;|&nbsp; Plots vertical marker on Sa(T) graph and returns Sa(T*) below
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Charts -->
@@ -979,6 +1056,8 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("tablesGrid").innerHTML = "";
       const bar = document.getElementById("roundedCoordsBar");
       bar.style.display = "none"; bar.textContent = "";
+      const tSection = document.getElementById("tInputSection");
+      if (tSection) tSection.style.display = "none";
       renderCharts([], []);
     }
 
@@ -1342,6 +1421,19 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     // Build a single Sa(T) chart inside canvasId for one APoE row
+    // ── Design period state ──
+    let designPeriodT = null;  // null = not set
+
+    // Evaluate Sa(T) for given params at a specific T value
+    function evalSaT(pga, sas, tc, td, t) {
+      if (!Number.isFinite(t) || t < 0) return null;
+      if (t === 0)       return pga;
+      if (t < 0.1)       return pga + (sas - pga) * (t / 0.1);
+      if (t <= tc)       return sas;
+      if (t <= td)       return sas * tc / t;
+      return sas * tc * td / (t * t);
+    }
+
     function buildSpectraChart(canvasId, apoe, matchTitle, sheet1Row) {
       destroyChart(canvasId);
       const ctx = document.getElementById(canvasId);
@@ -1361,7 +1453,6 @@ Because only approximate, non-identifying location data is collected, there is g
         }
       });
 
-      // Datasets: envelope first, then each class
       const datasets = [];
 
       // Envelope
@@ -1380,7 +1471,7 @@ Because only approximate, non-identifying location data is collected, there is g
         });
       }
 
-      // Per-class curves
+      // Per-class spectral curves
       classParams.forEach((p, ci) => {
         const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
         const color    = CLASS_COLORS[colorIdx] || "#888";
@@ -1397,7 +1488,7 @@ Because only approximate, non-identifying location data is collected, there is g
         });
       });
 
-      // Sa(T) = Sa_s line for selected site class (highlight)
+      // Sa,s reference line for selected site class
       if (selectedSiteClass) {
         const idx = SHEET1_SITECLASS_COLS[selectedSiteClass];
         if (idx) {
@@ -1407,7 +1498,7 @@ Because only approximate, non-identifying location data is collected, there is g
             datasets.push({
               label: "Sa,s (Class " + selectedSiteClass + ")",
               data: [{ x: 0, y: sas }, { x: tc, y: sas }],
-              borderColor: "rgba(255,255,255,0.35)",
+              borderColor: "rgba(255,255,255,0.3)",
               backgroundColor: "transparent",
               borderWidth: 1,
               borderDash: [3, 3],
@@ -1420,6 +1511,53 @@ Because only approximate, non-identifying location data is collected, there is g
         }
       }
 
+      // T* vertical line + dot markers on each curve
+      const tStar = designPeriodT;
+      const tStarValid = Number.isFinite(tStar) && tStar >= 0 && tStar <= 4.0;
+
+      if (tStarValid) {
+        // Compute max y at T* for the vertical line extent
+        let maxY = 0;
+        classParams.forEach(p => {
+          const v = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
+          if (v > maxY) maxY = v;
+        });
+
+        // Vertical line (two points, same x)
+        datasets.push({
+          label: "T* = " + tStar.toFixed(2) + " s",
+          data: [{ x: tStar, y: 0 }, { x: tStar, y: maxY * 1.05 }],
+          borderColor: "#ff2d9b",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+          order: -2,
+        });
+
+        // Dot markers at intersection with each class curve
+        classParams.forEach((p, ci) => {
+          const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
+          const color    = CLASS_COLORS[colorIdx] || "#888";
+          const sa       = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
+          if (!Number.isFinite(sa)) return;
+          datasets.push({
+            label: "_dot_" + p.cls,   // prefixed with _ so tooltip can skip
+            data: [{ x: tStar, y: sa }],
+            borderColor: color,
+            backgroundColor: color,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+            pointStyle: "circle",
+            showLine: false,
+            fill: false,
+            order: -3,
+          });
+        });
+      }
+
       _charts[canvasId] = new Chart(ctx, {
         type: "line",
         data: { datasets },
@@ -1427,7 +1565,123 @@ Because only approximate, non-identifying location data is collected, there is g
           ...CHART_DEFAULTS,
           parsing: false,
           normalized: true,
+          plugins: {
+            ...CHART_DEFAULTS.plugins,
+            tooltip: {
+              ...CHART_DEFAULTS.plugins.tooltip,
+              filter: item => !item.dataset.label.startsWith("_dot_"),
+              callbacks: {
+                title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
+                label: item  => {
+                  if (item.dataset.label.startsWith("_dot_")) return null;
+                  return " " + item.dataset.label + ": " + Number(item.parsed.y).toFixed(4) + " g";
+                },
+              }
+            }
+          }
         }
+      });
+    }
+
+    // Build the Sa(T*) results table HTML for a given sheet1Row
+    function buildSatTable(sheet1Row, tStar, apoe, matchTitle) {
+      if (!Number.isFinite(tStar)) return "";
+      const rows = SITE_CLASSES_ALL.map(cls => {
+        const idx = SHEET1_SITECLASS_COLS[cls];
+        if (!idx) return null;
+        const pga = parseFloat(sheet1Row[idx.PGA]);
+        const sas = parseFloat(sheet1Row[idx.Sa]);
+        const tc  = parseFloat(sheet1Row[idx.Tc]);
+        const td  = parseFloat(sheet1Row[idx.Td]);
+        if (![pga,sas,tc,td].every(Number.isFinite)) return null;
+        const sa  = evalSaT(pga, sas, tc, td, tStar);
+        return { cls, sa: sa.toFixed(4), tc: tc.toFixed(2), td: td.toFixed(2) };
+      }).filter(Boolean);
+
+      if (!rows.length) return "";
+
+      const isSelected = cls => cls === selectedSiteClass;
+
+      return `
+        <div class="sat-results show">
+          <div class="sat-results-title">
+            Sa(T*) at <strong>T* = ${tStar.toFixed(2)} s</strong>
+            &nbsp;|&nbsp; APoE ${apoe}${matchTitle ? " &nbsp;|&nbsp; " + matchTitle : ""}
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="sat-table">
+              <thead>
+                <tr>
+                  <th>Site Class</th>
+                  <th>Sa(T*) [g]</th>
+                  <th>Tc (s)</th>
+                  <th>Td (s)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r => `
+                  <tr class="${isSelected(r.cls) ? "sat-selected" : ""}">
+                    <td>Class ${r.cls}${isSelected(r.cls) ? " ★" : ""}</td>
+                    <td>${r.sa}</td>
+                    <td>${r.tc}</td>
+                    <td>${r.td}</td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    // Track current chart items so T* updates can rebuild charts without re-fetching data
+    let _currentChartItems = [];
+
+    function rebuildAllSpectraCharts() {
+      _currentChartItems.forEach((item, idx) => {
+        const canvasId   = "spectraCanvas_" + idx;
+        const satTableId = "satTable_" + idx;
+        buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
+        // Update Sa(T*) table
+        const satEl = document.getElementById(satTableId);
+        if (satEl) {
+          satEl.outerHTML = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle)
+            .replace('<div class="sat-results', `<div id="satTable_${idx}" class="sat-results`);
+        }
+      });
+    }
+
+    function wireDesignPeriodInput() {
+      const input   = document.getElementById("designPeriodInput");
+      const clearBtn = document.getElementById("clearPeriodBtn");
+      if (!input) return;
+
+      // Focus style
+      input.addEventListener("focus",  () => input.style.borderColor = "var(--accent)");
+      input.addEventListener("blur",   () => input.style.borderColor = "var(--border)");
+
+      input.addEventListener("input", () => {
+        const v = parseFloat(input.value);
+        if (Number.isFinite(v) && v >= 0 && v <= 4.0) {
+          designPeriodT = v;
+        } else {
+          designPeriodT = null;
+        }
+        rebuildAllSpectraCharts();
+      });
+
+      clearBtn.addEventListener("click", () => {
+        input.value   = "";
+        designPeriodT = null;
+        rebuildAllSpectraCharts();
+        clearBtn.style.borderColor = "";
+        clearBtn.style.color = "";
+      });
+      clearBtn.addEventListener("mouseover", () => {
+        clearBtn.style.borderColor = "var(--accent2)";
+        clearBtn.style.color = "var(--accent2)";
+      });
+      clearBtn.addEventListener("mouseout", () => {
+        clearBtn.style.borderColor = "";
+        clearBtn.style.color = "";
       });
     }
 
@@ -1435,25 +1689,27 @@ Because only approximate, non-identifying location data is collected, there is g
       const section  = document.getElementById("chartsSection");
       const grid     = document.getElementById("spectraChartsGrid");
       const tabsEl   = document.getElementById("apoeTabs");
+      const tSection = document.getElementById("tInputSection");
 
       destroyAllSpectraCharts();
+      _currentChartItems = [];
       if (grid)   grid.innerHTML   = "";
       if (tabsEl) tabsEl.innerHTML = "";
 
       if (!allMatchedRows || !allMatchedRows.length || !filteredRows || !filteredRows.length) {
-        if (section) section.style.display = "none";
+        if (section)  section.style.display  = "none";
+        if (tSection) tSection.style.display = "none";
         return;
       }
 
-      // Build a lookup: apoe (lowercase) → sheet1Row, from ALL matched rows
+      // Build lookup: apoe → sheet1Row from ALL matched rows
       const apoeRowMap = new Map();
       for (const item of allMatchedRows) {
         const apoe = normalize(item.row[SHEET1_APOE_COL_INDEX]).toLowerCase();
         if (apoe && !apoeRowMap.has(apoe)) apoeRowMap.set(apoe, item.row);
       }
 
-      // Use filteredRows (ULS/SLS1/SLS2 as applicable) — these are the design APoEs
-      // De-dup and sort
+      // De-dup filtered rows and sort by RP
       const seen = new Set();
       const chartItems = [];
       for (const f of filteredRows) {
@@ -1463,24 +1719,30 @@ Because only approximate, non-identifying location data is collected, there is g
         const row = apoeRowMap.get(apoe);
         if (row) chartItems.push({ apoe: f.apoe, matchTitle: f.matchTitle, row });
       }
-      // Sort by RP ascending (1/25 → 1/2500)
       chartItems.sort((a, b) => apoeToNum(a.apoe) - apoeToNum(b.apoe));
 
-      if (!chartItems.length) { if (section) section.style.display = "none"; return; }
+      if (!chartItems.length) {
+        if (section)  section.style.display  = "none";
+        if (tSection) tSection.style.display = "none";
+        return;
+      }
 
-      if (section) section.style.display = "";
+      _currentChartItems = chartItems;
+      if (section)  section.style.display  = "";
+      if (tSection) tSection.style.display = "";
 
       // Build one panel + tab per APoE
       chartItems.forEach((item, idx) => {
         const styleClass = titleToStyleClass(item.matchTitle);
-        const panelId    = "spectraPanel_" + idx;
+        const panelId    = "spectraPanel_"  + idx;
         const canvasId   = "spectraCanvas_" + idx;
+        const satTableId = "satTable_"      + idx;
         const isFirst    = idx === 0;
 
         // Tab button
         const tab = document.createElement("button");
-        tab.className    = "apoe-tab " + styleClass + "-style" + (isFirst ? " active" : "");
-        tab.textContent  = (item.matchTitle ? item.matchTitle + " — " : "") + item.apoe;
+        tab.className     = "apoe-tab " + styleClass + "-style" + (isFirst ? " active" : "");
+        tab.textContent   = (item.matchTitle ? item.matchTitle + " — " : "") + item.apoe;
         tab.dataset.panel = panelId;
         tab.addEventListener("click", () => {
           document.querySelectorAll(".apoe-tab").forEach(t => t.classList.remove("active"));
@@ -1490,11 +1752,12 @@ Because only approximate, non-identifying location data is collected, there is g
         });
         tabsEl.appendChild(tab);
 
-        // Panel + chart card
+        // Panel wrapper
         const panel = document.createElement("div");
         panel.id        = panelId;
         panel.className = "spectra-panel" + (isFirst ? " active" : "");
 
+        // Chart card
         const card = document.createElement("div");
         card.className = "chart-card cc-" + styleClass;
 
@@ -1505,19 +1768,37 @@ Because only approximate, non-identifying location data is collected, there is g
 
         const wrap = document.createElement("div");
         wrap.className = "chart-wrap";
-
         const canvas = document.createElement("canvas");
         canvas.id = canvasId;
-
         wrap.appendChild(canvas);
         card.appendChild(lbl);
         card.appendChild(wrap);
         panel.appendChild(card);
+
+        // Sa(T*) table placeholder (rendered after chart)
+        const satWrap = document.createElement("div");
+        satWrap.id = satTableId;
+        panel.appendChild(satWrap);
+
         grid.appendChild(panel);
 
-        // Render chart (deferred so canvas is in DOM)
-        requestAnimationFrame(() => buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row));
+        // Render chart + initial table (deferred so canvas is in DOM)
+        requestAnimationFrame(() => {
+          buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
+          const html = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle);
+          if (html) satWrap.outerHTML = html.replace(
+            '<div class="sat-results',
+            `<div id="${satTableId}" class="sat-results`
+          );
+        });
       });
+
+      // Wire T input once (guard against double-wiring)
+      if (!document.getElementById("designPeriodInput")?._wired) {
+        wireDesignPeriodInput();
+        const inp = document.getElementById("designPeriodInput");
+        if (inp) inp._wired = true;
+      }
     }
 
     function renderTablesFullWidth(filtered){
