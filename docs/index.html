@@ -549,40 +549,41 @@
       white-space: nowrap;
     }
 
-    /* APoE tab strip */
-    .apoe-tabs {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .apoe-tab {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      padding: 5px 13px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--muted);
-      cursor: pointer;
-      letter-spacing: 0.06em;
-      transition: all 0.15s;
-    }
-    .apoe-tab:hover { border-color: var(--accent); color: var(--accent); }
-    .apoe-tab.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: var(--bg);
-      font-weight: 700;
-    }
-    .apoe-tab.uls-style  { border-color: var(--accent);  color: var(--accent); }
-    .apoe-tab.sls1-style { border-color: var(--accent3); color: var(--accent3); }
-    .apoe-tab.sls2-style { border-color: var(--accent2); color: var(--accent2); }
-    .apoe-tab.uls-style.active  { background: var(--accent);  border-color: var(--accent);  color: var(--bg); }
-    .apoe-tab.sls1-style.active { background: var(--accent3); border-color: var(--accent3); color: var(--bg); }
-    .apoe-tab.sls2-style.active { background: var(--accent2); border-color: var(--accent2); color: var(--bg); }
+    /* APoE tab strip — kept for potential future use but hidden */
+    .apoe-tabs { display: none; }
 
-    /* Spectra chart grid: shown one-at-a-time via active class */
-    .spectra-panel { display: none; }
-    .spectra-panel.active { display: block; }
+    /* Spectra layout: stacked row-groups, each group = chart row + table row */
+    .spectra-row-group {
+      margin-bottom: 20px;
+    }
+
+    .spectra-chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .spectra-chart-row.single {
+      grid-template-columns: 1fr;
+    }
+    @media (max-width: 800px) {
+      .spectra-chart-row { grid-template-columns: 1fr; }
+    }
+
+    .spectra-table-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .spectra-table-row.single {
+      grid-template-columns: 1fr;
+    }
+    @media (max-width: 800px) {
+      .spectra-table-row { grid-template-columns: 1fr; }
+    }
+
+    /* Individual spectra cell (chart card + its table below) */
+    .spectra-cell { display: flex; flex-direction: column; gap: 0; }
 
     .chart-card {
       background: var(--surface);
@@ -779,10 +780,9 @@
     <div class="charts-section" id="chartsSection" style="display:none;">
       <div class="charts-section-header">
         <div class="charts-section-title">Sa(T) Design Spectra — All Site Classes</div>
-        <div class="apoe-tabs" id="apoeTabs"></div>
       </div>
       <div class="spectra-charts-wrap" id="spectraChartsGrid">
-        <!-- dynamically populated: one chart-card per APoE -->
+        <!-- dynamically populated: paired rows of [charts] then [tables] -->
       </div>
     </div>
 
@@ -1783,13 +1783,11 @@ Because only approximate, non-identifying location data is collected, there is g
     function renderCharts(allMatchedRows, filteredRows) {
       const section  = document.getElementById("chartsSection");
       const grid     = document.getElementById("spectraChartsGrid");
-      const tabsEl   = document.getElementById("apoeTabs");
       const tSection = document.getElementById("tInputSection");
 
       destroyAllSpectraCharts();
       _currentChartItems = [];
-      if (grid)   grid.innerHTML   = "";
-      if (tabsEl) tabsEl.innerHTML = "";
+      if (grid) grid.innerHTML = "";
 
       if (!allMatchedRows || !allMatchedRows.length || !filteredRows || !filteredRows.length) {
         if (section)  section.style.display  = "none";
@@ -1826,69 +1824,73 @@ Because only approximate, non-identifying location data is collected, there is g
       if (section)  section.style.display  = "";
       if (tSection) tSection.style.display = "";
 
-      // Build one panel + tab per APoE
-      chartItems.forEach((item, idx) => {
-        const styleClass = titleToStyleClass(item.matchTitle);
-        const panelId    = "spectraPanel_"  + idx;
-        const canvasId   = "spectraCanvas_" + idx;
-        const satTableId = "satTable_"      + idx;
-        const isFirst    = idx === 0;
+      // ── Build paired row-groups: 2 charts per row, then 2 tables per row ──
+      // Chunk chartItems into pairs
+      for (let pairStart = 0; pairStart < chartItems.length; pairStart += 2) {
+        const pair      = chartItems.slice(pairStart, pairStart + 2);
+        const isSingle  = pair.length === 1;
 
-        // Tab button
-        const tab = document.createElement("button");
-        tab.className     = "apoe-tab " + styleClass + "-style" + (isFirst ? " active" : "");
-        tab.textContent   = (item.matchTitle ? item.matchTitle + " — " : "") + item.apoe;
-        tab.dataset.panel = panelId;
-        tab.addEventListener("click", () => {
-          document.querySelectorAll(".apoe-tab").forEach(t => t.classList.remove("active"));
-          document.querySelectorAll(".spectra-panel").forEach(p => p.classList.remove("active"));
-          tab.classList.add("active");
-          document.getElementById(panelId).classList.add("active");
+        // Row-group wrapper
+        const rowGroup = document.createElement("div");
+        rowGroup.className = "spectra-row-group";
+
+        // ── Chart row ──
+        const chartRow = document.createElement("div");
+        chartRow.className = "spectra-chart-row" + (isSingle ? " single" : "");
+
+        // ── Table row ──
+        const tableRow = document.createElement("div");
+        tableRow.className = "spectra-table-row" + (isSingle ? " single" : "");
+
+        pair.forEach((item, pairIdx) => {
+          const globalIdx  = pairStart + pairIdx;
+          const styleClass = titleToStyleClass(item.matchTitle);
+          const canvasId   = "spectraCanvas_" + globalIdx;
+          const satTableId = "satTable_"      + globalIdx;
+
+          // ── Chart card ──
+          const card = document.createElement("div");
+          card.className = "chart-card cc-" + styleClass;
+
+          const lbl = document.createElement("div");
+          lbl.className = "chart-label cc-" + styleClass;
+          lbl.innerHTML = "SPECTRAL ACCELERATION Sa(T) — <strong>APoE " + item.apoe + "</strong>"
+                        + (item.matchTitle ? " &nbsp;|&nbsp; " + item.matchTitle : "");
+
+          const wrap = document.createElement("div");
+          wrap.className = "chart-wrap";
+          const canvas = document.createElement("canvas");
+          canvas.id = canvasId;
+          wrap.appendChild(canvas);
+          card.appendChild(lbl);
+          card.appendChild(wrap);
+          chartRow.appendChild(card);
+
+          // ── Table placeholder ──
+          const satWrap = document.createElement("div");
+          satWrap.id = satTableId;
+          tableRow.appendChild(satWrap);
+
+          // Render chart + table deferred
+          requestAnimationFrame(() => {
+            buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
+            const html = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle);
+            if (html) {
+              const el = document.getElementById(satTableId);
+              if (el) el.outerHTML = html.replace(
+                '<div class="sat-results',
+                `<div id="${satTableId}" class="sat-results`
+              );
+            }
+          });
         });
-        tabsEl.appendChild(tab);
 
-        // Panel wrapper
-        const panel = document.createElement("div");
-        panel.id        = panelId;
-        panel.className = "spectra-panel" + (isFirst ? " active" : "");
+        rowGroup.appendChild(chartRow);
+        rowGroup.appendChild(tableRow);
+        grid.appendChild(rowGroup);
+      }
 
-        // Chart card
-        const card = document.createElement("div");
-        card.className = "chart-card cc-" + styleClass;
-
-        const lbl = document.createElement("div");
-        lbl.className = "chart-label cc-" + styleClass;
-        lbl.innerHTML = "SPECTRAL ACCELERATION Sa(T) — <strong>APoE " + item.apoe + "</strong>"
-                      + (item.matchTitle ? " &nbsp;|&nbsp; " + item.matchTitle : "");
-
-        const wrap = document.createElement("div");
-        wrap.className = "chart-wrap";
-        const canvas = document.createElement("canvas");
-        canvas.id = canvasId;
-        wrap.appendChild(canvas);
-        card.appendChild(lbl);
-        card.appendChild(wrap);
-        panel.appendChild(card);
-
-        // Sa(T*) table placeholder (rendered after chart)
-        const satWrap = document.createElement("div");
-        satWrap.id = satTableId;
-        panel.appendChild(satWrap);
-
-        grid.appendChild(panel);
-
-        // Render chart + initial table (deferred so canvas is in DOM)
-        requestAnimationFrame(() => {
-          buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
-          const html = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle);
-          if (html) satWrap.outerHTML = html.replace(
-            '<div class="sat-results',
-            `<div id="${satTableId}" class="sat-results`
-          );
-        });
-      });
-
-      // Wire T input once (guard against double-wiring)
+      // Wire T input once
       if (!document.getElementById("designPeriodInput")?._wired) {
         wireDesignPeriodInput();
         const inp = document.getElementById("designPeriodInput");
