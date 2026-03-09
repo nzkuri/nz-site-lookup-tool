@@ -666,6 +666,7 @@
     .sat-table .sat-selected td { color: var(--accent); }
     .sat-table .sat-selected td:first-child { color: var(--accent); }
     .sat-table .sat-envelope-row td { border-bottom: 1px solid var(--accent); background: rgba(255,255,255,0.04); }
+    .sat-table .sat-envelope-row.sat-selected td { background: rgba(0,212,255,0.07); }
   </style>
 </head>
 
@@ -705,6 +706,7 @@
               <button type="button" data-value="IV">IV</button>
               <button type="button" data-value="V">V</button>
               <button type="button" data-value="VI">VI</button>
+              <button type="button" data-value="Envelope">Envelope</button>
             </div>
           </div>
 
@@ -1238,12 +1240,56 @@ Because only approximate, non-identifying location data is collected, there is g
 
     function buildThreeRowTable(sheet1Row, apoe, matchTitle){
       const sc      = selectedSiteClass;
+      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
+
+      if (sc === "Envelope") {
+        // Max across all site classes for each parameter
+        let maxPGA = -Infinity, maxSa = -Infinity, maxTc = -Infinity, maxTd = -Infinity;
+        SITE_CLASSES_ALL.forEach(cls => {
+          const idx = SHEET1_SITECLASS_COLS[cls];
+          if (!idx) return;
+          const pga = parseFloat(sheet1Row[idx.PGA]);
+          const sa  = parseFloat(sheet1Row[idx.Sa]);
+          const tc  = parseFloat(sheet1Row[idx.Tc]);
+          const td  = parseFloat(sheet1Row[idx.Td]);
+          if (Number.isFinite(pga) && pga > maxPGA) maxPGA = pga;
+          if (Number.isFinite(sa)  && sa  > maxSa)  maxSa  = sa;
+          if (Number.isFinite(tc)  && tc  > maxTc)  maxTc  = tc;
+          if (Number.isFinite(td)  && td  > maxTd)  maxTd  = td;
+        });
+        const fmt = v => Number.isFinite(v) ? (Math.round(v * 100) / 100).toString() : "";
+        return `
+          <table class="sc-table">
+            <thead>
+              <tr>
+                <th class="left-head">${topLeft}</th>
+                <th colspan="4">Envelope (Max)</th>
+              </tr>
+              <tr>
+                <th class="subhead left-head">apoe</th>
+                <th class="subhead">PGA</th>
+                <th class="subhead">Sa,s</th>
+                <th class="subhead">Tc</th>
+                <th class="subhead">Td</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="left-cell">${apoe || "(APOE blank)"}</td>
+                <td>${fmt(maxPGA)}</td>
+                <td>${fmt(maxSa)}</td>
+                <td>${fmt(maxTc)}</td>
+                <td>${fmt(maxTd)}</td>
+              </tr>
+            </tbody>
+          </table>`;
+      }
+
       const idx     = SHEET1_SITECLASS_COLS[sc];
       const pga     = idx ? safeCell(sheet1Row[idx.PGA]) : "";
       const sa      = idx ? safeCell(sheet1Row[idx.Sa])  : "";
       const tc      = idx ? safeCell(sheet1Row[idx.Tc])  : "";
       const td      = idx ? safeCell(sheet1Row[idx.Td])  : "";
-      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
       return `
         <table class="sc-table">
           <thead>
@@ -1268,8 +1314,7 @@ Because only approximate, non-identifying location data is collected, there is g
               <td>${td}</td>
             </tr>
           </tbody>
-        </table>
-      `;
+        </table>`;
     }
 
     // ── Chart instances ──
@@ -1490,8 +1535,29 @@ Because only approximate, non-identifying location data is collected, there is g
         });
       });
 
-      // Sa,s reference line for selected site class
-      if (selectedSiteClass) {
+      // Sa,s reference line — for selected site class, or envelope max
+      if (selectedSiteClass === "Envelope") {
+        // Use the max Sa,s and the max Tc across all classes
+        let maxSas = -Infinity, maxTc = -Infinity;
+        classParams.forEach(p => {
+          if (p.sas > maxSas) maxSas = p.sas;
+          if (p.tc  > maxTc)  maxTc  = p.tc;
+        });
+        if (Number.isFinite(maxSas) && Number.isFinite(maxTc)) {
+          datasets.push({
+            label: "Sa,s (Envelope)",
+            data: [{ x: 0, y: maxSas }, { x: maxTc, y: maxSas }],
+            borderColor: "rgba(255,255,255,0.3)",
+            backgroundColor: "transparent",
+            borderWidth: 1,
+            borderDash: [3, 3],
+            pointRadius: 0,
+            tension: 0,
+            fill: false,
+            order: -1,
+          });
+        }
+      } else if (selectedSiteClass) {
         const idx = SHEET1_SITECLASS_COLS[selectedSiteClass];
         if (idx) {
           const sas = parseFloat(sheet1Row[idx.Sa]);
@@ -1610,16 +1676,20 @@ Because only approximate, non-identifying location data is collected, there is g
 
       if (!rows.length) return "";
 
-      // Compute envelope row: max Sa(T*) across all classes; Tc and Td shown as range
+      // Envelope: max Sa(T*), max Tc, max Td
       const envSa = Math.max(...rows.map(r => parseFloat(r.sa)));
-      const tcMin = Math.min(...rows.map(r => parseFloat(r.tc)));
-      const tcMax = Math.max(...rows.map(r => parseFloat(r.tc)));
-      const tdMin = Math.min(...rows.map(r => parseFloat(r.td)));
-      const tdMax = Math.max(...rows.map(r => parseFloat(r.td)));
-      const tcStr = tcMin === tcMax ? tcMin.toFixed(2) : tcMin.toFixed(2) + " – " + tcMax.toFixed(2);
-      const tdStr = tdMin === tdMax ? tdMin.toFixed(2) : tdMin.toFixed(2) + " – " + tdMax.toFixed(2);
+      const envTc = Math.max(...rows.map(r => parseFloat(r.tc)));
+      const envTd = Math.max(...rows.map(r => parseFloat(r.td)));
 
-      const isSelected = cls => cls === selectedSiteClass;
+      const isEnvSelected  = selectedSiteClass === "Envelope";
+      const isSelected     = cls => cls === selectedSiteClass;
+
+      const envRowClass    = isEnvSelected ? "sat-envelope-row sat-selected" : "sat-envelope-row";
+      const envNameStyle   = isEnvSelected
+        ? "color:var(--accent); font-weight:700;"
+        : "color:#ffffff; font-weight:700;";
+      const envValStyle    = isEnvSelected ? "color:var(--accent); font-weight:700;" : "color:#ffffff; font-weight:700;";
+      const envMutedStyle  = isEnvSelected ? "color:var(--accent);" : "color:var(--muted);";
 
       return `
         <div class="sat-results show">
@@ -1638,11 +1708,11 @@ Because only approximate, non-identifying location data is collected, there is g
                 </tr>
               </thead>
               <tbody>
-                <tr class="sat-envelope-row">
-                  <td style="color:#ffffff; font-weight:700;">Envelope</td>
-                  <td style="color:#ffffff; font-weight:700;">${envSa.toFixed(4)}</td>
-                  <td style="color:var(--muted);">${tcStr}</td>
-                  <td style="color:var(--muted);">${tdStr}</td>
+                <tr class="${envRowClass}">
+                  <td style="${envNameStyle}">Envelope${isEnvSelected ? " ★" : ""}</td>
+                  <td style="${envValStyle}">${envSa.toFixed(4)}</td>
+                  <td style="${envMutedStyle}">${envTc.toFixed(2)}</td>
+                  <td style="${envMutedStyle}">${envTd.toFixed(2)}</td>
                 </tr>
                 ${rows.map(r => `
                   <tr class="${isSelected(r.cls) ? "sat-selected" : ""}">
