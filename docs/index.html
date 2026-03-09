@@ -1579,7 +1579,7 @@ Because only approximate, non-identifying location data is collected, there is g
         }
       }
 
-      // T* vertical line + dot markers on each curve
+      // T* vertical line + horizontal lines + dot markers on each curve
       const tStar = designPeriodT;
       const tStarValid = Number.isFinite(tStar) && tStar >= 0 && tStar <= 4.0;
 
@@ -1591,7 +1591,7 @@ Because only approximate, non-identifying location data is collected, there is g
           if (v > maxY) maxY = v;
         });
 
-        // Vertical line (two points, same x)
+        // Vertical line from y=0 up to maxY
         datasets.push({
           label: "T* = " + tStar.toFixed(2) + " s",
           data: [{ x: tStar, y: 0 }, { x: tStar, y: maxY * 1.05 }],
@@ -1603,6 +1603,26 @@ Because only approximate, non-identifying location data is collected, there is g
           tension: 0,
           fill: false,
           order: -2,
+        });
+
+        // Horizontal lines from T=0 to T* at each class's Sa(T*) value
+        classParams.forEach((p, ci) => {
+          const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
+          const color    = CLASS_COLORS[colorIdx] || "#888";
+          const sa       = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
+          if (!Number.isFinite(sa)) return;
+          datasets.push({
+            label: "_hline_" + p.cls,
+            data: [{ x: 0, y: sa }, { x: tStar, y: sa }],
+            borderColor: color,
+            backgroundColor: "transparent",
+            borderWidth: 1,
+            borderDash: [4, 3],
+            pointRadius: 0,
+            tension: 0,
+            fill: false,
+            order: -2,
+          });
         });
 
         // Dot markers at intersection with each class curve
@@ -1639,12 +1659,12 @@ Because only approximate, non-identifying location data is collected, there is g
               ...CHART_DEFAULTS.plugins.legend,
               labels: {
                 ...CHART_DEFAULTS.plugins.legend.labels,
-                filter: item => !item.text.startsWith("_dot_"),
+                filter: item => !item.text.startsWith("_dot_") && !item.text.startsWith("_hline_"),
               }
             },
             tooltip: {
               ...CHART_DEFAULTS.plugins.tooltip,
-              filter: item => !item.dataset.label.startsWith("_dot_"),
+              filter: item => !item.dataset.label.startsWith("_dot_") && !item.dataset.label.startsWith("_hline_"),
               callbacks: {
                 title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
                 label: item  => {
