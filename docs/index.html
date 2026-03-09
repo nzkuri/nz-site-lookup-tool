@@ -532,20 +532,57 @@
       margin-bottom: 14px;
     }
 
+    .charts-section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
     .charts-section-title {
       font-family: 'Space Mono', monospace;
       font-size: 10px;
       letter-spacing: 0.2em;
       color: var(--muted);
       text-transform: uppercase;
-      margin-bottom: 10px;
+      white-space: nowrap;
     }
 
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
+    /* APoE tab strip */
+    .apoe-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
     }
+    .apoe-tab {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 5px 13px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.15s;
+    }
+    .apoe-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .apoe-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+    }
+    .apoe-tab.uls-style  { border-color: var(--accent);  color: var(--accent); }
+    .apoe-tab.sls1-style { border-color: var(--accent3); color: var(--accent3); }
+    .apoe-tab.sls2-style { border-color: var(--accent2); color: var(--accent2); }
+    .apoe-tab.uls-style.active  { background: var(--accent);  border-color: var(--accent);  color: var(--bg); }
+    .apoe-tab.sls1-style.active { background: var(--accent3); border-color: var(--accent3); color: var(--bg); }
+    .apoe-tab.sls2-style.active { background: var(--accent2); border-color: var(--accent2); color: var(--bg); }
+
+    /* Spectra chart grid: shown one-at-a-time via active class */
+    .spectra-panel { display: none; }
+    .spectra-panel.active { display: block; }
 
     .chart-card {
       background: var(--surface);
@@ -561,21 +598,8 @@
       height: 2px;
       background: linear-gradient(90deg, var(--accent), transparent);
     }
-    .chart-card.accent2::before {
-      background: linear-gradient(90deg, var(--accent2), transparent);
-    }
-    .chart-card.accent3::before {
-      background: linear-gradient(90deg, var(--accent3), transparent);
-    }
-
-    .chart-row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    @media (max-width: 700px) {
-      .chart-row-2 { grid-template-columns: 1fr; }
-    }
+    .chart-card.cc-sls1::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+    .chart-card.cc-sls2::before { background: linear-gradient(90deg, var(--accent2), transparent); }
 
     .chart-label {
       font-family: 'Space Mono', monospace;
@@ -585,16 +609,14 @@
       text-transform: uppercase;
       margin-bottom: 14px;
     }
-    .chart-label strong { color: var(--accent2); }
-    .chart-label.lbl2 strong { color: var(--accent3); }
-    .chart-label.lbl3 strong { color: var(--accent); }
-    .chart-label.lbl4 strong { color: #a78bfa; }
+    .chart-label strong { color: var(--accent); }
+    .chart-label.cc-sls1 strong { color: var(--accent3); }
+    .chart-label.cc-sls2 strong { color: var(--accent2); }
 
     .chart-wrap {
       position: relative;
-      height: 280px;
+      height: 360px;
     }
-    .chart-wrap.tall { height: 320px; }
   </style>
 </head>
 
@@ -675,28 +697,12 @@
 
     <!-- Charts -->
     <div class="charts-section" id="chartsSection" style="display:none;">
-      <div class="charts-grid">
-        <!-- PGA full width -->
-        <div class="chart-card">
-          <div class="chart-label">HAZARD SPECTRA — <strong>PGA</strong> VS APOE (ALL SITE CLASSES)</div>
-          <div class="chart-wrap tall"><canvas id="chartPGA"></canvas></div>
-        </div>
-        <!-- Sa(s) full width -->
-        <div class="chart-card accent2">
-          <div class="chart-label lbl2">HAZARD SPECTRA — <strong>Sa,s</strong> VS APOE (ALL SITE CLASSES)</div>
-          <div class="chart-wrap tall"><canvas id="chartSas"></canvas></div>
-        </div>
-        <!-- Tc and Td side by side -->
-        <div class="chart-row-2">
-          <div class="chart-card accent3">
-            <div class="chart-label lbl3">SPECTRAL SHAPE — <strong>Tc</strong> (CORNER PERIOD) VS APOE</div>
-            <div class="chart-wrap"><canvas id="chartTc"></canvas></div>
-          </div>
-          <div class="chart-card" style="--accent-bar:#a78bfa;">
-            <div class="chart-label lbl4">SPECTRAL SHAPE — <strong>Td</strong> (LONG PERIOD) VS APOE</div>
-            <div class="chart-wrap"><canvas id="chartTd"></canvas></div>
-          </div>
-        </div>
+      <div class="charts-section-header">
+        <div class="charts-section-title">Sa(T) Design Spectra — All Site Classes</div>
+        <div class="apoe-tabs" id="apoeTabs"></div>
+      </div>
+      <div class="spectra-charts-wrap" id="spectraChartsGrid">
+        <!-- dynamically populated: one chart-card per APoE -->
       </div>
     </div>
 
@@ -973,7 +979,7 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("tablesGrid").innerHTML = "";
       const bar = document.getElementById("roundedCoordsBar");
       bar.style.display = "none"; bar.textContent = "";
-      renderCharts([]);
+      renderCharts([], []);
     }
 
     function applyTablesGridColumns(n){
@@ -1192,22 +1198,23 @@ Because only approximate, non-identifying location data is collected, there is g
     const SITE_CLASSES_ALL = ["I","II","III","IV","V","VI"];
     const CLASS_COLORS = [
       "#00d4ff", // cyan   – I
-      "#ff6b35", // orange – II
-      "#a8ff3e", // lime   – III
-      "#ff2d9b", // pink   – IV
-      "#ffd700", // gold   – V
-      "#a78bfa", // purple – VI
+      "#ff4444", // red    – II
+      "#ffd700", // gold   – III
+      "#a8ff3e", // lime   – IV
+      "#ff6b35", // orange – V
+      "#00e5a0", // teal   – VI
     ];
 
     const CHART_DEFAULTS = {
       responsive: true,
       maintainAspectRatio: false,
+      animation: { duration: 400 },
       plugins: {
         legend: {
           labels: {
             color: "#8a9ab0",
             font: { family: "'Space Mono', monospace", size: 11 },
-            boxWidth: 10,
+            boxWidth: 12,
             padding: 14,
           }
         },
@@ -1218,117 +1225,299 @@ Because only approximate, non-identifying location data is collected, there is g
           titleColor: "#00d4ff",
           bodyColor: "#e8edf3",
           titleFont: { family: "'Space Mono', monospace", size: 11 },
-          bodyFont: { family: "'Space Mono', monospace", size: 11 },
+          bodyFont:  { family: "'Space Mono', monospace", size: 11 },
+          callbacks: {
+            title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
+            label: item  => " " + item.dataset.label + ": " + Number(item.parsed.y).toFixed(4) + " g",
+          }
         }
       },
       scales: {
         x: {
-          ticks: { color: "#5a6a7e", font: { family: "'Space Mono', monospace", size: 10 } },
+          type: "linear",
+          min: 0,
+          ticks: {
+            color: "#5a6a7e",
+            font: { family: "'Space Mono', monospace", size: 10 },
+            maxTicksLimit: 10,
+          },
           grid: { color: "rgba(30,42,58,0.9)" },
+          title: { display: true, text: "Period T (s)", color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
         },
         y: {
-          ticks: { color: "#5a6a7e", font: { family: "'Space Mono', monospace", size: 10 } },
+          min: 0,
+          ticks: {
+            color: "#5a6a7e",
+            font: { family: "'Space Mono', monospace", size: 10 },
+            maxTicksLimit: 8,
+          },
           grid: { color: "rgba(30,42,58,0.9)" },
+          title: { display: true, text: "Sa(T) [g]", color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
         }
       }
     };
 
-    function makeScaleOpts(xLabel, yLabel) {
-      return {
-        x: {
-          ...CHART_DEFAULTS.scales.x,
-          title: { display: true, text: xLabel, color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
-        },
-        y: {
-          ...CHART_DEFAULTS.scales.y,
-          title: { display: true, text: yLabel, color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
+    // ── NZS 1170.5 Spectral Shape ──
+    // Builds {x, y} point array for Sa(T) curve given PGA, Sa_s, Tc, Td
+    // Shape:
+    //   T=0:              Sa = PGA
+    //   0 < T < 0.1:      Sa linearly interpolates PGA → Sa_s  (rising limb)
+    //   0.1 ≤ T ≤ Tc:     Sa = Sa_s                            (plateau)
+    //   Tc < T ≤ Td:      Sa = Sa_s * Tc / T                   (1/T decay)
+    //   T > Td:           Sa = Sa_s * Tc * Td / T^2            (1/T² decay)
+    function buildSpectralCurve(pga, sas, tc, td) {
+      const pts = [];
+      const T_MAX = 4.0;
+      const N_FINE = 300;
+
+      for (let i = 0; i <= N_FINE; i++) {
+        const t = (T_MAX / N_FINE) * i;
+        let sa;
+        if (t === 0) {
+          sa = pga;
+        } else if (t < 0.1) {
+          // linear ramp from PGA at T=0 to Sa_s at T=0.1
+          sa = pga + (sas - pga) * (t / 0.1);
+        } else if (t <= tc) {
+          sa = sas;
+        } else if (t <= td) {
+          sa = sas * tc / t;
+        } else {
+          sa = sas * tc * td / (t * t);
         }
-      };
+        pts.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(Math.max(0, sa).toFixed(5)) });
+      }
+      return pts;
     }
 
-    // Build chart datasets: one line per site class, x = apoe labels, y = param value
-    function buildChartDatasets(apoeRows, param) {
-      // apoeRows: array of { apoe, row } sorted by apoe (already filtered for this location)
-      // We show ALL site classes as separate lines
-      return SITE_CLASSES_ALL.map((cls, ci) => {
-        const idx = SHEET1_SITECLASS_COLS[cls];
-        return {
-          label: "Class " + cls,
-          data: apoeRows.map(item => {
-            if (!idx) return null;
-            const v = item.row[idx[param]];
-            const n = parseFloat(v);
-            return Number.isFinite(n) ? n : null;
-          }),
-          borderColor: CLASS_COLORS[ci],
-          backgroundColor: CLASS_COLORS[ci] + "28",
-          pointBackgroundColor: "transparent",
-          pointBorderColor: CLASS_COLORS[ci],
-          pointRadius: 5,
-          pointHoverRadius: 8,
-          tension: 0.3,
-          borderWidth: 2,
-          fill: false,
-        };
-      });
+    // Build envelope (max across all site classes at each T step)
+    function buildEnvelopeCurve(classParams) {
+      const T_MAX = 4.0;
+      const N_FINE = 300;
+      const pts = [];
+      for (let i = 0; i <= N_FINE; i++) {
+        const t = (T_MAX / N_FINE) * i;
+        let maxSa = 0;
+        for (const p of classParams) {
+          let sa;
+          if (t === 0) {
+            sa = p.pga;
+          } else if (t < 0.1) {
+            sa = p.pga + (p.sas - p.pga) * (t / 0.1);
+          } else if (t <= p.tc) {
+            sa = p.sas;
+          } else if (t <= p.td) {
+            sa = p.sas * p.tc / t;
+          } else {
+            sa = p.sas * p.tc * p.td / (t * t);
+          }
+          if (sa > maxSa) maxSa = sa;
+        }
+        pts.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(Math.max(0, maxSa).toFixed(5)) });
+      }
+      return pts;
     }
 
     function destroyChart(id) {
       if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
     }
 
-    function makeChart(canvasId, labels, datasets, xLabel, yLabel) {
-      destroyChart(canvasId);
-      const ctx = document.getElementById(canvasId);
-      if (!ctx) return;
-      _charts[canvasId] = new Chart(ctx, {
-        type: "line",
-        data: { labels, datasets },
-        options: {
-          ...CHART_DEFAULTS,
-          scales: makeScaleOpts(xLabel, yLabel),
-        }
-      });
+    function destroyAllSpectraCharts() {
+      Object.keys(_charts).forEach(id => destroyChart(id));
     }
 
-    // Sort apoe strings numerically: "1/2500" → 1/2500 → smallest first (most frequent)
+    // Sort apoe strings numerically: "1/25" first, "1/2500" last
     function apoeToNum(s) {
       const m = String(s).match(/1[\/:](\d+)/);
       return m ? parseInt(m[1], 10) : 99999;
     }
 
-    function renderCharts(allMatchedRows) {
-      const section = document.getElementById("chartsSection");
-      if (!allMatchedRows || !allMatchedRows.length) {
+    // Map matchTitle → CSS class suffix for colour theming
+    function titleToStyleClass(title) {
+      const t = (title || "").trim().toUpperCase();
+      if (t === "ULS")  return "uls";
+      if (t === "SLS1") return "sls1";
+      if (t === "SLS2") return "sls2";
+      return "uls";
+    }
+
+    // Build a single Sa(T) chart inside canvasId for one APoE row
+    function buildSpectraChart(canvasId, apoe, matchTitle, sheet1Row) {
+      destroyChart(canvasId);
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) return;
+
+      // Gather params for all site classes
+      const classParams = [];
+      SITE_CLASSES_ALL.forEach(cls => {
+        const idx = SHEET1_SITECLASS_COLS[cls];
+        if (!idx) return;
+        const pga = parseFloat(sheet1Row[idx.PGA]);
+        const sas = parseFloat(sheet1Row[idx.Sa]);
+        const tc  = parseFloat(sheet1Row[idx.Tc]);
+        const td  = parseFloat(sheet1Row[idx.Td]);
+        if ([pga,sas,tc,td].every(Number.isFinite)) {
+          classParams.push({ cls, pga, sas, tc, td });
+        }
+      });
+
+      // Datasets: envelope first, then each class
+      const datasets = [];
+
+      // Envelope
+      if (classParams.length > 1) {
+        datasets.push({
+          label: "Envelope",
+          data: buildEnvelopeCurve(classParams),
+          borderColor: "#ffffff",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [5, 3],
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+          order: 0,
+        });
+      }
+
+      // Per-class curves
+      classParams.forEach((p, ci) => {
+        const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
+        const color    = CLASS_COLORS[colorIdx] || "#888";
+        datasets.push({
+          label: "Class " + p.cls,
+          data: buildSpectralCurve(p.pga, p.sas, p.tc, p.td),
+          borderColor: color,
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+          order: ci + 1,
+        });
+      });
+
+      // Sa(T) = Sa_s line for selected site class (highlight)
+      if (selectedSiteClass) {
+        const idx = SHEET1_SITECLASS_COLS[selectedSiteClass];
+        if (idx) {
+          const sas = parseFloat(sheet1Row[idx.Sa]);
+          const tc  = parseFloat(sheet1Row[idx.Tc]);
+          if (Number.isFinite(sas) && Number.isFinite(tc)) {
+            datasets.push({
+              label: "Sa,s (Class " + selectedSiteClass + ")",
+              data: [{ x: 0, y: sas }, { x: tc, y: sas }],
+              borderColor: "rgba(255,255,255,0.35)",
+              backgroundColor: "transparent",
+              borderWidth: 1,
+              borderDash: [3, 3],
+              pointRadius: 0,
+              tension: 0,
+              fill: false,
+              order: -1,
+            });
+          }
+        }
+      }
+
+      _charts[canvasId] = new Chart(ctx, {
+        type: "line",
+        data: { datasets },
+        options: {
+          ...CHART_DEFAULTS,
+          parsing: false,
+          normalized: true,
+        }
+      });
+    }
+
+    function renderCharts(allMatchedRows, filteredRows) {
+      const section  = document.getElementById("chartsSection");
+      const grid     = document.getElementById("spectraChartsGrid");
+      const tabsEl   = document.getElementById("apoeTabs");
+
+      destroyAllSpectraCharts();
+      if (grid)   grid.innerHTML   = "";
+      if (tabsEl) tabsEl.innerHTML = "";
+
+      if (!allMatchedRows || !allMatchedRows.length || !filteredRows || !filteredRows.length) {
         if (section) section.style.display = "none";
-        ["chartPGA","chartSas","chartTc","chartTd"].forEach(destroyChart);
         return;
       }
 
-      // De-dup by apoe and sort ascending (1/25 first → 1/2500 last)
-      const seen = new Set();
-      const apoeRows = [];
+      // Build a lookup: apoe (lowercase) → sheet1Row, from ALL matched rows
+      const apoeRowMap = new Map();
       for (const item of allMatchedRows) {
-        const apoe = normalize(item.row[SHEET1_APOE_COL_INDEX]);
-        if (!apoe || seen.has(apoe.toLowerCase())) continue;
-        seen.add(apoe.toLowerCase());
-        apoeRows.push({ apoe, row: item.row });
+        const apoe = normalize(item.row[SHEET1_APOE_COL_INDEX]).toLowerCase();
+        if (apoe && !apoeRowMap.has(apoe)) apoeRowMap.set(apoe, item.row);
       }
-      apoeRows.sort((a, b) => apoeToNum(a.apoe) - apoeToNum(b.apoe));
 
-      if (!apoeRows.length) {
-        if (section) section.style.display = "none";
-        return;
+      // Use filteredRows (ULS/SLS1/SLS2 as applicable) — these are the design APoEs
+      // De-dup and sort
+      const seen = new Set();
+      const chartItems = [];
+      for (const f of filteredRows) {
+        const apoe = normalize(f.apoe).toLowerCase();
+        if (seen.has(apoe)) continue;
+        seen.add(apoe);
+        const row = apoeRowMap.get(apoe);
+        if (row) chartItems.push({ apoe: f.apoe, matchTitle: f.matchTitle, row });
       }
+      // Sort by RP ascending (1/25 → 1/2500)
+      chartItems.sort((a, b) => apoeToNum(a.apoe) - apoeToNum(b.apoe));
+
+      if (!chartItems.length) { if (section) section.style.display = "none"; return; }
 
       if (section) section.style.display = "";
 
-      const labels = apoeRows.map(r => r.apoe);
+      // Build one panel + tab per APoE
+      chartItems.forEach((item, idx) => {
+        const styleClass = titleToStyleClass(item.matchTitle);
+        const panelId    = "spectraPanel_" + idx;
+        const canvasId   = "spectraCanvas_" + idx;
+        const isFirst    = idx === 0;
 
-      makeChart("chartPGA", labels, buildChartDatasets(apoeRows, "PGA"), "APoE",        "PGA (g)");
-      makeChart("chartSas", labels, buildChartDatasets(apoeRows, "Sa"),  "APoE",        "Sa,s (g)");
-      makeChart("chartTc",  labels, buildChartDatasets(apoeRows, "Tc"),  "APoE",        "Tc (s)");
-      makeChart("chartTd",  labels, buildChartDatasets(apoeRows, "Td"),  "APoE",        "Td (s)");
+        // Tab button
+        const tab = document.createElement("button");
+        tab.className    = "apoe-tab " + styleClass + "-style" + (isFirst ? " active" : "");
+        tab.textContent  = (item.matchTitle ? item.matchTitle + " — " : "") + item.apoe;
+        tab.dataset.panel = panelId;
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".apoe-tab").forEach(t => t.classList.remove("active"));
+          document.querySelectorAll(".spectra-panel").forEach(p => p.classList.remove("active"));
+          tab.classList.add("active");
+          document.getElementById(panelId).classList.add("active");
+        });
+        tabsEl.appendChild(tab);
+
+        // Panel + chart card
+        const panel = document.createElement("div");
+        panel.id        = panelId;
+        panel.className = "spectra-panel" + (isFirst ? " active" : "");
+
+        const card = document.createElement("div");
+        card.className = "chart-card cc-" + styleClass;
+
+        const lbl = document.createElement("div");
+        lbl.className = "chart-label cc-" + styleClass;
+        lbl.innerHTML = "SPECTRAL ACCELERATION Sa(T) — <strong>APoE " + item.apoe + "</strong>"
+                      + (item.matchTitle ? " &nbsp;|&nbsp; " + item.matchTitle : "");
+
+        const wrap = document.createElement("div");
+        wrap.className = "chart-wrap";
+
+        const canvas = document.createElement("canvas");
+        canvas.id = canvasId;
+
+        wrap.appendChild(canvas);
+        card.appendChild(lbl);
+        card.appendChild(wrap);
+        panel.appendChild(card);
+        grid.appendChild(panel);
+
+        // Render chart (deferred so canvas is in DOM)
+        requestAnimationFrame(() => buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row));
+      });
     }
 
     function renderTablesFullWidth(filtered){
@@ -1341,8 +1530,8 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("tablesGrid").innerHTML = filtered.map(x =>
         `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
       ).join("");
-      // Charts — use ALL matched rows for this location (all APoEs), not just filtered
-      renderCharts(matchedSheet1Rows);
+      // Charts — filtered gives the design APoEs (ULS/SLS1/SLS2), allMatchedRows for full data lookup
+      renderCharts(matchedSheet1Rows, filtered);
     }
 
     async function writeMatchedRowsToSheet7(rows){
