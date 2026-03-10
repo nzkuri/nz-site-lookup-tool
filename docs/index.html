@@ -1,696 +1,2161 @@
 
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>TS1170.5 Finder — Preview</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NZS TS1170.5 Site Parameter Finder</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
   <style>
+    /* ── Design tokens ── */
     :root {
-      --bg: #000000; --surface: #0a0a0a; --surface2: #050505;
-      --border: #333333; --accent: #00ffff; --accent2: #ff4488;
-      --accent3: #c8ff00; --text: #ffffff; --muted: #777777;
-      --grid-line: rgba(0,255,255,0.07); --shadow: 0 8px 32px rgba(0,0,0,0.8);
+      --bg:        #0a0e14;
+      --surface:   #111620;
+      --surface2:  #0d1520;
+      --border:    #1e2a3a;
+      --accent:    #00d4ff;
+      --accent2:   #ff6b35;
+      --accent3:   #a8ff3e;
+      --text:      #e8edf3;
+      --muted:     #5a6a7e;
+      --grid-line: rgba(0,212,255,0.06);
+      --shadow:    0 8px 32px rgba(0,0,0,0.5);
     }
-    [data-theme="light"] {
-      --bg: #ffffff; --surface: #f0f0f0; --surface2: #e8e8e8;
-      --border: #000000; --accent: #007799; --accent2: #cc2255;
-      --accent3: #446600; --text: #000000; --muted: #444444;
-      --grid-line: rgba(0,0,0,0.07); --shadow: 0 8px 32px rgba(0,0,0,0.15);
-    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      background: var(--bg); color: var(--text);
-      font-family: 'Space Mono', monospace;
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
-                        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    }
+
+    /* Animated grid bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
       background-size: 40px 40px;
-      transition: background 0.35s, color 0.35s;
+      pointer-events: none;
+      z-index: 0;
     }
-    .page-wrap { max-width: 1280px; margin: 0 auto; padding: 24px 24px 60px; }
 
-    /* Header */
+    /* ── Layout ── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    /* ── Header ── */
     .page-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+      border-left: 3px solid var(--accent);
+      padding-left: 20px;
+      margin-bottom: 10px;
     }
-    .label {
-      font-family: 'Space Mono', monospace; font-size: 10px;
-      letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 6px;
+    .page-header .label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 6px;
     }
-    h1 {
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(22px, 3vw, 36px);
-      letter-spacing: -0.02em; color: var(--text); line-height: 1.1;
+    .page-header h1 {
+      font-size: clamp(22px, 4vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
     }
-    /* Theme toggle */
-    .theme-toggle-wrap { display: flex; align-items: center; gap: 10px; padding-top: 6px; }
-    .theme-toggle-label { font-size: 11px; color: var(--muted); transition: color 0.2s; }
-    .theme-toggle-label.active { color: var(--accent); }
-    .theme-toggle-switch { position: relative; display: block; width: 52px; height: 26px; cursor: pointer; }
-    .theme-toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .theme-toggle-track {
-      position: absolute; inset: 0; border-radius: 13px;
-      background: var(--surface2); border: 1px solid var(--border);
-      transition: background 0.3s;
-    }
-    .theme-toggle-thumb {
-      position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
-      border-radius: 50%; background: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; transition: left 0.3s, background 0.3s;
-    }
-    [data-theme="light"] .theme-toggle-thumb { left: 29px; }
 
-    /* SEO intro */
-    .seo-intro { margin-bottom: 20px; }
-    .seo-intro p { font-size: 12px; color: var(--muted); line-height: 1.7; max-width: 760px; }
-
-    /* Search */
-    .search-wrap { display: flex; gap: 10px; margin-bottom: 12px; }
-    .search-wrap input {
-      flex: 1; max-width: 460px; padding: 10px 14px;
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px; outline: none;
+    /* ── Intro ── */
+    .seo-intro {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-left: 3px solid var(--border);
     }
-    .search-wrap button {
-      padding: 10px 16px; background: var(--surface); border: 1px solid var(--accent);
-      color: var(--accent); font-family: 'Space Mono', monospace; font-size: 12px; cursor: pointer;
-    }
-    #coords { font-size: 11px; color: var(--accent); margin-bottom: 20px; letter-spacing: 0.05em; }
 
-    /* Main grid */
-    .main-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; margin-bottom: 24px; }
-    .left-panel {}
-
-    /* Option blocks */
-    .option-block {
-      background: var(--surface); border: 1px solid var(--border);
-      border-top: 2px solid var(--accent); padding: 18px; margin-bottom: 0;
-    }
-    .option-block h3 {
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 12px;
-      letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent);
+    /* ── Search bar ── */
+    .search-wrap {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
       margin-bottom: 16px;
     }
-    .row { margin-bottom: 14px; }
-    .row label { display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    #addressInput {
+      flex: 1 1 520px;
+      padding: 11px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #addressInput::placeholder { color: var(--muted); }
+    #addressInput:focus { border-color: var(--accent); }
+
+    #useMyLocationBtn {
+      padding: 11px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      letter-spacing: 0.04em;
+    }
+    #useMyLocationBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Coords bar ── */
+    #coords {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      padding: 8px 14px;
+      border-left: 2px solid var(--border);
+    }
+    #coords b { color: var(--accent2); }
+
+    /* ── Main grid ── */
+    .main-grid {
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+    .left-panel { flex: 0 0 520px; max-width: 520px; width: 100%; }
+    .right-panel { flex: 1 1 auto; min-width: 320px; display: flex; }
+
+    @media (max-width: 980px) {
+      .main-grid { flex-direction: column; }
+      .left-panel { max-width: 100%; flex-basis: auto; }
+      .right-panel { width: 100%; }
+    }
+
+    /* ── Option block ── */
+    .option-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px;
+      width: 100%;
+      position: relative;
+    }
+    .option-block::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+    .option-block h3 {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .row { margin-bottom: 18px; }
+    .row:last-child { margin-bottom: 0; }
+    .row label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 8px;
+    }
+
     .option-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
     .option-buttons button {
-      padding: 6px 12px; background: var(--bg); border: 1px solid var(--border);
-      color: var(--muted); font-family: 'Space Mono', monospace; font-size: 11px; cursor: pointer;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 7px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
       transition: all 0.15s;
+      letter-spacing: 0.04em;
     }
-    .option-buttons button.active {
-      background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700;
-    }
-    .sc-help-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 16px; height: 16px; border-radius: 50%;
-      border: 1.5px solid var(--accent); background: transparent;
-      color: var(--accent); font-size: 10px; font-family: 'Syne', sans-serif;
-      font-weight: 800; cursor: pointer; margin-left: 6px; vertical-align: middle;
+    .option-buttons button:hover { border-color: var(--accent); color: var(--accent); }
+    .option-buttons button.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
     }
 
-    /* Map placeholder */
-    .map-placeholder {
-      background: #0d1520; border: 1px solid var(--border); height: 340px;
-      display: flex; align-items: center; justify-content: center;
-      position: relative; overflow: hidden;
-    }
-    [data-theme="light"] .map-placeholder { background: #e8eef5; }
-    .map-placeholder svg { opacity: 0.18; }
-    .map-marker {
-      position: absolute; top: 48%; left: 52%;
-      width: 12px; height: 12px; background: var(--accent);
-      border-radius: 50%; border: 2px solid var(--bg);
-      box-shadow: 0 0 0 4px rgba(0,255,255,0.25);
-    }
-    .map-label {
-      position: absolute; bottom: 12px; left: 12px;
-      font-size: 10px; color: var(--accent); letter-spacing: 0.1em;
-      background: rgba(0,0,0,0.6); padding: 4px 8px;
+    /* ── Map ── */
+    #map {
+      width: 100%;
+      min-height: 280px;
+      border: 1px solid var(--border);
+      flex: 1 1 auto;
+      filter: grayscale(0.3) brightness(0.85);
     }
 
-    /* Results */
-    .results-wrap { margin-bottom: 24px; }
-    .coords-bar {
-      background: var(--surface); border: 1px solid var(--border);
-      padding: 10px 16px; margin-bottom: 16px;
-      font-size: 12px; letter-spacing: 0.08em;
-      display: flex; gap: 24px; align-items: center; flex-wrap: wrap;
+    /* ── Results ── */
+    .results-wrap {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 14px;
     }
-    .coords-bar span { color: var(--muted); }
-    .coords-bar strong { color: var(--accent); }
-    .apoe-badge {
-      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
-      padding: 3px 8px; border: 1px solid; border-radius: 2px;
+    .results-wrap::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent2), transparent);
     }
-    .apoe-uls { border-color: var(--accent); color: var(--accent); }
-    .apoe-sls1 { border-color: var(--accent3); color: var(--accent3); }
-    .apoe-sls2 { border-color: var(--accent2); color: var(--accent2); }
 
-    /* sc-table (PGA/Sa,s summary) */
+    #roundedCoordsBar {
+      display: none;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      letter-spacing: 0.06em;
+    }
+    #roundedCoordsBar b { color: var(--accent); }
+
+    #tablesGrid {
+      display: grid;
+      gap: 12px;
+      width: 100%;
+    }
+
+    /* ── Data table cards ── */
     .table-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-top: 2px solid var(--accent);
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      background: var(--surface2);
     }
-    .table-card.sls1 { border-top-color: var(--accent3); }
-    .table-card.sls2 { border-top-color: var(--accent2); }
-    .table-card-header {
-      padding: 12px 16px; border-bottom: 1px solid var(--border);
-      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+
+    .sc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
     }
-    .table-card-header strong { color: var(--accent); }
-    .table-card.sls1 .table-card-header strong { color: var(--accent3); }
-    .table-card.sls2 .table-card-header strong { color: var(--accent2); }
-    .sc-table { width: 100%; border-collapse: collapse; font-size: 11px; }
     .sc-table th {
-      padding: 8px 10px; text-align: left; font-size: 9px;
-      letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
-      border-bottom: 1px solid var(--border); background: var(--surface2);
+      background: #0a0e14;
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      font-weight: 700;
     }
     .sc-table td {
-      padding: 8px 10px; border-bottom: 1px solid rgba(51,51,51,0.5);
+      padding: 10px 14px;
+      text-align: center;
+      border: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: middle;
       white-space: nowrap;
     }
-    .sc-table .selected-row td { background: rgba(0,212,255,0.07); color: var(--accent); }
+    .sc-table thead th:first-child,
+    .sc-table td.left-head,
+    .sc-table td.left-cell {
+      text-align: left;
+      width: 220px;
+    }
+    .sc-table thead th { border-bottom: 1px solid var(--accent); }
+    .sc-table .subhead { color: var(--muted); }
+    .sc-table .left-cell { color: var(--accent2); font-weight: 700; }
+    .sc-table tr:hover td { background: rgba(0,212,255,0.03); }
 
-    /* Spectra charts section */
-    .charts-section { margin-bottom: 24px; }
+    /* ── Loading overlay ── */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10,14,20,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .loading-overlay.show { display: flex; }
+    .loading-overlay::before {
+      content: '';
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin-right: 10px;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Special case card ── */
+    .special-case-card {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      padding: 18px;
+      color: var(--accent2);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Coming soon ── */
+    .coming-soon-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--muted);
+      padding: 14px 18px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    /* ── Suggestions ── */
+    details.suggestions-details {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    details.suggestions-details > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 18px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: color 0.15s;
+    }
+    details.suggestions-details > summary:hover { color: var(--accent); }
+    details.suggestions-details > summary::-webkit-details-marker { display: none; }
+    .suggestions-body {
+      padding: 16px 18px;
+      border-top: 1px solid var(--border);
+    }
+    #suggestionText {
+      width: 100%;
+      min-height: 100px;
+      resize: vertical;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #suggestionText::placeholder { color: var(--muted); }
+    #suggestionText:focus { border-color: var(--accent); }
+
+    #submitSuggestionBtn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 9px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.15s;
+    }
+    #submitSuggestionBtn:hover { border-color: var(--accent); color: var(--accent); }
+    #suggestionMsg { margin-top: 8px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+
+    /* ── Page views ── */
+    .pageviews {
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      padding: 10px 0;
+    }
+    .pageviews span { color: var(--accent); }
+
+    /* ── Modals ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 18px;
+    }
+    .modal-backdrop.show { display: flex; }
+
+    .modal {
+      width: min(820px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .modal::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .modal-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .modal-body {
+      padding: 20px;
+      max-height: min(60vh, 520px);
+      overflow: auto;
+      white-space: pre-line;
+      line-height: 1.7;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      background: var(--surface2);
+    }
+
+    .btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 9px 18px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.15s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+    }
+    .btn.primary:hover { background: #00bce0; border-color: #00bce0; }
+    .btn.danger { border-color: #ff4444; color: #ff4444; }
+    .btn.danger:hover { background: #ff4444; color: var(--bg); }
+
+    .close-x {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 16px;
+      transition: all 0.15s;
+      flex: 0 0 auto;
+    }
+    .close-x:hover { border-color: var(--accent); color: var(--accent); }
+
+    body.consent-locked .page-wrap {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* ── Charts section ── */
+    .charts-section {
+      margin-bottom: 14px;
+    }
+
     .charts-section-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
-    }
-    .charts-section-header h2 {
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px;
-      letter-spacing: 0.12em; text-transform: uppercase; color: var(--text);
-    }
-    .t-input-inline { display: flex; align-items: center; gap: 10px; }
-    .t-input-inline label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
-    .t-input-inline input {
-      width: 90px; padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
-      color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px; outline: none;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
     }
 
-    /* Row group: 2 charts + 2 tables */
-    .spectra-row-group { margin-bottom: 28px; }
-    .spectra-row-group-header {
-      font-size: 10px; letter-spacing: 0.16em; color: var(--muted);
-      text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;
+    .charts-section-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      white-space: nowrap;
     }
-    .spectra-row-group-header::after { content:''; flex:1; height:1px; background:var(--border); }
-    .charts-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .tables-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* APoE tab strip — kept for potential future use but hidden */
+    .apoe-tabs { display: none; }
+
+    /* Spectra layout: stacked row-groups, each group = chart row + table row */
+    .spectra-row-group {
+      margin-bottom: 20px;
+    }
+
+    .spectra-chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .spectra-chart-row.single {
+      grid-template-columns: 1fr;
+    }
+    @media (max-width: 800px) {
+      .spectra-chart-row { grid-template-columns: 1fr; }
+    }
+
+    .spectra-table-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .spectra-table-row.single {
+      grid-template-columns: 1fr;
+    }
+    @media (max-width: 800px) {
+      .spectra-table-row { grid-template-columns: 1fr; }
+    }
+
+    /* Individual spectra cell (chart card + its table below) */
+    .spectra-cell { display: flex; flex-direction: column; gap: 0; }
 
     .chart-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-top: 2px solid var(--accent); padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px 20px 16px;
+      position: relative;
+      overflow: hidden;
     }
-    .chart-card.sls1 { border-top-color: var(--accent3); }
-    .chart-card.sls2 { border-top-color: var(--accent2); }
+    .chart-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+    .chart-card.cc-sls1::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+    .chart-card.cc-sls2::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+
     .chart-label {
-      font-size: 10px; letter-spacing: 0.14em; color: var(--muted);
-      text-transform: uppercase; margin-bottom: 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 14px;
     }
     .chart-label strong { color: var(--accent); }
-    .chart-card.sls1 .chart-label strong { color: var(--accent3); }
-    .chart-card.sls2 .chart-label strong { color: var(--accent2); }
-    .chart-wrap { position: relative; height: 260px; }
+    .chart-label.cc-sls1 strong { color: var(--accent3); }
+    .chart-label.cc-sls2 strong { color: var(--accent2); }
 
-    /* SAT table */
-    .sat-results { margin-top: 0; }
+    .chart-wrap {
+      position: relative;
+      height: 360px;
+    }
+
+    /* ── Sa(T*) results table ── */
+    .sat-results {
+      margin-top: 14px;
+      display: none;
+    }
+    .sat-results.show { display: block; }
+
     .sat-results-title {
-      font-size: 10px; letter-spacing: 0.16em; color: var(--muted);
-      text-transform: uppercase; margin-bottom: 8px; padding: 12px 16px 0;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
     }
     .sat-results-title strong { color: var(--accent2); }
-    .sat-table { width: 100%; border-collapse: collapse; font-family: 'Space Mono', monospace; font-size: 11px; }
+
+    .sat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+    }
     .sat-table th {
-      background: var(--surface2); padding: 8px 10px; text-align: center;
-      font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--accent); border: 1px solid var(--border); font-weight: 700;
+      background: #0a0e14;
+      padding: 9px 12px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      font-weight: 700;
     }
     .sat-table th:first-child { text-align: left; }
     .sat-table td {
-      padding: 8px 10px; text-align: center;
-      border: 1px solid var(--border); color: var(--text);
+      padding: 9px 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+      color: var(--text);
+      white-space: nowrap;
     }
     .sat-table td:first-child { text-align: left; color: var(--accent); font-weight: 700; }
+    .sat-table tr:hover td { background: rgba(0,212,255,0.04); }
     .sat-table .sat-selected { background: rgba(0,212,255,0.07); }
     .sat-table .sat-selected td { color: var(--accent); }
-    .sat-table .sat-envelope-row td { border-bottom: 2px solid var(--accent); background: rgba(255,255,255,0.03); }
-
-    /* Legend */
-    .legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--border); }
-    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-    /* Preview badge */
-    .preview-banner {
-      background: var(--accent); color: var(--bg);
-      font-family: 'Syne', sans-serif; font-weight: 800;
-      font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-      padding: 6px 14px; display: inline-block; margin-bottom: 16px;
-    }
+    .sat-table .sat-selected td:first-child { color: var(--accent); }
+    .sat-table .sat-envelope-row td { border-bottom: 1px solid var(--accent); background: rgba(255,255,255,0.04); }
+    .sat-table .sat-envelope-row.sat-selected td { background: rgba(0,212,255,0.07); }
   </style>
 </head>
-<body>
-<div class="page-wrap">
 
-  <div class="preview-banner">⚠ Static UI Preview — Live tool requires Google Maps + backend</div>
+<body class="consent-locked">
+  <div class="page-wrap">
 
-  <header class="page-header">
-    <div class="page-header-text">
+    <header class="page-header">
       <div class="label">Seismic Design // NZ</div>
       <h1>TS1170.5 Site Parameter Finder</h1>
+    </header>
+
+    <div class="seo-intro">
+      <p>Free web tool for New Zealand structural engineers — quickly search &amp; retrieve NZS TS1170.5 site
+      parameters for seismic design. Select a project location (address search or map click), then choose
+      the appropriate site class, importance level, and design working life to view matched outputs
+      aligned with TS1170.5.</p>
     </div>
-    <div class="theme-toggle-wrap">
-      <span class="theme-toggle-label active" id="lbl-dark">🌑 Dark</span>
-      <label class="theme-toggle-switch" title="Toggle theme">
-        <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
-        <div class="theme-toggle-track"></div>
-        <div class="theme-toggle-thumb" id="thumbEmoji">🌑</div>
-      </label>
-      <span class="theme-toggle-label" id="lbl-light">☀️ Light</span>
+
+    <div class="search-wrap">
+      <input id="addressInput" placeholder="Search address (NZ only)" />
+      <button id="useMyLocationBtn" type="button">⊕ My Location</button>
     </div>
-  </header>
 
-  <div class="seo-intro">
-    <p>Free web tool for New Zealand structural engineers — quickly search &amp; retrieve NZS TS1170.5 site
-    parameters for seismic design. Select a project location (address search or map click), then choose
-    the appropriate site class, importance level, and design working life to view matched outputs
-    aligned with TS1170.5.</p>
-  </div>
+    <div id="coords">Choose a location — search address or click the map</div>
 
-  <div class="search-wrap">
-    <input placeholder="Search address (NZ only)" value="148 Victoria Street, Christchurch" readonly />
-    <button type="button">⊕ My Location</button>
-  </div>
+    <div class="main-grid">
+      <div class="left-panel">
+        <div class="option-block" id="designInputsBlock">
+          <h3>Design Inputs</h3>
 
-  <div id="coords">Lat: <b>-43.53218</b> &nbsp;|&nbsp; Lng: <b>172.63635</b></div>
+          <div class="row">
+            <label>Site Class</label>
+            <div class="option-buttons" id="siteClassOptions">
+              <button type="button" data-value="I">I</button>
+              <button type="button" data-value="II">II</button>
+              <button type="button" data-value="III">III</button>
+              <button type="button" data-value="IV">IV</button>
+              <button type="button" data-value="V">V</button>
+              <button type="button" data-value="VI">VI</button>
+              <button type="button" data-value="Envelope">Envelope</button>
+            </div>
+          </div>
 
-  <div class="main-grid">
-    <div class="left-panel">
-      <div class="option-block">
-        <h3>Design Inputs</h3>
-        <div class="row">
-          <label style="display:inline-flex;align-items:center;">
-            Site Class
-            <button class="sc-help-btn">?</button>
-          </label>
-          <div class="option-buttons">
-            <button>I</button><button>II</button><button>III</button>
-            <button class="active">IV</button><button>V</button><button>VI</button>
-            <button>Envelope</button>
+          <div class="row">
+            <label>Importance Level</label>
+            <div class="option-buttons" id="importanceLevelOptions">
+              <button type="button" data-value="1">1</button>
+              <button type="button" data-value="2">2</button>
+              <button type="button" data-value="3">3</button>
+              <button type="button" data-value="4">4</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Design Working Life</label>
+            <div class="option-buttons" id="workingLifeOptions">
+              <button type="button" data-value="construction">Construction equipment</button>
+              <button type="button" data-value="lt6months">Less than 6 months</button>
+              <button type="button" data-value="5">5 years</button>
+              <button type="button" data-value="25">25 years</button>
+              <button type="button" data-value="50">50 years</button>
+              <button type="button" data-value="100">100 years or more</button>
+            </div>
           </div>
         </div>
-        <div class="row">
-          <label>Importance Level</label>
-          <div class="option-buttons">
-            <button>1</button><button class="active">2</button><button>3</button><button>4</button>
+      </div>
+
+      <div class="right-panel">
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-wrap">
+      <div class="loading-overlay" id="loadingOverlay">Loading</div>
+      <div id="roundedCoordsBar"></div>
+      <div id="tablesGrid"></div>
+    </div>
+
+    <!-- Design Period Input -->
+    <div class="t-input-section" id="tInputSection" style="display:none;">
+      <div class="option-block" style="margin-bottom:14px;">
+        <h3>Design Period</h3>
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+          <div>
+            <label class="row" style="margin-bottom:6px;">Period T (seconds)</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input id="designPeriodInput" type="number" min="0" max="3" step="0.01"
+                placeholder="e.g. 1.00"
+                style="width:140px; padding:9px 12px; background:var(--bg); border:1px solid var(--border);
+                       color:var(--text); font-family:'Space Mono',monospace; font-size:13px; outline:none;
+                       transition:border-color 0.15s;"
+                onmouseover="" />
+              <button id="clearPeriodBtn" type="button"
+                style="padding:9px 14px; background:var(--surface); border:1px solid var(--border);
+                       color:var(--muted); font-family:'Space Mono',monospace; font-size:11px;
+                       cursor:pointer; letter-spacing:0.06em; transition:all 0.15s;">
+                Clear
+              </button>
+            </div>
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:0.08em;">
+              Range: 0 – 3.0 s &nbsp;|&nbsp; Plots vertical marker on Sa(T) graph and returns Sa(T*) below
+            </div>
           </div>
         </div>
-        <div class="row">
-          <label>Design Working Life</label>
-          <div class="option-buttons">
-            <button>Construction equipment</button>
-            <button>Less than 6 months</button>
-            <button>5 years</button>
-            <button>25 years</button>
-            <button class="active">50 years</button>
-            <button>100 years or more</button>
-          </div>
-        </div>
       </div>
     </div>
 
-    <div class="right-panel">
-      <div class="map-placeholder">
-        <!-- SVG NZ outline approximation -->
-        <svg width="220" height="300" viewBox="0 0 220 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- North Island rough shape -->
-          <path d="M120,20 C135,25 155,40 160,60 C165,80 155,100 145,115 C135,130 125,140 115,155 C105,170 100,185 95,195 C90,205 85,210 80,208 C75,206 70,195 72,180 C74,165 82,150 90,135 C98,120 108,105 112,88 C116,71 110,50 115,35 Z" fill="var(--accent)" opacity="0.15" stroke="var(--accent)" stroke-width="1"/>
-          <!-- South Island rough shape -->
-          <path d="M60,220 C75,215 95,218 110,228 C125,238 135,255 138,270 C141,285 135,295 125,292 C115,289 105,278 95,268 C85,258 72,248 62,240 C52,232 45,228 48,224 Z" fill="var(--accent)" opacity="0.15" stroke="var(--accent)" stroke-width="1"/>
-        </svg>
-        <div class="map-marker"></div>
-        <div class="map-label">Christchurch CBD</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Coords bar -->
-  <div class="results-wrap">
-    <div class="coords-bar">
-      <span>Location: <strong>Christchurch CBD</strong></span>
-      <span>Lat: <strong>-43.532</strong></span>
-      <span>Lng: <strong>172.636</strong></span>
-      <span>Site Class: <strong>IV</strong></span>
-      <span>IL: <strong>2</strong></span>
-      <span>DWL: <strong>50 yrs</strong></span>
-    </div>
-
-    <!-- Summary tables row -->
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; margin-bottom:24px;">
-
-      <div class="table-card">
-        <div class="table-card-header"><strong>ULS</strong> — 10% / 50yr (500yr RP)</div>
-        <table class="sc-table">
-          <thead><tr><th>Param</th><th>Value</th></tr></thead>
-          <tbody>
-            <tr><td>PGA</td><td>0.335 g</td></tr>
-            <tr><td>Sa,s</td><td>0.700 g</td></tr>
-            <tr><td>Tc</td><td>0.45 s</td></tr>
-            <tr><td>Td</td><td>3.00 s</td></tr>
-            <tr class="selected-row"><td>APoE</td><td>10% / 50yr</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="table-card sls1">
-        <div class="table-card-header"><strong>SLS1</strong> — 63% / 50yr (72yr RP)</div>
-        <table class="sc-table">
-          <thead><tr><th>Param</th><th>Value</th></tr></thead>
-          <tbody>
-            <tr><td>PGA</td><td>0.104 g</td></tr>
-            <tr><td>Sa,s</td><td>0.218 g</td></tr>
-            <tr><td>Tc</td><td>0.45 s</td></tr>
-            <tr><td>Td</td><td>3.00 s</td></tr>
-            <tr class="selected-row"><td>APoE</td><td>63% / 50yr</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="table-card sls2">
-        <div class="table-card-header"><strong>SLS2</strong> — 2% / 50yr (2500yr RP)</div>
-        <table class="sc-table">
-          <thead><tr><th>Param</th><th>Value</th></tr></thead>
-          <tbody>
-            <tr><td>PGA</td><td>0.720 g</td></tr>
-            <tr><td>Sa,s</td><td>1.505 g</td></tr>
-            <tr><td>Tc</td><td>0.45 s</td></tr>
-            <tr><td>Td</td><td>3.00 s</td></tr>
-            <tr class="selected-row"><td>APoE</td><td>2% / 50yr</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div>
-
-    <!-- Charts section -->
-    <div class="charts-section">
+    <!-- Charts -->
+    <div class="charts-section" id="chartsSection" style="display:none;">
       <div class="charts-section-header">
-        <h2>Sa(T) Spectral Curves</h2>
-        <div class="t-input-inline">
-          <label>Design Period T*</label>
-          <input type="number" value="0.80" readonly />
-          <span style="font-size:11px;color:var(--accent);">s</span>
-        </div>
+        <div class="charts-section-title">Sa(T) Design Spectra — All Site Classes</div>
       </div>
-
-      <!-- ULS row group -->
-      <div class="spectra-row-group">
-        <div class="spectra-row-group-header"><strong style="color:var(--accent);">ULS</strong> &nbsp;10% / 50yr (500yr RP)</div>
-        <div class="charts-pair">
-          <div class="chart-card">
-            <div class="chart-label">Site Class IV — <strong>ULS</strong> &nbsp;Sa(T) vs T</div>
-            <div class="chart-wrap"><canvas id="chart-uls-1"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-label">All Site Classes — <strong>ULS</strong> &nbsp;Envelope overlay</div>
-            <div class="chart-wrap"><canvas id="chart-uls-2"></canvas></div>
-          </div>
-        </div>
-        <div class="tables-pair">
-          <div class="table-card" style="border-top-color:var(--accent);">
-            <div class="sat-results-title">Sa(T*=0.80s) — <strong>ULS</strong></div>
-            <table class="sat-table">
-              <thead><tr><th>Site Class</th><th>Sa(T*) [g]</th><th>Tc (s)</th><th>Td (s)</th></tr></thead>
-              <tbody>
-                <tr class="sat-envelope-row"><td>★ Envelope</td><td>0.875</td><td>—</td><td>—</td></tr>
-                <tr><td>I</td><td>0.480</td><td>0.35</td><td>3.00</td></tr>
-                <tr><td>II</td><td>0.612</td><td>0.40</td><td>3.00</td></tr>
-                <tr><td>III</td><td>0.762</td><td>0.45</td><td>3.00</td></tr>
-                <tr class="sat-selected"><td>★ IV</td><td>0.875</td><td>0.45</td><td>3.00</td></tr>
-                <tr><td>V</td><td>0.813</td><td>0.60</td><td>3.00</td></tr>
-                <tr><td>VI</td><td>0.700</td><td>0.70</td><td>3.00</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="table-card" style="border-top-color:var(--accent);">
-            <div class="sat-results-title">Parameters — <strong>ULS</strong> site class comparison</div>
-            <table class="sat-table">
-              <thead><tr><th>Site Class</th><th>PGA [g]</th><th>Sa,s [g]</th><th>Tc (s)</th><th>Td (s)</th></tr></thead>
-              <tbody>
-                <tr><td>I</td><td>0.168</td><td>0.350</td><td>0.35</td><td>3.00</td></tr>
-                <tr><td>II</td><td>0.215</td><td>0.448</td><td>0.40</td><td>3.00</td></tr>
-                <tr><td>III</td><td>0.268</td><td>0.559</td><td>0.45</td><td>3.00</td></tr>
-                <tr class="sat-selected"><td>★ IV</td><td>0.335</td><td>0.700</td><td>0.45</td><td>3.00</td></tr>
-                <tr><td>V</td><td>0.312</td><td>0.650</td><td>0.60</td><td>3.00</td></tr>
-                <tr><td>VI</td><td>0.280</td><td>0.580</td><td>0.70</td><td>3.00</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div class="spectra-charts-wrap" id="spectraChartsGrid">
+        <!-- dynamically populated: paired rows of [charts] then [tables] -->
       </div>
+    </div>
 
-      <!-- SLS1 row group -->
-      <div class="spectra-row-group">
-        <div class="spectra-row-group-header"><strong style="color:var(--accent3);">SLS1</strong> &nbsp;63% / 50yr (72yr RP)</div>
-        <div class="charts-pair">
-          <div class="chart-card sls1">
-            <div class="chart-label">Site Class IV — <strong>SLS1</strong> &nbsp;Sa(T) vs T</div>
-            <div class="chart-wrap"><canvas id="chart-sls1-1"></canvas></div>
-          </div>
-          <div class="chart-card sls1">
-            <div class="chart-label">All Site Classes — <strong>SLS1</strong> &nbsp;Envelope overlay</div>
-            <div class="chart-wrap"><canvas id="chart-sls1-2"></canvas></div>
-          </div>
+    <div class="coming-soon-box">
+      ◈ &nbsp; Horizontal Design Action Coefficient — Coming Soon
+    </div>
+
+    <!-- Suggestions -->
+    <details class="suggestions-details" id="suggestionsDetails">
+      <summary>
+        <span>Suggestions</span>
+        <span style="color:var(--accent);">+</span>
+      </summary>
+      <div class="suggestions-body">
+        <textarea id="suggestionText" placeholder="Got an idea to improve this tool? Drop it here…"></textarea>
+        <div>
+          <button id="submitSuggestionBtn" type="button">Submit</button>
         </div>
-        <div class="tables-pair">
-          <div class="table-card sls1">
-            <div class="sat-results-title" style="padding:12px 16px 0;">Sa(T*=0.80s) — <strong style="color:var(--accent3);">SLS1</strong></div>
-            <table class="sat-table">
-              <thead><tr><th>Site Class</th><th>Sa(T*) [g]</th><th>Tc (s)</th><th>Td (s)</th></tr></thead>
-              <tbody>
-                <tr class="sat-envelope-row"><td>★ Envelope</td><td>0.273</td><td>—</td><td>—</td></tr>
-                <tr><td>I</td><td>0.149</td><td>0.35</td><td>3.00</td></tr>
-                <tr><td>II</td><td>0.191</td><td>0.40</td><td>3.00</td></tr>
-                <tr><td>III</td><td>0.237</td><td>0.45</td><td>3.00</td></tr>
-                <tr class="sat-selected"><td>★ IV</td><td>0.273</td><td>0.45</td><td>3.00</td></tr>
-                <tr><td>V</td><td>0.253</td><td>0.60</td><td>3.00</td></tr>
-                <tr><td>VI</td><td>0.218</td><td>0.70</td><td>3.00</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="table-card sls1">
-            <div class="sat-results-title" style="padding:12px 16px 0;">Parameters — <strong style="color:var(--accent3);">SLS1</strong> site class comparison</div>
-            <table class="sat-table">
-              <thead><tr><th>Site Class</th><th>PGA [g]</th><th>Sa,s [g]</th><th>Tc (s)</th><th>Td (s)</th></tr></thead>
-              <tbody>
-                <tr><td>I</td><td>0.052</td><td>0.109</td><td>0.35</td><td>3.00</td></tr>
-                <tr><td>II</td><td>0.067</td><td>0.140</td><td>0.40</td><td>3.00</td></tr>
-                <tr><td>III</td><td>0.083</td><td>0.174</td><td>0.45</td><td>3.00</td></tr>
-                <tr class="sat-selected"><td>★ IV</td><td>0.104</td><td>0.218</td><td>0.45</td><td>3.00</td></tr>
-                <tr><td>V</td><td>0.097</td><td>0.202</td><td>0.60</td><td>3.00</td></tr>
-                <tr><td>VI</td><td>0.087</td><td>0.181</td><td>0.70</td><td>3.00</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div id="suggestionMsg"></div>
       </div>
+    </details>
 
-    </div><!-- /charts-section -->
-  </div><!-- /results-wrap -->
+    <!-- Page Views -->
+    <div class="pageviews" id="Counter">
+      Views today: <span id="pageViewsToday">—</span> &nbsp;|&nbsp;
+      Total views: <span id="pageViewsTotal">—</span>
+    </div>
 
-  <!-- Color legend -->
-  <div class="option-block" style="margin-top:0;">
-    <h3>Site Class Legend</h3>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div>Class I</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff4444"></div>Class II</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div>Class III</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#a8ff3e"></div>Class IV ★ selected</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div>Class V</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#00e5a0"></div>Class VI</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fff;border:1px dashed #fff;border-radius:0;width:20px;height:2px;border-radius:0;"></div>Envelope (max)</div>
+  </div><!-- /.page-wrap -->
+
+  <!-- Consent Modal -->
+  <div class="modal-backdrop show" id="consentModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="consentTitle">Notice &amp; Consent</div>
+        <div style="width:32px;"></div>
+      </div>
+      <div class="modal-body" id="consentText">
+TS1170.5 Site Parameter Finder is made available without charge and in good faith. It is agreed by the user that no liability for its use, applicability or accuracy is accepted by the author. Professional care and judgement must be exercised, with relevant design knowledge and skill applied by the user.
+
+This site uses essential cookies and collects approximate location data (country/region/city) for analytics and improvement.
+      </div>
+      <div class="modal-footer">
+        <button class="btn primary" id="btnAccept">Accept &amp; Continue</button>
+        <button class="btn danger"  id="btnExit">Exit</button>
+        <button class="btn"         id="btnLearnMore">Learn more</button>
+      </div>
     </div>
   </div>
 
-</div><!-- /page-wrap -->
+  <!-- Learn More Modal -->
+  <div class="modal-backdrop" id="learnMoreModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="learnMoreTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="learnMoreTitle">Location Information</div>
+        <button class="close-x" id="btnLearnMoreClose" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body" id="learnMoreText">
+Location Information (NZ Privacy Act 2020)
+This website collects approximate location information (such as country, region, or city) derived from your IP address.
+This information is collected in accordance with the Privacy Act 2020 (New Zealand) and is used for legitimate purposes, including:
+• Understanding how the tool is used across different regions
+• Improving performance and reliability
+• Anonymous usage analytics
+We do not collect precise location data, do not track individuals, and do not use location information to identify you.
+Location information is handled in aggregated form and may be processed by trusted third-party service providers solely for the purposes described above.
+________________________________________
+Key Privacy Principles
+In line with the NZ Privacy Act:
+• We only collect information that is necessary for the operation and improvement of the tool
+• Information is collected lawfully and fairly
+• Data is used only for the purposes it was collected
+• Reasonable steps are taken to protect the information
+________________________________________
+Your Rights
+Under the Privacy Act 2020, you have the right to:
+• Request access to personal information held about you
+• Request correction of that information, if applicable
+Because only approximate, non-identifying location data is collected, there is generally no personal information that can be linked to an individual user.
+      </div>
+    </div>
+  </div>
 
-<script>
-// Theme toggle
-function toggleTheme() {
-  const checked = document.getElementById('themeToggle').checked;
-  document.documentElement.setAttribute('data-theme', checked ? 'light' : 'dark');
-  document.getElementById('thumbEmoji').textContent = checked ? '☀️' : '🌑';
-  document.getElementById('lbl-dark').classList.toggle('active', !checked);
-  document.getElementById('lbl-light').classList.toggle('active', checked);
-  // Redraw charts
-  setTimeout(buildCharts, 50);
-}
+  <!-- ── Analytics Module (unchanged) ── -->
+  <script>
+    console.log("MAIN SCRIPT STARTED");
+    window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwdbPPFrWXCatRYLpGdOHIxRz6tnZI-rDMAkWQMgCR_0MD8jZUL8eNAWhpY9U0ZoUoP/exec";
+    window.GEO_URL = "/geo";
+    window.ANALYTICS_DEBUG = false;
 
-// Spectral curve evaluator
-function evalSa(pga, sas, tc, td, t) {
-  if (t <= 0) return pga;
-  if (t < 0.1) return pga + (sas - pga) * (t / 0.1);
-  if (t <= tc) return sas;
-  if (t <= td) return sas * tc / t;
-  return sas * tc * td / (t * t);
-}
-
-const CLASS_PARAMS = {
-  uls: [
-    { label: 'I',   color: '#00d4ff', pga: 0.168, sas: 0.350, tc: 0.35, td: 3.0 },
-    { label: 'II',  color: '#ff4444', pga: 0.215, sas: 0.448, tc: 0.40, td: 3.0 },
-    { label: 'III', color: '#ffd700', pga: 0.268, sas: 0.559, tc: 0.45, td: 3.0 },
-    { label: 'IV',  color: '#a8ff3e', pga: 0.335, sas: 0.700, tc: 0.45, td: 3.0 },
-    { label: 'V',   color: '#ff6b35', pga: 0.312, sas: 0.650, tc: 0.60, td: 3.0 },
-    { label: 'VI',  color: '#00e5a0', pga: 0.280, sas: 0.580, tc: 0.70, td: 3.0 },
-  ],
-  sls1: [
-    { label: 'I',   color: '#00d4ff', pga: 0.052, sas: 0.109, tc: 0.35, td: 3.0 },
-    { label: 'II',  color: '#ff4444', pga: 0.067, sas: 0.140, tc: 0.40, td: 3.0 },
-    { label: 'III', color: '#ffd700', pga: 0.083, sas: 0.174, tc: 0.45, td: 3.0 },
-    { label: 'IV',  color: '#a8ff3e', pga: 0.104, sas: 0.218, tc: 0.45, td: 3.0 },
-    { label: 'V',   color: '#ff6b35', pga: 0.097, sas: 0.202, tc: 0.60, td: 3.0 },
-    { label: 'VI',  color: '#00e5a0', pga: 0.087, sas: 0.181, tc: 0.70, td: 3.0 },
-  ]
-};
-
-const T_MAX = 3.0, N = 200;
-const T_STAR = 0.80;
-
-function buildT() {
-  const arr = [];
-  for (let i = 0; i <= N; i++) arr.push(parseFloat((i * T_MAX / N).toFixed(4)));
-  return arr;
-}
-
-function buildCurve(params, tArr) {
-  return tArr.map(t => parseFloat(evalSa(params.pga, params.sas, params.tc, params.td, t).toFixed(4)));
-}
-
-function buildEnvelope(allParams, tArr) {
-  return tArr.map((t, i) => Math.max(...allParams.map(p => evalSa(p.pga, p.sas, p.tc, p.td, t))));
-}
-
-let charts = {};
-
-function isDark() {
-  return document.documentElement.getAttribute('data-theme') !== 'light';
-}
-
-function getThemeColors() {
-  const dark = isDark();
-  return {
-    bg: dark ? '#000' : '#fff',
-    grid: dark ? 'rgba(0,255,255,0.07)' : 'rgba(0,0,0,0.07)',
-    text: dark ? '#777' : '#555',
-    accent: dark ? '#00ffff' : '#007799',
-    accent2: dark ? '#ff4488' : '#cc2255',
-  };
-}
-
-function makeChart(id, params, tArr, apoe, selectedClass) {
-  const tc = getThemeColors();
-  const datasets = params.map(p => ({
-    label: p.label,
-    data: buildCurve(p, tArr).map((y, i) => ({ x: tArr[i], y })),
-    borderColor: p.color,
-    borderWidth: p.label === selectedClass ? 2.5 : 1.5,
-    pointRadius: 0,
-    tension: 0.2,
-  }));
-
-  // Envelope
-  const env = buildEnvelope(params, tArr);
-  datasets.push({
-    label: 'Envelope',
-    data: env.map((y, i) => ({ x: tArr[i], y })),
-    borderColor: '#ffffff',
-    borderWidth: 1.5,
-    borderDash: [5, 4],
-    pointRadius: 0,
-    tension: 0.2,
-  });
-
-  // T* annotation dataset (vertical line)
-  const saAtT = evalSa(
-    params.find(p=>p.label===selectedClass).pga,
-    params.find(p=>p.label===selectedClass).sas,
-    params.find(p=>p.label===selectedClass).tc,
-    params.find(p=>p.label===selectedClass).td,
-    T_STAR
-  );
-  datasets.push({
-    label: 'T*',
-    data: [{ x: T_STAR, y: 0 }, { x: T_STAR, y: 1.6 }],
-    borderColor: tc.accent2,
-    borderWidth: 1.5,
-    borderDash: [4, 3],
-    pointRadius: 0,
-    tension: 0,
-  });
-  // T* dot
-  datasets.push({
-    label: `Sa(T*)`,
-    data: [{ x: T_STAR, y: saAtT }],
-    borderColor: '#a8ff3e',
-    backgroundColor: '#a8ff3e',
-    borderWidth: 0,
-    pointRadius: 5,
-    pointStyle: 'circle',
-  });
-
-  const ctx = document.getElementById(id);
-  if (!ctx) return;
-  if (charts[id]) charts[id].destroy();
-  charts[id] = new Chart(ctx, {
-    type: 'scatter',
-    data: { datasets },
-    options: {
-      animation: false,
-      responsive: true,
-      maintainAspectRatio: false,
-      parsing: false,
-      scales: {
-        x: {
-          type: 'linear', min: 0, max: 3,
-          title: { display: true, text: 'T (s)', color: tc.text, font: { family: 'Space Mono', size: 10 } },
-          ticks: { color: tc.text, font: { family: 'Space Mono', size: 9 }, maxTicksLimit: 7 },
-          grid: { color: tc.grid },
-          border: { color: tc.text },
-        },
-        y: {
-          type: 'linear', min: 0,
-          title: { display: true, text: 'Sa(T) [g]', color: tc.text, font: { family: 'Space Mono', size: 10 } },
-          ticks: { color: tc.text, font: { family: 'Space Mono', size: 9 }, maxTicksLimit: 6 },
-          grid: { color: tc.grid },
-          border: { color: tc.text },
+    (function () {
+      var VISITOR_KEY = "nz_tool_visitor_id";
+      function getVisitor() {
+        var id = localStorage.getItem(VISITOR_KEY);
+        var isNew = false;
+        if (!id) {
+          isNew = true;
+          id = (window.crypto && crypto.randomUUID)
+            ? ("v_" + crypto.randomUUID())
+            : ("v_" + Date.now() + "_" + Math.random().toString(16).slice(2));
+          localStorage.setItem(VISITOR_KEY, id);
         }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false },
+        return { id: id, isNew: isNew };
+      }
+      function safeGeoObject(g) {
+        return {
+          geoProvider: (g && g.geoProvider) ? g.geoProvider : "cloudflare",
+          geoCountry:  (g && g.geoCountry)  ? g.geoCountry  : "",
+          geoRegion:   (g && g.geoRegion)   ? g.geoRegion   : "",
+          geoCity:     (g && g.geoCity)     ? g.geoCity     : ""
+        };
+      }
+      function getGeo() {
+        var url = window.GEO_URL || "/geo";
+        return fetch(url, { cache: "no-store" })
+          .then(r => r.text().then(t => {
+            try { return safeGeoObject(JSON.parse(t)); }
+            catch(e){ return safeGeoObject(null); }
+          }))
+          .catch(() => safeGeoObject(null));
+      }
+      function postToAppsScript(payloadObj) {
+        var url  = window.WEB_APP_URL;
+        var body = new URLSearchParams();
+        body.set("payload", JSON.stringify(payloadObj));
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body: body.toString()
+        }).then(res => res.text());
+      }
+      function logEvent(eventName, extra) {
+        extra = extra || {};
+        var v = getVisitor();
+        return getGeo().then(function (geo) {
+          var payload = Object.assign({
+            visitorId:   v.id,
+            isNew:       v.isNew,
+            event:       String(eventName || ""),
+            page:        location.pathname || "",
+            userAgent:   navigator.userAgent || "",
+            tsClient:    new Date().toISOString(),
+            geoProvider: geo.geoProvider,
+            geoCountry:  geo.geoCountry,
+            geoRegion:   geo.geoRegion,
+            geoCity:     geo.geoCity
+          }, extra);
+          return postToAppsScript(payload);
+        });
+      }
+      window.SiteAnalytics = { logEvent: logEvent, getVisitor: getVisitor };
+    })();
+  </script>
+
+  <!-- ── Main app logic (unchanged) ── -->
+  <script>
+    function safeLog(eventName, extra){
+      try{
+        if (!window.SiteAnalytics || !window.SiteAnalytics.logEvent) return;
+        window.SiteAnalytics.logEvent(eventName, extra || {}).catch(() => {});
+      } catch(e){}
+    }
+
+    const SHEET_ID        = "1f34jZQUy7Jw4BZOP8xwj6DgXXvwDPnxbGhGkhUadULg";
+    const SHEET1_NAME     = "Sheet1";
+    const SHEET2_NAME     = "Sheet2";
+    const GOOGLE_MAPS_KEY = "AIzaSyC671lrEe82CVe7kS6yCebRsF3GIGrOmLw";
+
+    const SHEET1_LAT_COL_INDEX  = 0;
+    const SHEET1_LNG_COL_INDEX  = 1;
+    const SHEET1_APOE_COL_INDEX = 2;
+
+    const SHEET1_SITECLASS_COLS = {
+      I:   { PGA: 5,  Sa: 6,  Tc: 7,  Td: 8  },
+      II:  { PGA: 9,  Sa: 10, Tc: 11, Td: 12 },
+      III: { PGA: 13, Sa: 14, Tc: 15, Td: 16 },
+      IV:  { PGA: 17, Sa: 18, Tc: 19, Td: 20 },
+      V:   { PGA: 21, Sa: 22, Tc: 23, Td: 24 },
+      VI:  { PGA: 25, Sa: 26, Tc: 27, Td: 28 },
+    };
+
+    const SHEET2_WORKINGLIFE_COL_INDEX = 0;
+    const SHEET2_IMPORTANCE_COL_INDEX  = 1;
+    const SHEET2_STRING_COLS           = [2, 3, 4];
+    const SHEET2_FALLBACK_TITLES       = { 2: "ULS", 3: "SLS1", 4: "SLS2" };
+
+    const WORKING_LIFE_LABEL = {
+      construction: "Construction equipment",
+      lt6months:    "Less than 6 months",
+      "5":          "5 years",
+      "25":         "25 years",
+      "50":         "50 years",
+      "100":        "100 years or more"
+    };
+
+    const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
+
+    async function incrementAndFetchPageViews(){
+      const todayEl = document.getElementById("pageViewsToday");
+      const totalEl = document.getElementById("pageViewsTotal");
+      if (todayEl) todayEl.textContent = "…";
+      if (totalEl) totalEl.textContent = "…";
+      try{
+        const url = String(window.WEB_APP_URL || "").trim();
+        if (!url) throw new Error("WEB_APP_URL not set");
+        const res = await fetch(url + "?mode=counter&ts=" + Date.now(), { cache: "no-store" });
+        const raw = await res.text();
+        let data;
+        try { data = JSON.parse(raw); } catch(e){ throw new Error("Counter returned non-JSON"); }
+        if (todayEl) todayEl.textContent = (data && typeof data.today === "number") ? String(data.today) : "—";
+        if (totalEl) totalEl.textContent = (data && typeof data.total === "number") ? String(data.total) : "—";
+      } catch(e){
+        if (todayEl) todayEl.textContent = "—";
+        if (totalEl) totalEl.textContent = "—";
       }
     }
-  });
-}
 
-function buildCharts() {
-  const tArr = buildT();
-  makeChart('chart-uls-1',  CLASS_PARAMS.uls,  tArr, 'ULS', 'IV');
-  makeChart('chart-uls-2',  CLASS_PARAMS.uls,  tArr, 'ULS', 'IV');
-  makeChart('chart-sls1-1', CLASS_PARAMS.sls1, tArr, 'SLS1', 'IV');
-  makeChart('chart-sls1-2', CLASS_PARAMS.sls1, tArr, 'SLS1', 'IV');
-}
+    const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000;
+    const sheet1BucketCache = new Map();
 
-window.addEventListener('load', buildCharts);
-</script>
+    function round1(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return null;
+      return Math.round(num * 10) / 10;
+    }
+
+    function bucketKeyFromLatLng(lat, lng){
+      const rLat = round1(lat), rLng = round1(lng);
+      if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) return "";
+      return `${rLat.toFixed(1)},${rLng.toFixed(1)}`;
+    }
+
+    function getBucketCache(key){
+      if (!key) return null;
+      const mem = sheet1BucketCache.get(key);
+      if (mem && (Date.now() - mem.ts) < SHEET1_BUCKET_CACHE_TTL_MS) return mem.rows;
+      try{
+        const raw = localStorage.getItem("sheet1_bucket_cache_" + key);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !obj.ts || !Array.isArray(obj.rows)) return null;
+        if ((Date.now() - obj.ts) >= SHEET1_BUCKET_CACHE_TTL_MS) return null;
+        sheet1BucketCache.set(key, { ts: obj.ts, rows: obj.rows });
+        return obj.rows;
+      } catch(e){ return null; }
+    }
+
+    function setBucketCache(key, rows){
+      if (!key) return;
+      const payload = { ts: Date.now(), rows: rows };
+      sheet1BucketCache.set(key, payload);
+      try{ localStorage.setItem("sheet1_bucket_cache_" + key, JSON.stringify(payload)); } catch(e){}
+    }
+
+    let map, marker, autocomplete;
+    let selectedLat = null, selectedLng = null;
+    let selectedSiteClass       = "";
+    let selectedImportanceLevel = "";
+    let selectedWorkingLife     = "";
+    let matchedSheet1Rows  = [];
+    let sheet2MatchOptions = [];
+    let recalcToken = 0;
+
+    function hasAllInputs(){
+      return Number.isFinite(selectedLat) && Number.isFinite(selectedLng) &&
+             !!selectedSiteClass && !!selectedWorkingLife && !!selectedImportanceLevel;
+    }
+
+    function showLoading(show){
+      document.getElementById("loadingOverlay").classList.toggle("show", !!show);
+    }
+
+    function clearResults(){
+      document.getElementById("tablesGrid").innerHTML = "";
+      const bar = document.getElementById("roundedCoordsBar");
+      bar.style.display = "none"; bar.textContent = "";
+      const tSection = document.getElementById("tInputSection");
+      if (tSection) tSection.style.display = "none";
+      renderCharts([], []);
+    }
+
+    function applyTablesGridColumns(n){
+      const grid = document.getElementById("tablesGrid");
+      if      (n === 4) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else if (n === 3) grid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      else if (n === 2) grid.style.gridTemplateColumns = "repeat(2, 1fr)";
+      else              grid.style.gridTemplateColumns = "repeat(1, 1fr)";
+    }
+
+    function normalize(v){ return (v === null || v === undefined) ? "" : String(v).trim(); }
+
+    function eqLoose(a, b){
+      const sa = normalize(a), sb = normalize(b);
+      if (sa === sb) return true;
+      const na = Number(sa), nb = Number(sb);
+      if (!Number.isNaN(na) && !Number.isNaN(nb) && na === nb) return true;
+      return sa.toLowerCase() === sb.toLowerCase();
+    }
+
+    function safeCell(v){
+      if (v === null || v === undefined || String(v).trim() === "") return "";
+      const n = Number(v);
+      return Number.isFinite(n) ? (Math.round(n * 100) / 100).toString() : String(v);
+    }
+
+    function isOneOver500(apoe){
+      const s = normalize(apoe).toLowerCase().replace(/\s+/g, "");
+      return s === "1/500" || s === "1:500" || s === "1-500" || s === "1\\500";
+    }
+
+    function setRoundedBar(){
+      const el = document.getElementById("roundedCoordsBar");
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)){
+        el.style.display = "none"; el.textContent = ""; return;
+      }
+      const rLat = round1(selectedLat), rLng = round1(selectedLng);
+      el.innerHTML = `Rounded (1dp) match key: <b>${rLat.toFixed(1)},${rLng.toFixed(1)}</b>`;
+    }
+
+    function isSpecialCaseSelected(){
+      return (String(selectedImportanceLevel) === "4") && (String(selectedWorkingLife) === "100");
+    }
+
+    function showSpecialCaseInTablesArea(){
+      const grid = document.getElementById("tablesGrid");
+      if (!grid) return;
+      applyTablesGridColumns(1);
+      grid.innerHTML = `<div class="table-card"><div class="special-case-card">Refer to NZS1170.1 table 3.3</div></div>`;
+      const bar = document.getElementById("roundedCoordsBar");
+      if (bar){ bar.style.display = "none"; bar.textContent = ""; }
+    }
+
+    function syncMapHeightToOptionBlock(){
+      const block = document.getElementById("designInputsBlock");
+      const mapEl = document.getElementById("map");
+      if (!block || !mapEl) return;
+      const h = Math.max(280, Math.round(block.getBoundingClientRect().height));
+      mapEl.style.height = h + "px";
+      if (window.google && google.maps && map){
+        google.maps.event.trigger(map, "resize");
+        if (marker) map.panTo(marker.getPosition());
+      }
+    }
+
+    function setupHeightSync(){
+      const block = document.getElementById("designInputsBlock");
+      if (!block) return;
+      requestAnimationFrame(syncMapHeightToOptionBlock);
+      if ("ResizeObserver" in window){
+        const ro = new ResizeObserver(() => syncMapHeightToOptionBlock());
+        ro.observe(block);
+      }
+      window.addEventListener("resize", syncMapHeightToOptionBlock);
+    }
+
+    function gvizUrl(sheetName, query){
+      const base   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
+      const params = new URLSearchParams();
+      params.set("sheet", sheetName);
+      params.set("tq",    query);
+      return `${base}?${params.toString()}`;
+    }
+
+    async function fetchSheetAs2DArray(sheetName, query){
+      const url      = gvizUrl(sheetName, query);
+      const res      = await fetch(url);
+      const text     = await res.text();
+      const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+      const data     = JSON.parse(jsonText);
+      const cols     = data.table.cols.length;
+      const rows     = data.table.rows || [];
+      return rows.map(r => {
+        const arr = new Array(cols).fill(null);
+        (r.c || []).forEach((cell, i) => { arr[i] = cell ? cell.v : null; });
+        return arr;
+      });
+    }
+
+    async function step1_findAllSheet1RowsMatching1dp(){
+      matchedSheet1Rows = [];
+      if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) return;
+      const key    = bucketKeyFromLatLng(selectedLat, selectedLng);
+      const cached = getBucketCache(key);
+      if (cached){ matchedSheet1Rows = cached.map(r => ({ row: r })); return; }
+      const targetLat1 = round1(selectedLat), targetLng1 = round1(selectedLng);
+      const latMin = targetLat1 - 0.05, latMax = targetLat1 + 0.05;
+      const lngMin = targetLng1 - 0.05, lngMax = targetLng1 + 0.05;
+      const q = `select * where A >= ${latMin} and A < ${latMax} and B >= ${lngMin} and B < ${lngMax}`;
+      const bucketRows = await fetchSheetAs2DArray(SHEET1_NAME, q);
+      const exact = [];
+      for (const row of bucketRows){
+        const lat = parseFloat(row[SHEET1_LAT_COL_INDEX]);
+        const lng = parseFloat(row[SHEET1_LNG_COL_INDEX]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        if (round1(lat) === targetLat1 && round1(lng) === targetLng1) exact.push(row);
+      }
+      setBucketCache(key, exact);
+      matchedSheet1Rows = exact.map(r => ({ row: r }));
+    }
+
+    async function step2_getTitlesAndStringsFromSheet2(){
+      sheet2MatchOptions = [];
+      if (!selectedWorkingLife || !selectedImportanceLevel) return;
+      const sheet2    = await fetchSheetAs2DArray(SHEET2_NAME, "select A,B,C,D,E");
+      if (!sheet2.length) return;
+      const firstA    = normalize(sheet2[0][SHEET2_WORKINGLIFE_COL_INDEX]).toLowerCase();
+      const firstB    = normalize(sheet2[0][SHEET2_IMPORTANCE_COL_INDEX]).toLowerCase();
+      const headerish = firstA.includes("working") || firstB.includes("importance");
+      const headerRow = headerish ? sheet2[0]      : null;
+      const dataRows  = headerish ? sheet2.slice(1) : sheet2;
+      const workingLifeForMatch = WORKING_LIFE_LABEL[selectedWorkingLife] || selectedWorkingLife;
+      const matchRow = dataRows.find(r =>
+        eqLoose(r[SHEET2_WORKINGLIFE_COL_INDEX], workingLifeForMatch) &&
+        eqLoose(r[SHEET2_IMPORTANCE_COL_INDEX],  selectedImportanceLevel)
+      );
+      if (!matchRow){ sheet2MatchOptions = []; return; }
+      sheet2MatchOptions = SHEET2_STRING_COLS
+        .map((colIdx) => {
+          const rawTitle = headerRow ? normalize(headerRow[colIdx]) : "";
+          const title    = (rawTitle && rawTitle.length > 0) ? rawTitle : (SHEET2_FALLBACK_TITLES[colIdx] || "");
+          const value    = normalize(matchRow[colIdx]);
+          return { title, value };
+        })
+        .filter(x => x.value.length > 0);
+    }
+
+    function step3_filterMatchedSheet1Rows(){
+      if (!matchedSheet1Rows.length || !sheet2MatchOptions.length) return [];
+      const out = [], seen = new Set();
+      for (const item of matchedSheet1Rows){
+        const sheet1Row = item.row;
+        const apoe      = normalize(sheet1Row[SHEET1_APOE_COL_INDEX]);
+        if (!apoe) continue;
+        const match = sheet2MatchOptions.find(opt => opt.value.toLowerCase() === apoe.toLowerCase());
+        if (!match) continue;
+        const key = `${apoe.toLowerCase()}|${(match.title||"").toLowerCase()}|${selectedSiteClass}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ sheet1Row, apoe, matchTitle: match.title });
+      }
+      const hasULS = sheet2MatchOptions.some(o => (o.title || "").toUpperCase() === "ULS");
+      if (hasULS){
+        const oneOver500Item = matchedSheet1Rows.find(it => isOneOver500((it.row || [])[SHEET1_APOE_COL_INDEX]));
+        if (oneOver500Item && oneOver500Item.row){
+          const apoe = normalize(oneOver500Item.row[SHEET1_APOE_COL_INDEX]);
+          const key  = `${apoe.toLowerCase()}|uls|${selectedSiteClass}`;
+          if (!seen.has(key)){
+            seen.add(key);
+            out.push({ sheet1Row: oneOver500Item.row, apoe, matchTitle: "ULS" });
+          }
+        }
+      }
+      return out;
+    }
+
+    function buildThreeRowTable(sheet1Row, apoe, matchTitle){
+      const sc      = selectedSiteClass;
+      const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
+
+      if (sc === "Envelope") {
+        // Max across all site classes for each parameter
+        let maxPGA = -Infinity, maxSa = -Infinity, maxTc = -Infinity, maxTd = -Infinity;
+        SITE_CLASSES_ALL.forEach(cls => {
+          const idx = SHEET1_SITECLASS_COLS[cls];
+          if (!idx) return;
+          const pga = parseFloat(sheet1Row[idx.PGA]);
+          const sa  = parseFloat(sheet1Row[idx.Sa]);
+          const tc  = parseFloat(sheet1Row[idx.Tc]);
+          const td  = parseFloat(sheet1Row[idx.Td]);
+          if (Number.isFinite(pga) && pga > maxPGA) maxPGA = pga;
+          if (Number.isFinite(sa)  && sa  > maxSa)  maxSa  = sa;
+          if (Number.isFinite(tc)  && tc  > maxTc)  maxTc  = tc;
+          if (Number.isFinite(td)  && td  > maxTd)  maxTd  = td;
+        });
+        const fmt = v => Number.isFinite(v) ? (Math.round(v * 100) / 100).toString() : "";
+        return `
+          <table class="sc-table">
+            <thead>
+              <tr>
+                <th class="left-head">${topLeft}</th>
+                <th colspan="4">Envelope (Max)</th>
+              </tr>
+              <tr>
+                <th class="subhead left-head">apoe</th>
+                <th class="subhead">PGA</th>
+                <th class="subhead">Sa,s</th>
+                <th class="subhead">Tc</th>
+                <th class="subhead">Td</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="left-cell">${apoe || "(APOE blank)"}</td>
+                <td>${fmt(maxPGA)}</td>
+                <td>${fmt(maxSa)}</td>
+                <td>${fmt(maxTc)}</td>
+                <td>${fmt(maxTd)}</td>
+              </tr>
+            </tbody>
+          </table>`;
+      }
+
+      const idx     = SHEET1_SITECLASS_COLS[sc];
+      const pga     = idx ? safeCell(sheet1Row[idx.PGA]) : "";
+      const sa      = idx ? safeCell(sheet1Row[idx.Sa])  : "";
+      const tc      = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+      const td      = idx ? safeCell(sheet1Row[idx.Td])  : "";
+      return `
+        <table class="sc-table">
+          <thead>
+            <tr>
+              <th class="left-head">${topLeft}</th>
+              <th colspan="4">Site Class ${sc}</th>
+            </tr>
+            <tr>
+              <th class="subhead left-head">apoe</th>
+              <th class="subhead">PGA</th>
+              <th class="subhead">Sa,s</th>
+              <th class="subhead">Tc</th>
+              <th class="subhead">Td</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="left-cell">${apoe || "(APOE blank)"}</td>
+              <td>${pga}</td>
+              <td>${sa}</td>
+              <td>${tc}</td>
+              <td>${td}</td>
+            </tr>
+          </tbody>
+        </table>`;
+    }
+
+    // ── Chart instances ──
+    const _charts = {};
+
+    const SITE_CLASSES_ALL = ["I","II","III","IV","V","VI"];
+    const CLASS_COLORS = [
+      "#00d4ff", // cyan   – I
+      "#ff4444", // red    – II
+      "#ffd700", // gold   – III
+      "#a8ff3e", // lime   – IV
+      "#ff6b35", // orange – V
+      "#00e5a0", // teal   – VI
+    ];
+
+    const CHART_DEFAULTS = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: {
+          labels: {
+            color: "#8a9ab0",
+            font: { family: "'Space Mono', monospace", size: 11 },
+            boxWidth: 12,
+            padding: 14,
+          }
+        },
+        tooltip: {
+          backgroundColor: "#111620",
+          borderColor: "#1e2a3a",
+          borderWidth: 1,
+          titleColor: "#00d4ff",
+          bodyColor: "#e8edf3",
+          titleFont: { family: "'Space Mono', monospace", size: 11 },
+          bodyFont:  { family: "'Space Mono', monospace", size: 11 },
+          callbacks: {
+            title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
+            label: item  => " " + item.dataset.label + ": " + Number(item.parsed.y).toFixed(4) + " g",
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: "linear",
+          min: 0,
+          max: 3.0,
+          ticks: {
+            color: "#5a6a7e",
+            font: { family: "'Space Mono', monospace", size: 10 },
+            maxTicksLimit: 10,
+          },
+          grid: { color: "rgba(30,42,58,0.9)" },
+          title: { display: true, text: "Period T (s)", color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
+        },
+        y: {
+          min: 0,
+          ticks: {
+            color: "#5a6a7e",
+            font: { family: "'Space Mono', monospace", size: 10 },
+            maxTicksLimit: 8,
+          },
+          grid: { color: "rgba(30,42,58,0.9)" },
+          title: { display: true, text: "Sa(T) [g]", color: "#5a6a7e", font: { family: "'Space Mono',monospace", size: 10 } }
+        }
+      }
+    };
+
+    // ── NZS 1170.5 Spectral Shape ──
+    // Builds {x, y} point array for Sa(T) curve given PGA, Sa_s, Tc, Td
+    // Shape:
+    //   T=0:              Sa = PGA
+    //   0 < T < 0.1:      Sa linearly interpolates PGA → Sa_s  (rising limb)
+    //   0.1 ≤ T ≤ Tc:     Sa = Sa_s                            (plateau)
+    //   Tc < T ≤ Td:      Sa = Sa_s * Tc / T                   (1/T decay)
+    //   T > Td:           Sa = Sa_s * Tc * Td / T^2            (1/T² decay)
+    function buildSpectralCurve(pga, sas, tc, td) {
+      const pts = [];
+      const T_MAX = 3.0;
+      const N_FINE = 300;
+
+      for (let i = 0; i <= N_FINE; i++) {
+        const t = (T_MAX / N_FINE) * i;
+        let sa;
+        if (t === 0) {
+          sa = pga;
+        } else if (t < 0.1) {
+          // linear ramp from PGA at T=0 to Sa_s at T=0.1
+          sa = pga + (sas - pga) * (t / 0.1);
+        } else if (t <= tc) {
+          sa = sas;
+        } else if (t <= td) {
+          sa = sas * tc / t;
+        } else {
+          sa = sas * tc * td / (t * t);
+        }
+        pts.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(Math.max(0, sa).toFixed(5)) });
+      }
+      return pts;
+    }
+
+    // Build envelope (max across all site classes at each T step)
+    function buildEnvelopeCurve(classParams) {
+      const T_MAX = 3.0;
+      const N_FINE = 300;
+      const pts = [];
+      for (let i = 0; i <= N_FINE; i++) {
+        const t = (T_MAX / N_FINE) * i;
+        let maxSa = 0;
+        for (const p of classParams) {
+          let sa;
+          if (t === 0) {
+            sa = p.pga;
+          } else if (t < 0.1) {
+            sa = p.pga + (p.sas - p.pga) * (t / 0.1);
+          } else if (t <= p.tc) {
+            sa = p.sas;
+          } else if (t <= p.td) {
+            sa = p.sas * p.tc / t;
+          } else {
+            sa = p.sas * p.tc * p.td / (t * t);
+          }
+          if (sa > maxSa) maxSa = sa;
+        }
+        pts.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(Math.max(0, maxSa).toFixed(5)) });
+      }
+      return pts;
+    }
+
+    function destroyChart(id) {
+      if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+    }
+
+    function destroyAllSpectraCharts() {
+      Object.keys(_charts).forEach(id => destroyChart(id));
+    }
+
+    // Sort apoe strings numerically: "1/25" first, "1/2500" last
+    function apoeToNum(s) {
+      const m = String(s).match(/1[\/:](\d+)/);
+      return m ? parseInt(m[1], 10) : 99999;
+    }
+
+    // Map matchTitle → CSS class suffix for colour theming
+    function titleToStyleClass(title) {
+      const t = (title || "").trim().toUpperCase();
+      if (t === "ULS")  return "uls";
+      if (t === "SLS1") return "sls1";
+      if (t === "SLS2") return "sls2";
+      return "uls";
+    }
+
+    // Build a single Sa(T) chart inside canvasId for one APoE row
+    // ── Design period state ──
+    let designPeriodT = null;  // null = not set
+
+    // Evaluate Sa(T) for given params at a specific T value
+    function evalSaT(pga, sas, tc, td, t) {
+      if (!Number.isFinite(t) || t < 0) return null;
+      if (t === 0)       return pga;
+      if (t < 0.1)       return pga + (sas - pga) * (t / 0.1);
+      if (t <= tc)       return sas;
+      if (t <= td)       return sas * tc / t;
+      return sas * tc * td / (t * t);
+    }
+
+    function buildSpectraChart(canvasId, apoe, matchTitle, sheet1Row) {
+      destroyChart(canvasId);
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) return;
+
+      // Gather params for all site classes
+      const classParams = [];
+      SITE_CLASSES_ALL.forEach(cls => {
+        const idx = SHEET1_SITECLASS_COLS[cls];
+        if (!idx) return;
+        const pga = parseFloat(sheet1Row[idx.PGA]);
+        const sas = parseFloat(sheet1Row[idx.Sa]);
+        const tc  = parseFloat(sheet1Row[idx.Tc]);
+        const td  = parseFloat(sheet1Row[idx.Td]);
+        if ([pga,sas,tc,td].every(Number.isFinite)) {
+          classParams.push({ cls, pga, sas, tc, td });
+        }
+      });
+
+      const datasets = [];
+
+      // Envelope
+      if (classParams.length > 1) {
+        datasets.push({
+          label: "Envelope",
+          data: buildEnvelopeCurve(classParams),
+          borderColor: "#ffffff",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [5, 3],
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+          order: 0,
+        });
+      }
+
+      // Per-class spectral curves
+      classParams.forEach((p, ci) => {
+        const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
+        const color    = CLASS_COLORS[colorIdx] || "#888";
+        datasets.push({
+          label: "Class " + p.cls,
+          data: buildSpectralCurve(p.pga, p.sas, p.tc, p.td),
+          borderColor: color,
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+          order: ci + 1,
+        });
+      });
+
+      // Sa,s reference line — for selected site class, or envelope max
+      if (selectedSiteClass === "Envelope") {
+        // Use the max Sa,s and the max Tc across all classes
+        let maxSas = -Infinity, maxTc = -Infinity;
+        classParams.forEach(p => {
+          if (p.sas > maxSas) maxSas = p.sas;
+          if (p.tc  > maxTc)  maxTc  = p.tc;
+        });
+        if (Number.isFinite(maxSas) && Number.isFinite(maxTc)) {
+          datasets.push({
+            label: "Sa,s (Envelope)",
+            data: [{ x: 0, y: maxSas }, { x: maxTc, y: maxSas }],
+            borderColor: "rgba(255,255,255,0.3)",
+            backgroundColor: "transparent",
+            borderWidth: 1,
+            borderDash: [3, 3],
+            pointRadius: 0,
+            tension: 0,
+            fill: false,
+            order: -1,
+          });
+        }
+      } else if (selectedSiteClass) {
+        const idx = SHEET1_SITECLASS_COLS[selectedSiteClass];
+        if (idx) {
+          const sas = parseFloat(sheet1Row[idx.Sa]);
+          const tc  = parseFloat(sheet1Row[idx.Tc]);
+          if (Number.isFinite(sas) && Number.isFinite(tc)) {
+            datasets.push({
+              label: "Sa,s (Class " + selectedSiteClass + ")",
+              data: [{ x: 0, y: sas }, { x: tc, y: sas }],
+              borderColor: "rgba(255,255,255,0.3)",
+              backgroundColor: "transparent",
+              borderWidth: 1,
+              borderDash: [3, 3],
+              pointRadius: 0,
+              tension: 0,
+              fill: false,
+              order: -1,
+            });
+          }
+        }
+      }
+
+      // T* vertical line + horizontal lines + dot markers on each curve
+      const tStar = designPeriodT;
+      const tStarValid = Number.isFinite(tStar) && tStar >= 0 && tStar <= 4.0;
+
+      if (tStarValid) {
+        // Compute max y at T* for the vertical line extent
+        let maxY = 0;
+        classParams.forEach(p => {
+          const v = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
+          if (v > maxY) maxY = v;
+        });
+
+        // Vertical line from y=0 up to maxY
+        datasets.push({
+          label: "T* = " + tStar.toFixed(2) + " s",
+          data: [{ x: tStar, y: 0 }, { x: tStar, y: maxY * 1.05 }],
+          borderColor: "#ff2d9b",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+          order: -2,
+        });
+
+        // Horizontal lines from T=0 to T* at each class's Sa(T*) value
+        classParams.forEach((p, ci) => {
+          const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
+          const color    = CLASS_COLORS[colorIdx] || "#888";
+          const sa       = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
+          if (!Number.isFinite(sa)) return;
+          datasets.push({
+            label: "_hline_" + p.cls,
+            data: [{ x: 0, y: sa }, { x: tStar, y: sa }],
+            borderColor: color,
+            backgroundColor: "transparent",
+            borderWidth: 1,
+            borderDash: [4, 3],
+            pointRadius: 0,
+            tension: 0,
+            fill: false,
+            order: -2,
+          });
+        });
+
+        // Dot markers at intersection with each class curve
+        classParams.forEach((p, ci) => {
+          const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
+          const color    = CLASS_COLORS[colorIdx] || "#888";
+          const sa       = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
+          if (!Number.isFinite(sa)) return;
+          datasets.push({
+            label: "_dot_" + p.cls,   // prefixed with _ so tooltip can skip
+            data: [{ x: tStar, y: sa }],
+            borderColor: color,
+            backgroundColor: color,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+            pointStyle: "circle",
+            showLine: false,
+            fill: false,
+            order: -3,
+          });
+        });
+      }
+
+      _charts[canvasId] = new Chart(ctx, {
+        type: "line",
+        data: { datasets },
+        options: {
+          ...CHART_DEFAULTS,
+          parsing: false,
+          normalized: true,
+          plugins: {
+            ...CHART_DEFAULTS.plugins,
+            legend: {
+              ...CHART_DEFAULTS.plugins.legend,
+              labels: {
+                ...CHART_DEFAULTS.plugins.legend.labels,
+                filter: item => !item.text.startsWith("_dot_") && !item.text.startsWith("_hline_"),
+              }
+            },
+            tooltip: {
+              ...CHART_DEFAULTS.plugins.tooltip,
+              filter: item => !item.dataset.label.startsWith("_dot_") && !item.dataset.label.startsWith("_hline_"),
+              callbacks: {
+                title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
+                label: item  => {
+                  if (item.dataset.label.startsWith("_dot_")) return null;
+                  return " " + item.dataset.label + ": " + Number(item.parsed.y).toFixed(4) + " g";
+                },
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Build the Sa(T*) results table HTML for a given sheet1Row
+    function buildSatTable(sheet1Row, tStar, apoe, matchTitle) {
+      if (!Number.isFinite(tStar)) return "";
+
+      const rows = SITE_CLASSES_ALL.map(cls => {
+        const idx = SHEET1_SITECLASS_COLS[cls];
+        if (!idx) return null;
+        const pga = parseFloat(sheet1Row[idx.PGA]);
+        const sas = parseFloat(sheet1Row[idx.Sa]);
+        const tc  = parseFloat(sheet1Row[idx.Tc]);
+        const td  = parseFloat(sheet1Row[idx.Td]);
+        if (![pga,sas,tc,td].every(Number.isFinite)) return null;
+        const sa  = evalSaT(pga, sas, tc, td, tStar);
+        return { cls, sa: sa.toFixed(4), tc: tc.toFixed(2), td: td.toFixed(2) };
+      }).filter(Boolean);
+
+      if (!rows.length) return "";
+
+      // Envelope: max Sa(T*), max Tc, max Td
+      const envSa = Math.max(...rows.map(r => parseFloat(r.sa)));
+      const envTc = Math.max(...rows.map(r => parseFloat(r.tc)));
+      const envTd = Math.max(...rows.map(r => parseFloat(r.td)));
+
+      const isEnvSelected  = selectedSiteClass === "Envelope";
+      const isSelected     = cls => cls === selectedSiteClass;
+
+      const envRowClass    = isEnvSelected ? "sat-envelope-row sat-selected" : "sat-envelope-row";
+      const envNameStyle   = isEnvSelected
+        ? "color:var(--accent); font-weight:700;"
+        : "color:#ffffff; font-weight:700;";
+      const envValStyle    = isEnvSelected ? "color:var(--accent); font-weight:700;" : "color:#ffffff; font-weight:700;";
+      const envMutedStyle  = isEnvSelected ? "color:var(--accent);" : "color:var(--muted);";
+
+      return `
+        <div class="sat-results show">
+          <div class="sat-results-title">
+            Sa(T*) at <strong>T* = ${tStar.toFixed(2)} s</strong>
+            &nbsp;|&nbsp; APoE ${apoe}${matchTitle ? " &nbsp;|&nbsp; " + matchTitle : ""}
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="sat-table">
+              <thead>
+                <tr>
+                  <th>Site Class</th>
+                  <th>Sa(T) [g]</th>
+                  <th>Tc (s)</th>
+                  <th>Td (s)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="${envRowClass}">
+                  <td style="${envNameStyle}">Envelope${isEnvSelected ? " ★" : ""}</td>
+                  <td style="${envValStyle}">${envSa.toFixed(4)}</td>
+                  <td style="${envMutedStyle}">${envTc.toFixed(2)}</td>
+                  <td style="${envMutedStyle}">${envTd.toFixed(2)}</td>
+                </tr>
+                ${rows.map(r => `
+                  <tr class="${isSelected(r.cls) ? "sat-selected" : ""}">
+                    <td>Class ${r.cls}${isSelected(r.cls) ? " ★" : ""}</td>
+                    <td>${r.sa}</td>
+                    <td>${r.tc}</td>
+                    <td>${r.td}</td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    // Track current chart items so T* updates can rebuild charts without re-fetching data
+    let _currentChartItems = [];
+
+    function rebuildAllSpectraCharts() {
+      _currentChartItems.forEach((item, idx) => {
+        const canvasId   = "spectraCanvas_" + idx;
+        const satTableId = "satTable_" + idx;
+        buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
+        // Update Sa(T*) table
+        const satEl = document.getElementById(satTableId);
+        if (satEl) {
+          satEl.outerHTML = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle)
+            .replace('<div class="sat-results', `<div id="satTable_${idx}" class="sat-results`);
+        }
+      });
+    }
+
+    function wireDesignPeriodInput() {
+      const input   = document.getElementById("designPeriodInput");
+      const clearBtn = document.getElementById("clearPeriodBtn");
+      if (!input) return;
+
+      // Focus style
+      input.addEventListener("focus",  () => input.style.borderColor = "var(--accent)");
+      input.addEventListener("blur",   () => input.style.borderColor = "var(--border)");
+
+      input.addEventListener("input", () => {
+        const v = parseFloat(input.value);
+        if (Number.isFinite(v) && v >= 0 && v <= 3.0) {
+          designPeriodT = v;
+        } else {
+          designPeriodT = null;
+        }
+        rebuildAllSpectraCharts();
+      });
+
+      clearBtn.addEventListener("click", () => {
+        input.value   = "";
+        designPeriodT = null;
+        rebuildAllSpectraCharts();
+        clearBtn.style.borderColor = "";
+        clearBtn.style.color = "";
+      });
+      clearBtn.addEventListener("mouseover", () => {
+        clearBtn.style.borderColor = "var(--accent2)";
+        clearBtn.style.color = "var(--accent2)";
+      });
+      clearBtn.addEventListener("mouseout", () => {
+        clearBtn.style.borderColor = "";
+        clearBtn.style.color = "";
+      });
+    }
+
+    function renderCharts(allMatchedRows, filteredRows) {
+      const section  = document.getElementById("chartsSection");
+      const grid     = document.getElementById("spectraChartsGrid");
+      const tSection = document.getElementById("tInputSection");
+
+      destroyAllSpectraCharts();
+      _currentChartItems = [];
+      if (grid) grid.innerHTML = "";
+
+      if (!allMatchedRows || !allMatchedRows.length || !filteredRows || !filteredRows.length) {
+        if (section)  section.style.display  = "none";
+        if (tSection) tSection.style.display = "none";
+        return;
+      }
+
+      // Build lookup: apoe → sheet1Row from ALL matched rows
+      const apoeRowMap = new Map();
+      for (const item of allMatchedRows) {
+        const apoe = normalize(item.row[SHEET1_APOE_COL_INDEX]).toLowerCase();
+        if (apoe && !apoeRowMap.has(apoe)) apoeRowMap.set(apoe, item.row);
+      }
+
+      // De-dup filtered rows and sort by RP
+      const seen = new Set();
+      const chartItems = [];
+      for (const f of filteredRows) {
+        const apoe = normalize(f.apoe).toLowerCase();
+        if (seen.has(apoe)) continue;
+        seen.add(apoe);
+        const row = apoeRowMap.get(apoe);
+        if (row) chartItems.push({ apoe: f.apoe, matchTitle: f.matchTitle, row });
+      }
+      chartItems.sort((a, b) => apoeToNum(a.apoe) - apoeToNum(b.apoe));
+
+      if (!chartItems.length) {
+        if (section)  section.style.display  = "none";
+        if (tSection) tSection.style.display = "none";
+        return;
+      }
+
+      _currentChartItems = chartItems;
+      if (section)  section.style.display  = "";
+      if (tSection) tSection.style.display = "";
+
+      // ── Build paired row-groups: 2 charts per row, then 2 tables per row ──
+      // Chunk chartItems into pairs
+      for (let pairStart = 0; pairStart < chartItems.length; pairStart += 2) {
+        const pair      = chartItems.slice(pairStart, pairStart + 2);
+        const isSingle  = pair.length === 1;
+
+        // Row-group wrapper
+        const rowGroup = document.createElement("div");
+        rowGroup.className = "spectra-row-group";
+
+        // ── Chart row ──
+        const chartRow = document.createElement("div");
+        chartRow.className = "spectra-chart-row" + (isSingle ? " single" : "");
+
+        // ── Table row ──
+        const tableRow = document.createElement("div");
+        tableRow.className = "spectra-table-row" + (isSingle ? " single" : "");
+
+        pair.forEach((item, pairIdx) => {
+          const globalIdx  = pairStart + pairIdx;
+          const styleClass = titleToStyleClass(item.matchTitle);
+          const canvasId   = "spectraCanvas_" + globalIdx;
+          const satTableId = "satTable_"      + globalIdx;
+
+          // ── Chart card ──
+          const card = document.createElement("div");
+          card.className = "chart-card cc-" + styleClass;
+
+          const lbl = document.createElement("div");
+          lbl.className = "chart-label cc-" + styleClass;
+          lbl.innerHTML = "SPECTRAL ACCELERATION Sa(T) — <strong>APoE " + item.apoe + "</strong>"
+                        + (item.matchTitle ? " &nbsp;|&nbsp; " + item.matchTitle : "");
+
+          const wrap = document.createElement("div");
+          wrap.className = "chart-wrap";
+          const canvas = document.createElement("canvas");
+          canvas.id = canvasId;
+          wrap.appendChild(canvas);
+          card.appendChild(lbl);
+          card.appendChild(wrap);
+          chartRow.appendChild(card);
+
+          // ── Table placeholder ──
+          const satWrap = document.createElement("div");
+          satWrap.id = satTableId;
+          tableRow.appendChild(satWrap);
+
+          // Render chart + table deferred
+          requestAnimationFrame(() => {
+            buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
+            const html = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle);
+            if (html) {
+              const el = document.getElementById(satTableId);
+              if (el) el.outerHTML = html.replace(
+                '<div class="sat-results',
+                `<div id="${satTableId}" class="sat-results`
+              );
+            }
+          });
+        });
+
+        rowGroup.appendChild(chartRow);
+        rowGroup.appendChild(tableRow);
+        grid.appendChild(rowGroup);
+      }
+
+      // Wire T input once
+      if (!document.getElementById("designPeriodInput")?._wired) {
+        wireDesignPeriodInput();
+        const inp = document.getElementById("designPeriodInput");
+        if (inp) inp._wired = true;
+      }
+    }
+
+    function renderTablesFullWidth(filtered){
+      if (!hasAllInputs()) return;
+      if (isSpecialCaseSelected()){ clearResults(); showSpecialCaseInTablesArea(); return; }
+      if (!sheet2MatchOptions.length || !matchedSheet1Rows.length || !filtered.length){ clearResults(); return; }
+      setRoundedBar();
+      document.getElementById("roundedCoordsBar").style.display = "";
+      applyTablesGridColumns(filtered.length);
+      document.getElementById("tablesGrid").innerHTML = filtered.map(x =>
+        `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
+      ).join("");
+      // Charts — filtered gives the design APoEs (ULS/SLS1/SLS2), allMatchedRows for full data lookup
+      renderCharts(matchedSheet1Rows, filtered);
+    }
+
+    async function writeMatchedRowsToSheet7(rows){
+      if (!rows || !rows.length) return;
+      try {
+        const payload = {
+          event:     "write_sheet7",
+          rows:      rows.map(r => r.row),
+          visitorId: (window.SiteAnalytics && window.SiteAnalytics.getVisitor)
+                       ? window.SiteAnalytics.getVisitor().id : ""
+        };
+        const body = new URLSearchParams();
+        body.set("payload", JSON.stringify(payload));
+        await fetch(window.WEB_APP_URL, {
+          method:  "POST",
+          mode:    "no-cors",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body:    body.toString()
+        });
+      } catch(e){ console.warn("writeMatchedRowsToSheet7 failed:", e); }
+    }
+
+    async function recalc(){
+      const myToken = ++recalcToken;
+      clearResults();
+      if (!hasAllInputs()) return;
+      if (isSpecialCaseSelected()){ showLoading(false); showSpecialCaseInTablesArea(); return; }
+      showLoading(true);
+      try {
+        await step1_findAllSheet1RowsMatching1dp();
+        if (myToken !== recalcToken) return;
+        if (matchedSheet1Rows.length) writeMatchedRowsToSheet7(matchedSheet1Rows);
+        await step2_getTitlesAndStringsFromSheet2();
+        if (myToken !== recalcToken) return;
+        const filtered = step3_filterMatchedSheet1Rows();
+        if (myToken !== recalcToken) return;
+        renderTablesFullWidth(filtered);
+      } catch(err){ console.error(err); }
+      finally { if (myToken === recalcToken) showLoading(false); }
+    }
+
+    function wireSingleSelectButtons(containerId, setter){
+      const buttons = document.querySelectorAll(`#${containerId} button`);
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          buttons.forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          setter(btn.dataset.value);
+          safeLog("option_select", { group: containerId, value: btn.dataset.value,
+            siteClass: selectedSiteClass, importanceLevel: selectedImportanceLevel, workingLife: selectedWorkingLife });
+          if (hasAllInputs() && isSpecialCaseSelected()) showSpecialCaseInTablesArea();
+          syncMapHeightToOptionBlock();
+          recalc();
+        });
+      });
+    }
+
+    function wireSuggestions(){
+      const textarea = document.getElementById("suggestionText");
+      const btn      = document.getElementById("submitSuggestionBtn");
+      const msg      = document.getElementById("suggestionMsg");
+      btn.addEventListener("click", async () => {
+        const text = (textarea.value || "").trim();
+        msg.textContent = "";
+        if (!text){ msg.textContent = "Please type a suggestion first."; return; }
+        btn.disabled = true; btn.textContent = "Submitting…";
+        try {
+          const v = (window.SiteAnalytics && window.SiteAnalytics.getVisitor) ? window.SiteAnalytics.getVisitor() : { id: "" };
+          safeLog("suggestion_submit_click", { length: text.length });
+          const payload = { event: "suggestion_submit", suggestionText: text, visitorId: v.id || "", page: location.pathname || "" };
+          const body = new URLSearchParams();
+          body.set("payload", JSON.stringify(payload));
+          const res = await fetch(window.WEB_APP_URL, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: body.toString() });
+          if (!res.ok){ msg.textContent = `Submit failed (${res.status}).`; return; }
+          textarea.value = ""; msg.textContent = "Thanks — suggestion submitted.";
+        } catch(e){ msg.textContent = "Submit failed (check console)."; }
+        finally { btn.disabled = false; btn.textContent = "Submit"; }
+      });
+    }
+
+    function showConsentModal(){
+      document.getElementById("consentModal").classList.add("show");
+      document.getElementById("learnMoreModal").classList.remove("show");
+      document.body.classList.add("consent-locked");
+    }
+    function hideConsentModal(){
+      document.getElementById("consentModal").classList.remove("show");
+      document.getElementById("learnMoreModal").classList.remove("show");
+      document.body.classList.remove("consent-locked");
+    }
+
+    function initConsent(){
+      const details = document.getElementById("suggestionsDetails");
+      if (details) details.open = false;
+      const accepted = sessionStorage.getItem(CONSENT_SESSION_KEY) === "true";
+      if (!accepted) showConsentModal();
+      else           hideConsentModal();
+      if (accepted){ incrementAndFetchPageViews(); safeLog("page_view", { title: document.title || "" }); }
+      document.getElementById("btnAccept").addEventListener("click", () => {
+        sessionStorage.setItem(CONSENT_SESSION_KEY, "true");
+        hideConsentModal();
+        incrementAndFetchPageViews();
+        safeLog("page_view", { title: document.title || "" });
+      });
+      document.getElementById("btnExit").addEventListener("click", () => {
+        safeLog("exit_click", {});
+        window.location.href = "https://www.standards.govt.nz/shop/snz-ts-1170-52025";
+      });
+      document.getElementById("btnLearnMore").addEventListener("click", () => {
+        safeLog("learn_more_open", {});
+        document.getElementById("consentModal").classList.remove("show");
+        document.getElementById("learnMoreModal").classList.add("show");
+      });
+      document.getElementById("btnLearnMoreClose").addEventListener("click", () => {
+        safeLog("learn_more_close", {});
+        document.getElementById("learnMoreModal").classList.remove("show");
+        document.getElementById("consentModal").classList.add("show");
+      });
+      if (details){
+        details.addEventListener("toggle", () => {
+          const sym = details.querySelector("summary span:last-child");
+          if (sym) sym.textContent = details.open ? "−" : "+";
+        });
+      }
+    }
+
+    function setMarker(lat, lng){
+      const pos = { lat, lng };
+      if (marker) marker.setMap(null);
+      marker = new google.maps.Marker({ map, position: pos });
+      map.panTo(pos);
+    }
+
+    function initMap(){
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: -41.2865, lng: 174.7762 },
+        zoom: 6,
+        styles: [
+          { elementType: "geometry",        stylers: [{ color: "#0d1520" }] },
+          { elementType: "labels.text.fill",stylers: [{ color: "#5a6a7e" }] },
+          { elementType: "labels.text.stroke",stylers:[{ color: "#0a0e14" }] },
+          { featureType: "road",             elementType: "geometry",       stylers: [{ color: "#1e2a3a" }] },
+          { featureType: "road",             elementType: "geometry.stroke",stylers: [{ color: "#0a0e14" }] },
+          { featureType: "water",            elementType: "geometry",       stylers: [{ color: "#060d14" }] },
+          { featureType: "water",            elementType: "labels.text.fill",stylers:[{ color: "#3a5068" }] },
+          { featureType: "administrative",   elementType: "geometry.stroke",stylers:[{ color: "#1e2a3a" }] },
+          { featureType: "landscape",        elementType: "geometry",       stylers: [{ color: "#111820" }] },
+          { featureType: "poi",              elementType: "geometry",       stylers: [{ color: "#111820" }] },
+          { featureType: "transit",          elementType: "geometry",       stylers: [{ color: "#111820" }] },
+        ]
+      });
+
+      setupHeightSync();
+      syncMapHeightToOptionBlock();
+
+      map.addListener("click", (e) => {
+        selectedLat = e.latLng.lat();
+        selectedLng = e.latLng.lng();
+        setMarker(selectedLat, selectedLng);
+        document.getElementById("coords").innerHTML =
+          `Lat: <b>${selectedLat.toFixed(5)}</b> &nbsp;|&nbsp; Lng: <b>${selectedLng.toFixed(5)}</b>`;
+        safeLog("map_click", { lat: selectedLat, lng: selectedLng });
+        recalc();
+      });
+
+      autocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("addressInput"),
+        { componentRestrictions: { country: "nz" } }
+      );
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) return;
+        selectedLat = place.geometry.location.lat();
+        selectedLng = place.geometry.location.lng();
+        setMarker(selectedLat, selectedLng);
+        map.setZoom(14);
+        document.getElementById("coords").innerHTML =
+          `Lat: <b>${selectedLat.toFixed(5)}</b> &nbsp;|&nbsp; Lng: <b>${selectedLng.toFixed(5)}</b> &nbsp;— ${place.formatted_address || ""}`;
+        safeLog("address_select", { lat: selectedLat, lng: selectedLng, address: place.formatted_address || "" });
+        recalc();
+      });
+
+      document.getElementById("useMyLocationBtn").addEventListener("click", () => {
+        if (!navigator.geolocation) return;
+        safeLog("use_my_location_click", {});
+        navigator.geolocation.getCurrentPosition((pos) => {
+          selectedLat = pos.coords.latitude;
+          selectedLng = pos.coords.longitude;
+          setMarker(selectedLat, selectedLng);
+          map.setZoom(14);
+          document.getElementById("coords").innerHTML =
+            `Lat: <b>${selectedLat.toFixed(5)}</b> &nbsp;|&nbsp; Lng: <b>${selectedLng.toFixed(5)}</b>`;
+          safeLog("use_my_location", { lat: selectedLat, lng: selectedLng });
+          recalc();
+        }, (err) => {
+          safeLog("use_my_location_error", { code: err && err.code, message: err && err.message });
+        });
+      });
+
+      wireSingleSelectButtons("siteClassOptions",       v => selectedSiteClass       = v);
+      wireSingleSelectButtons("importanceLevelOptions", v => selectedImportanceLevel = v);
+      wireSingleSelectButtons("workingLifeOptions",     v => selectedWorkingLife     = v);
+      wireSuggestions();
+      clearResults();
+      showLoading(false);
+    }
+
+    if (document.readyState === "loading"){
+      document.addEventListener("DOMContentLoaded", initConsent);
+    } else {
+      initConsent();
+    }
+
+    window.initMap = initMap;
+
+    (function loadGoogleMaps(){
+      if (window.google && window.google.maps) return;
+      const s   = document.createElement("script");
+      s.src     = "https://maps.googleapis.com/maps/api/js"
+                + "?key="      + encodeURIComponent(GOOGLE_MAPS_KEY)
+                + "&callback=initMap"
+                + "&libraries=places";
+      s.async = true; s.defer = true;
+      s.onerror = () => console.error("Google Maps failed to load.");
+      document.head.appendChild(s);
+    })();
+  </script>
 </body>
 </html>
