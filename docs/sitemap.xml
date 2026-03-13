@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ts1170taputapu.nz/nz-site-lookup-tool/</loc>
+    <loc>https://ts1170taputapu.nz/nz-site-lookup-tool/docs</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
@@ -14,4 +14,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ts1170taputapu.nz/nz-site-lookup-tool/sitemap.xml
+Sitemap: https://ts1170taputapu.nz/nz-site-lookup-tool/docs/sitemap.xml
