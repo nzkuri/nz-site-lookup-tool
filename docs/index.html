@@ -48,7 +48,7 @@
       --accent2:   #991010;
       --accent3:   #e63c1e;
       --text:      #111111;
-      --muted:     #555555;
+      --muted:     #111111;
       --grid-line: rgba(180,60,60,0.06);
       --shadow:    0 8px 32px rgba(0,0,0,0.10);
 
@@ -736,35 +736,36 @@
 
     .spectra-cell { display: flex; flex-direction: column; gap: 0; }
 
-    /* Chart card always has dark bg */
+    /* Chart card — bg and border follow the active theme */
     .chart-card {
-      background: #0a0e14;
-      border: 1px solid #1e2a3a;
+      background: var(--surface);
+      border: 1px solid var(--border);
       padding: 20px 20px 16px;
       position: relative;
       overflow: hidden;
+      transition: background 0.3s, border-color 0.3s;
     }
     .chart-card::before {
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 2px;
-      background: linear-gradient(90deg, #00d4ff, transparent);
+      background: linear-gradient(90deg, var(--accent), transparent);
     }
-    .chart-card.cc-sls1::before { background: linear-gradient(90deg, #a8ff3e, transparent); }
-    .chart-card.cc-sls2::before { background: linear-gradient(90deg, #ff6b35, transparent); }
+    .chart-card.cc-sls1::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+    .chart-card.cc-sls2::before { background: linear-gradient(90deg, var(--accent2), transparent); }
 
     .chart-label {
       font-family: 'Space Mono', monospace;
       font-size: 10px;
       letter-spacing: 0.14em;
-      color: #8899aa;
+      color: var(--text);
       text-transform: uppercase;
       margin-bottom: 14px;
     }
-    .chart-label strong { color: #00d4ff; }
-    .chart-label.cc-sls1 strong { color: #a8ff3e; }
-    .chart-label.cc-sls2 strong { color: #ff6b35; }
+    .chart-label strong { color: var(--accent); }
+    .chart-label.cc-sls1 strong { color: var(--accent3); }
+    .chart-label.cc-sls2 strong { color: var(--accent2); }
 
     .chart-wrap {
       position: relative;
@@ -1178,6 +1179,7 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("themeToggleInput").addEventListener("change", function() {
         applyTheme(this.checked);
         safeLog("theme_toggle", { theme: this.checked ? "dark" : "day" });
+        rebuildAllSpectraCharts();
       });
     }
 
@@ -1570,59 +1572,68 @@ Because only approximate, non-identifying location data is collected, there is g
       "#00e5a0", // teal   – VI
     ];
 
-    /* Chart.js defaults — always dark bg */
-    const CHART_DEFAULTS = {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 400 },
-      plugins: {
-        legend: {
-          labels: {
-            color: "#ffffff",
-            font: { family: "'Space Mono', monospace", size: 11 },
-            boxWidth: 12,
-            padding: 14,
+    /* Chart.js defaults — reads current theme at build time */
+    function getChartDefaults() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const tickClr      = isDark ? "#ffffff" : "#111111";
+      const gridClr      = isDark ? "rgba(30,42,58,0.9)" : "rgba(180,60,60,0.10)";
+      const tooltipBg    = isDark ? "#111620" : "#ffffff";
+      const tooltipBdr   = isDark ? "#1e2a3a" : "#ddd9d3";
+      const tooltipTitle = isDark ? "#00d4ff" : "#cc1a1a";
+      const tooltipBody  = isDark ? "#e8edf3" : "#111111";
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        plugins: {
+          legend: {
+            labels: {
+              color: tickClr,
+              font: { family: "'Space Mono', monospace", size: 11 },
+              boxWidth: 12,
+              padding: 14,
+            }
+          },
+          tooltip: {
+            backgroundColor: tooltipBg,
+            borderColor: tooltipBdr,
+            borderWidth: 1,
+            titleColor: tooltipTitle,
+            bodyColor: tooltipBody,
+            titleFont: { family: "'Space Mono', monospace", size: 11 },
+            bodyFont:  { family: "'Space Mono', monospace", size: 11 },
+            callbacks: {
+              title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
+              label: item  => " " + item.dataset.label + ": " + Number(item.parsed.y).toFixed(4) + " g",
+            }
           }
         },
-        tooltip: {
-          backgroundColor: "#111620",
-          borderColor: "#1e2a3a",
-          borderWidth: 1,
-          titleColor: "#00d4ff",
-          bodyColor: "#e8edf3",
-          titleFont: { family: "'Space Mono', monospace", size: 11 },
-          bodyFont:  { family: "'Space Mono', monospace", size: 11 },
-          callbacks: {
-            title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
-            label: item  => " " + item.dataset.label + ": " + Number(item.parsed.y).toFixed(4) + " g",
+        scales: {
+          x: {
+            type: "linear",
+            min: 0,
+            max: 3.0,
+            ticks: {
+              color: tickClr,
+              font: { family: "'Space Mono', monospace", size: 10 },
+              maxTicksLimit: 10,
+            },
+            grid: { color: gridClr },
+            title: { display: true, text: "Period T (s)", color: tickClr, font: { family: "'Space Mono',monospace", size: 10 } }
+          },
+          y: {
+            min: 0,
+            ticks: {
+              color: tickClr,
+              font: { family: "'Space Mono', monospace", size: 10 },
+              maxTicksLimit: 8,
+            },
+            grid: { color: gridClr },
+            title: { display: true, text: "Sa(T) [g]", color: tickClr, font: { family: "'Space Mono',monospace", size: 10 } }
           }
         }
-      },
-      scales: {
-        x: {
-          type: "linear",
-          min: 0,
-          max: 3.0,
-          ticks: {
-            color: "#ffffff",
-            font: { family: "'Space Mono', monospace", size: 10 },
-            maxTicksLimit: 10,
-          },
-          grid: { color: "rgba(30,42,58,0.9)" },
-          title: { display: true, text: "Period T (s)", color: "#ffffff", font: { family: "'Space Mono',monospace", size: 10 } }
-        },
-        y: {
-          min: 0,
-          ticks: {
-            color: "#ffffff",
-            font: { family: "'Space Mono', monospace", size: 10 },
-            maxTicksLimit: 8,
-          },
-          grid: { color: "rgba(30,42,58,0.9)" },
-          title: { display: true, text: "Sa(T) [g]", color: "#ffffff", font: { family: "'Space Mono',monospace", size: 10 } }
-        }
-      }
-    };
+      };
+    }
 
     /* ── NZS 1170.5 Spectral Shape ── */
     function buildSpectralCurve(pga, sas, tc, td) {
@@ -1851,20 +1862,20 @@ Because only approximate, non-identifying location data is collected, there is g
         type: "line",
         data: { datasets },
         options: {
-          ...CHART_DEFAULTS,
+          ...getChartDefaults(),
           parsing: false,
           normalized: true,
           plugins: {
-            ...CHART_DEFAULTS.plugins,
+            ...getChartDefaults().plugins,
             legend: {
-              ...CHART_DEFAULTS.plugins.legend,
+              ...getChartDefaults().plugins.legend,
               labels: {
-                ...CHART_DEFAULTS.plugins.legend.labels,
+                ...getChartDefaults().plugins.legend.labels,
                 filter: item => !item.text.startsWith("_dot_") && !item.text.startsWith("_hline_"),
               }
             },
             tooltip: {
-              ...CHART_DEFAULTS.plugins.tooltip,
+              ...getChartDefaults().plugins.tooltip,
               filter: item => !item.dataset.label.startsWith("_dot_") && !item.dataset.label.startsWith("_hline_"),
               callbacks: {
                 title: items => "T = " + Number(items[0].parsed.x).toFixed(2) + " s",
