@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="day">
 <head>
 
  <!-- Google tag (gtag.js) -->
@@ -9,7 +9,6 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'AW-18014237838');
 </script>
   
@@ -24,19 +23,49 @@
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://ts1170taputapu.nz/" />
 
-<!-- Open Graph (for sharing on LinkedIn, Facebook etc) -->
+<!-- Open Graph -->
 <meta property="og:title" content="NZS TS1170.5 Site Parameter Finder" />
 <meta property="og:description" content="Free web tool for NZ structural engineers — look up seismic site parameters by location, site class and importance level." />
 <meta property="og:url" content="https://ts1170taputapu.nz/" />
 <meta property="og:type" content="website" />
 
-  
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
   <style>
-    /* ── Design tokens ── */
-    :root {
+    /* ═══════════════════════════════════════════════
+       THEME TOKENS
+       ═══════════════════════════════════════════════ */
+
+    /* ── Day (default) ── */
+    :root,
+    [data-theme="day"] {
+      --bg:        #ffffff;
+      --surface:   #f7f7f5;
+      --surface2:  #f0eeea;
+      --border:    #ddd9d3;
+      --accent:    #cc1a1a;
+      --accent2:   #991010;
+      --accent3:   #e63c1e;
+      --text:      #111111;
+      --muted:     #555555;
+      --grid-line: rgba(180,60,60,0.06);
+      --shadow:    0 8px 32px rgba(0,0,0,0.10);
+
+      /* Chart colours — always dark-mode palette regardless of theme */
+      --chart-bg:        #0a0e14;
+      --chart-grid:      rgba(30,42,58,0.9);
+      --chart-tick:      #ffffff;
+      --chart-axis-title:#ffffff;
+      --chart-tooltip-bg:#111620;
+      --chart-legend-clr:#ffffff;
+
+      /* Map styles selector */
+      --map-theme: day;
+    }
+
+    /* ── Dark ── */
+    [data-theme="dark"] {
       --bg:        #0a0e14;
       --surface:   #111620;
       --surface2:  #0d1520;
@@ -45,18 +74,33 @@
       --accent2:   #ff6b35;
       --accent3:   #a8ff3e;
       --text:      #e8edf3;
-      --muted:     #ffffff;
+      --muted:     #8899aa;
       --grid-line: rgba(0,212,255,0.06);
       --shadow:    0 8px 32px rgba(0,0,0,0.5);
+
+      --chart-bg:        #0a0e14;
+      --chart-grid:      rgba(30,42,58,0.9);
+      --chart-tick:      #ffffff;
+      --chart-axis-title:#ffffff;
+      --chart-tooltip-bg:#111620;
+      --chart-legend-clr:#ffffff;
+
+      --map-theme: dark;
     }
 
+    /* ═══════════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { transition: background 0.3s, color 0.3s; }
 
     body {
       font-family: 'Syne', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
     }
 
     /* Animated grid bg */
@@ -70,9 +114,80 @@
       background-size: 40px 40px;
       pointer-events: none;
       z-index: 0;
+      transition: background-image 0.3s;
     }
 
-    /* ── Layout ── */
+    /* ═══════════════════════════════════════════════
+       THEME TOGGLE SLIDER
+       ═══════════════════════════════════════════════ */
+    .theme-toggle-bar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 8px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      transition: background 0.3s, border-color 0.3s;
+    }
+    .theme-toggle-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color 0.2s;
+      user-select: none;
+    }
+    .theme-toggle-label.active { color: var(--accent); font-weight: 700; }
+
+    .slider-wrap {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .slider-wrap input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .slider-track {
+      position: absolute;
+      inset: 0;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      transition: background 0.25s, border-color 0.25s;
+    }
+    .slider-wrap input:checked + .slider-track {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .slider-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform 0.25s, background 0.25s;
+      pointer-events: none;
+    }
+    .slider-wrap input:checked ~ .slider-thumb {
+      transform: translateX(22px);
+    }
+    [data-theme="day"]  .slider-wrap input:checked ~ .slider-thumb { background: #ffffff; }
+    [data-theme="dark"] .slider-wrap input:checked ~ .slider-thumb { background: #0a0e14; }
+
+    /* ═══════════════════════════════════════════════
+       LAYOUT
+       ═══════════════════════════════════════════════ */
     .page-wrap {
       position: relative;
       z-index: 1;
@@ -100,6 +215,7 @@
       font-weight: 800;
       letter-spacing: -0.02em;
       line-height: 1.1;
+      color: var(--text);
     }
 
     /* ── Intro ── */
@@ -113,6 +229,7 @@
       border: 1px solid var(--border);
       background: var(--surface);
       border-left: 3px solid var(--border);
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
     }
 
     /* ── Search bar ── */
@@ -131,7 +248,7 @@
       font-family: 'Space Mono', monospace;
       font-size: 13px;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, background 0.3s, color 0.3s;
     }
     #addressInput::placeholder { color: var(--muted); }
     #addressInput:focus { border-color: var(--accent); }
@@ -144,7 +261,7 @@
       font-family: 'Space Mono', monospace;
       font-size: 12px;
       cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
+      transition: border-color 0.15s, color 0.15s, background 0.3s;
       letter-spacing: 0.04em;
     }
     #useMyLocationBtn:hover { border-color: var(--accent); color: var(--accent); }
@@ -157,6 +274,7 @@
       margin-bottom: 20px;
       padding: 8px 14px;
       border-left: 2px solid var(--border);
+      transition: color 0.3s, border-color 0.3s;
     }
     #coords b { color: var(--accent2); }
 
@@ -183,6 +301,7 @@
       padding: 20px;
       width: 100%;
       position: relative;
+      transition: background 0.3s, border-color 0.3s;
     }
     .option-block::before {
       content: '';
@@ -228,9 +347,10 @@
     .option-buttons button.selected {
       background: var(--accent);
       border-color: var(--accent);
-      color: var(--bg);
+      color: #ffffff;
       font-weight: 700;
     }
+    [data-theme="dark"] .option-buttons button.selected { color: var(--bg); }
 
     /* ── Map ── */
     #map {
@@ -239,7 +359,9 @@
       border: 1px solid var(--border);
       flex: 1 1 auto;
       filter: grayscale(0.3) brightness(0.85);
+      transition: border-color 0.3s;
     }
+    [data-theme="day"] #map { filter: none; }
 
     /* ── Results ── */
     .results-wrap {
@@ -248,6 +370,7 @@
       border: 1px solid var(--border);
       padding: 20px;
       margin-bottom: 14px;
+      transition: background 0.3s, border-color 0.3s;
     }
     .results-wrap::before {
       content: '';
@@ -279,6 +402,7 @@
       overflow-x: auto;
       border: 1px solid var(--border);
       background: var(--surface2);
+      transition: background 0.3s, border-color 0.3s;
     }
 
     .sc-table {
@@ -288,7 +412,7 @@
       font-size: 13px;
     }
     .sc-table th {
-      background: #0a0e14;
+      background: var(--bg);
       padding: 10px 14px;
       text-align: center;
       font-size: 11px;
@@ -297,6 +421,7 @@
       color: var(--accent);
       border: 1px solid var(--border);
       font-weight: 700;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
     }
     .sc-table td {
       padding: 10px 14px;
@@ -305,6 +430,7 @@
       color: var(--text);
       vertical-align: middle;
       white-space: nowrap;
+      transition: color 0.3s, border-color 0.3s;
     }
     .sc-table thead th:first-child,
     .sc-table td.left-head,
@@ -315,13 +441,14 @@
     .sc-table thead th { border-bottom: 1px solid var(--accent); }
     .sc-table .subhead { color: var(--muted); }
     .sc-table .left-cell { color: var(--accent2); font-weight: 700; }
-    .sc-table tr:hover td { background: rgba(0,212,255,0.03); }
+    .sc-table tr:hover td { background: rgba(128,0,0,0.03); }
+    [data-theme="dark"] .sc-table tr:hover td { background: rgba(0,212,255,0.03); }
 
     /* ── Loading overlay ── */
     .loading-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(10,14,20,0.85);
+      background: rgba(247,247,245,0.85);
       display: none;
       align-items: center;
       justify-content: center;
@@ -331,7 +458,9 @@
       letter-spacing: 0.15em;
       color: var(--accent);
       text-transform: uppercase;
+      transition: background 0.3s;
     }
+    [data-theme="dark"] .loading-overlay { background: rgba(10,14,20,0.85); }
     .loading-overlay.show { display: flex; }
     .loading-overlay::before {
       content: '';
@@ -369,6 +498,7 @@
       color: var(--muted);
       text-transform: uppercase;
       margin-bottom: 14px;
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
     }
 
     /* ── Suggestions ── */
@@ -377,6 +507,7 @@
       border: 1px solid var(--border);
       margin-bottom: 14px;
       overflow: hidden;
+      transition: background 0.3s, border-color 0.3s;
     }
     details.suggestions-details > summary {
       list-style: none;
@@ -410,7 +541,7 @@
       font-family: 'Space Mono', monospace;
       font-size: 12px;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, background 0.3s, color 0.3s;
     }
     #suggestionText::placeholder { color: var(--muted); }
     #suggestionText:focus { border-color: var(--accent); }
@@ -462,6 +593,7 @@
       box-shadow: var(--shadow);
       overflow: hidden;
       position: relative;
+      transition: background 0.3s, border-color 0.3s;
     }
     .modal::before {
       content: '';
@@ -507,6 +639,7 @@
       justify-content: flex-end;
       flex-wrap: wrap;
       background: var(--surface2);
+      transition: background 0.3s, border-color 0.3s;
     }
 
     .btn {
@@ -524,12 +657,13 @@
     .btn.primary {
       background: var(--accent);
       border-color: var(--accent);
-      color: var(--bg);
+      color: #ffffff;
       font-weight: 700;
     }
-    .btn.primary:hover { background: #00bce0; border-color: #00bce0; }
-    .btn.danger { border-color: #ff4444; color: #ff4444; }
-    .btn.danger:hover { background: #ff4444; color: var(--bg); }
+    [data-theme="dark"] .btn.primary { color: var(--bg); }
+    .btn.primary:hover { opacity: 0.88; }
+    .btn.danger { border-color: #cc2222; color: #cc2222; }
+    .btn.danger:hover { background: #cc2222; color: #ffffff; }
 
     .close-x {
       width: 32px;
@@ -553,10 +687,11 @@
       user-select: none;
     }
 
-    /* ── Charts section ── */
-    .charts-section {
-      margin-bottom: 14px;
-    }
+    /* ═══════════════════════════════════════════════
+       CHARTS SECTION
+       ── Chart bg is ALWAYS dark regardless of theme
+       ═══════════════════════════════════════════════ */
+    .charts-section { margin-bottom: 14px; }
 
     .charts-section-header {
       display: flex;
@@ -575,13 +710,9 @@
       white-space: nowrap;
     }
 
-    /* APoE tab strip — kept for potential future use but hidden */
     .apoe-tabs { display: none; }
 
-    /* Spectra layout: stacked row-groups, each group = chart row + table row */
-    .spectra-row-group {
-      margin-bottom: 20px;
-    }
+    .spectra-row-group { margin-bottom: 20px; }
 
     .spectra-chart-row {
       display: grid;
@@ -589,31 +720,26 @@
       gap: 14px;
       margin-bottom: 14px;
     }
-    .spectra-chart-row.single {
-      grid-template-columns: 1fr;
-    }
-    @media (max-width: 800px) {
-      .spectra-chart-row { grid-template-columns: 1fr; }
-    }
+    .spectra-chart-row.single { grid-template-columns: 1fr; }
 
     .spectra-table-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
     }
-    .spectra-table-row.single {
-      grid-template-columns: 1fr;
-    }
+    .spectra-table-row.single { grid-template-columns: 1fr; }
+
     @media (max-width: 800px) {
+      .spectra-chart-row,
       .spectra-table-row { grid-template-columns: 1fr; }
     }
 
-    /* Individual spectra cell (chart card + its table below) */
     .spectra-cell { display: flex; flex-direction: column; gap: 0; }
 
+    /* Chart card always has dark bg */
     .chart-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: #0a0e14;
+      border: 1px solid #1e2a3a;
       padding: 20px 20px 16px;
       position: relative;
       overflow: hidden;
@@ -623,22 +749,22 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--accent), transparent);
+      background: linear-gradient(90deg, #00d4ff, transparent);
     }
-    .chart-card.cc-sls1::before { background: linear-gradient(90deg, var(--accent3), transparent); }
-    .chart-card.cc-sls2::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+    .chart-card.cc-sls1::before { background: linear-gradient(90deg, #a8ff3e, transparent); }
+    .chart-card.cc-sls2::before { background: linear-gradient(90deg, #ff6b35, transparent); }
 
     .chart-label {
       font-family: 'Space Mono', monospace;
       font-size: 10px;
       letter-spacing: 0.14em;
-      color: var(--muted);
+      color: #8899aa;
       text-transform: uppercase;
       margin-bottom: 14px;
     }
-    .chart-label strong { color: var(--accent); }
-    .chart-label.cc-sls1 strong { color: var(--accent3); }
-    .chart-label.cc-sls2 strong { color: var(--accent2); }
+    .chart-label strong { color: #00d4ff; }
+    .chart-label.cc-sls1 strong { color: #a8ff3e; }
+    .chart-label.cc-sls2 strong { color: #ff6b35; }
 
     .chart-wrap {
       position: relative;
@@ -646,10 +772,7 @@
     }
 
     /* ── Sa(T*) results table ── */
-    .sat-results {
-      margin-top: 14px;
-      display: none;
-    }
+    .sat-results { margin-top: 14px; display: none; }
     .sat-results.show { display: block; }
 
     .sat-results-title {
@@ -669,7 +792,7 @@
       font-size: 12px;
     }
     .sat-table th {
-      background: #0a0e14;
+      background: var(--bg);
       padding: 9px 12px;
       text-align: center;
       font-size: 10px;
@@ -678,6 +801,7 @@
       color: var(--accent);
       border: 1px solid var(--border);
       font-weight: 700;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
     }
     .sat-table th:first-child { text-align: left; }
     .sat-table td {
@@ -686,18 +810,44 @@
       border: 1px solid var(--border);
       color: var(--text);
       white-space: nowrap;
+      transition: color 0.3s, border-color 0.3s;
     }
     .sat-table td:first-child { text-align: left; color: var(--accent); font-weight: 700; }
-    .sat-table tr:hover td { background: rgba(0,212,255,0.04); }
-    .sat-table .sat-selected { background: rgba(0,212,255,0.07); }
+    .sat-table tr:hover td { background: rgba(128,0,0,0.04); }
+    [data-theme="dark"] .sat-table tr:hover td { background: rgba(0,212,255,0.04); }
+    .sat-table .sat-selected { background: rgba(128,0,0,0.06); }
     .sat-table .sat-selected td { color: var(--accent); }
     .sat-table .sat-selected td:first-child { color: var(--accent); }
-    .sat-table .sat-envelope-row td { border-bottom: 1px solid var(--accent); background: rgba(255,255,255,0.04); }
-    .sat-table .sat-envelope-row.sat-selected td { background: rgba(0,212,255,0.07); }
+    [data-theme="dark"] .sat-table .sat-selected { background: rgba(0,212,255,0.07); }
+    .sat-table .sat-envelope-row td { border-bottom: 1px solid var(--accent); background: rgba(0,0,0,0.04); }
+    [data-theme="dark"] .sat-table .sat-envelope-row td { background: rgba(255,255,255,0.04); }
+    .sat-table .sat-envelope-row.sat-selected td { background: rgba(128,0,0,0.06); }
+    [data-theme="dark"] .sat-table .sat-envelope-row.sat-selected td { background: rgba(0,212,255,0.07); }
+
+    /* Design period input */
+    #designPeriodInput {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
+    }
+    #designPeriodInput:focus { border-color: var(--accent); outline: none; }
   </style>
 </head>
 
 <body class="consent-locked">
+
+  <!-- ── Theme toggle bar ── -->
+  <div class="theme-toggle-bar">
+    <span class="theme-toggle-label active" id="lblDay">Day</span>
+    <label class="slider-wrap" title="Toggle theme">
+      <input type="checkbox" id="themeToggleInput">
+      <div class="slider-track"></div>
+      <div class="slider-thumb"></div>
+    </label>
+    <span class="theme-toggle-label" id="lblDark">Dark</span>
+  </div>
+
   <div class="page-wrap">
 
     <header class="page-header">
@@ -783,10 +933,7 @@
             <div style="display:flex; align-items:center; gap:10px;">
               <input id="designPeriodInput" type="number" min="0" max="3" step="0.01"
                 placeholder="e.g. 1.00"
-                style="width:140px; padding:9px 12px; background:var(--bg); border:1px solid var(--border);
-                       color:var(--text); font-family:'Space Mono',monospace; font-size:13px; outline:none;
-                       transition:border-color 0.15s;"
-                onmouseover="" />
+                style="width:140px; padding:9px 12px; font-family:'Space Mono',monospace; font-size:13px;" />
               <button id="clearPeriodBtn" type="button"
                 style="padding:9px 14px; background:var(--surface); border:1px solid var(--border);
                        color:var(--muted); font-family:'Space Mono',monospace; font-size:11px;
@@ -807,9 +954,7 @@
       <div class="charts-section-header">
         <div class="charts-section-title">Sa(T) Design Spectra — All Site Classes</div>
       </div>
-      <div class="spectra-charts-wrap" id="spectraChartsGrid">
-        <!-- dynamically populated: paired rows of [charts] then [tables] -->
-      </div>
+      <div class="spectra-charts-wrap" id="spectraChartsGrid"></div>
     </div>
 
     <div class="coming-soon-box">
@@ -892,7 +1037,7 @@ Because only approximate, non-identifying location data is collected, there is g
     </div>
   </div>
 
-  <!-- ── Analytics Module (unchanged) ── -->
+  <!-- ── Analytics Module ── -->
   <script>
     console.log("MAIN SCRIPT STARTED");
     window.WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwdbPPFrWXCatRYLpGdOHIxRz6tnZI-rDMAkWQMgCR_0MD8jZUL8eNAWhpY9U0ZoUoP/exec";
@@ -963,7 +1108,7 @@ Because only approximate, non-identifying location data is collected, there is g
     })();
   </script>
 
-  <!-- ── Main app logic (unchanged) ── -->
+  <!-- ── Main app logic ── -->
   <script>
     function safeLog(eventName, extra){
       try{
@@ -1006,6 +1151,68 @@ Because only approximate, non-identifying location data is collected, there is g
 
     const CONSENT_SESSION_KEY = "ts1170_5_consent_session_ok_v1";
 
+    /* ═══════════════════════════════════════════════
+       THEME TOGGLE LOGIC
+       ═══════════════════════════════════════════════ */
+    const THEME_STORAGE_KEY = "ts1170_theme_pref";
+
+    function applyTheme(dark) {
+      const html = document.documentElement;
+      html.setAttribute("data-theme", dark ? "dark" : "day");
+      document.getElementById("themeToggleInput").checked = dark;
+      document.getElementById("lblDay").classList.toggle("active", !dark);
+      document.getElementById("lblDark").classList.toggle("active", dark);
+      // Update map if already loaded
+      if (window.google && google.maps && window._mapInstance) {
+        window._mapInstance.setOptions({ styles: dark ? MAP_STYLES_DARK : MAP_STYLES_DAY });
+      }
+      try { localStorage.setItem(THEME_STORAGE_KEY, dark ? "dark" : "day"); } catch(e){}
+    }
+
+    function initThemeToggle() {
+      // Load saved preference; default to day
+      let saved = "day";
+      try { saved = localStorage.getItem(THEME_STORAGE_KEY) || "day"; } catch(e){}
+      applyTheme(saved === "dark");
+
+      document.getElementById("themeToggleInput").addEventListener("change", function() {
+        applyTheme(this.checked);
+        safeLog("theme_toggle", { theme: this.checked ? "dark" : "day" });
+      });
+    }
+
+    /* ── Map style sets ── */
+    const MAP_STYLES_DARK = [
+      { elementType: "geometry",          stylers: [{ color: "#0d1520" }] },
+      { elementType: "labels.text.fill",  stylers: [{ color: "#ffffff" }] },
+      { elementType: "labels.text.stroke",stylers: [{ color: "#0a0e14" }] },
+      { featureType: "road",  elementType: "geometry",        stylers: [{ color: "#1e2a3a" }] },
+      { featureType: "road",  elementType: "geometry.stroke", stylers: [{ color: "#0a0e14" }] },
+      { featureType: "water", elementType: "geometry",        stylers: [{ color: "#060d14" }] },
+      { featureType: "water", elementType: "labels.text.fill",stylers: [{ color: "#3a5068" }] },
+      { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#1e2a3a" }] },
+      { featureType: "landscape", elementType: "geometry",  stylers: [{ color: "#111820" }] },
+      { featureType: "poi",       elementType: "geometry",  stylers: [{ color: "#111820" }] },
+      { featureType: "transit",   elementType: "geometry",  stylers: [{ color: "#111820" }] },
+    ];
+
+    const MAP_STYLES_DAY = [
+      { elementType: "geometry",          stylers: [{ color: "#f5f5f0" }] },
+      { elementType: "labels.text.fill",  stylers: [{ color: "#111111" }] },
+      { elementType: "labels.text.stroke",stylers: [{ color: "#ffffff" }] },
+      { featureType: "road",  elementType: "geometry",        stylers: [{ color: "#e0ddd8" }] },
+      { featureType: "road",  elementType: "geometry.stroke", stylers: [{ color: "#cccccc" }] },
+      { featureType: "water", elementType: "geometry",        stylers: [{ color: "#b8d4e8" }] },
+      { featureType: "water", elementType: "labels.text.fill",stylers: [{ color: "#4a7090" }] },
+      { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#cccccc" }] },
+      { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#eeeee8" }] },
+      { featureType: "poi",       elementType: "geometry", stylers: [{ color: "#e8e8e0" }] },
+      { featureType: "transit",   elementType: "geometry", stylers: [{ color: "#e8e8e0" }] },
+    ];
+
+    /* ═══════════════════════════════════════════════
+       PAGE VIEWS
+       ═══════════════════════════════════════════════ */
     async function incrementAndFetchPageViews(){
       const todayEl = document.getElementById("pageViewsToday");
       const totalEl = document.getElementById("pageViewsTotal");
@@ -1026,6 +1233,9 @@ Because only approximate, non-identifying location data is collected, there is g
       }
     }
 
+    /* ═══════════════════════════════════════════════
+       DATA / SHEET LOGIC
+       ═══════════════════════════════════════════════ */
     const SHEET1_BUCKET_CACHE_TTL_MS = 10 * 60 * 1000;
     const sheet1BucketCache = new Map();
 
@@ -1269,7 +1479,6 @@ Because only approximate, non-identifying location data is collected, there is g
       const topLeft = (matchTitle && matchTitle.trim()) ? matchTitle.trim() : "ULS";
 
       if (sc === "Envelope") {
-        // Max across all site classes for each parameter
         let maxPGA = -Infinity, maxSa = -Infinity, maxTc = -Infinity, maxTd = -Infinity;
         SITE_CLASSES_ALL.forEach(cls => {
           const idx = SHEET1_SITECLASS_COLS[cls];
@@ -1311,11 +1520,11 @@ Because only approximate, non-identifying location data is collected, there is g
           </table>`;
       }
 
-      const idx     = SHEET1_SITECLASS_COLS[sc];
-      const pga     = idx ? safeCell(sheet1Row[idx.PGA]) : "";
-      const sa      = idx ? safeCell(sheet1Row[idx.Sa])  : "";
-      const tc      = idx ? safeCell(sheet1Row[idx.Tc])  : "";
-      const td      = idx ? safeCell(sheet1Row[idx.Td])  : "";
+      const idx = SHEET1_SITECLASS_COLS[sc];
+      const pga = idx ? safeCell(sheet1Row[idx.PGA]) : "";
+      const sa  = idx ? safeCell(sheet1Row[idx.Sa])  : "";
+      const tc  = idx ? safeCell(sheet1Row[idx.Tc])  : "";
+      const td  = idx ? safeCell(sheet1Row[idx.Td])  : "";
       return `
         <table class="sc-table">
           <thead>
@@ -1343,10 +1552,15 @@ Because only approximate, non-identifying location data is collected, there is g
         </table>`;
     }
 
-    // ── Chart instances ──
+    /* ═══════════════════════════════════════════════
+       CHART INSTANCES
+       — Colours always use the dark-mode palette
+       ═══════════════════════════════════════════════ */
     const _charts = {};
 
     const SITE_CLASSES_ALL = ["I","II","III","IV","V","VI"];
+
+    /* These colours are fixed — same in both day and dark mode */
     const CLASS_COLORS = [
       "#00d4ff", // cyan   – I
       "#ff4444", // red    – II
@@ -1356,6 +1570,7 @@ Because only approximate, non-identifying location data is collected, there is g
       "#00e5a0", // teal   – VI
     ];
 
+    /* Chart.js defaults — always dark bg */
     const CHART_DEFAULTS = {
       responsive: true,
       maintainAspectRatio: false,
@@ -1409,40 +1624,24 @@ Because only approximate, non-identifying location data is collected, there is g
       }
     };
 
-    // ── NZS 1170.5 Spectral Shape ──
-    // Builds {x, y} point array for Sa(T) curve given PGA, Sa_s, Tc, Td
-    // Shape:
-    //   T=0:              Sa = PGA
-    //   0 < T < 0.1:      Sa linearly interpolates PGA → Sa_s  (rising limb)
-    //   0.1 ≤ T ≤ Tc:     Sa = Sa_s                            (plateau)
-    //   Tc < T ≤ Td:      Sa = Sa_s * Tc / T                   (1/T decay)
-    //   T > Td:           Sa = Sa_s * Tc * Td / T^2            (1/T² decay)
+    /* ── NZS 1170.5 Spectral Shape ── */
     function buildSpectralCurve(pga, sas, tc, td) {
       const pts = [];
       const T_MAX = 3.0;
       const N_FINE = 300;
-
       for (let i = 0; i <= N_FINE; i++) {
         const t = (T_MAX / N_FINE) * i;
         let sa;
-        if (t === 0) {
-          sa = pga;
-        } else if (t < 0.1) {
-          // linear ramp from PGA at T=0 to Sa_s at T=0.1
-          sa = pga + (sas - pga) * (t / 0.1);
-        } else if (t <= tc) {
-          sa = sas;
-        } else if (t <= td) {
-          sa = sas * tc / t;
-        } else {
-          sa = sas * tc * td / (t * t);
-        }
+        if (t === 0)        { sa = pga; }
+        else if (t < 0.1)   { sa = pga + (sas - pga) * (t / 0.1); }
+        else if (t <= tc)   { sa = sas; }
+        else if (t <= td)   { sa = sas * tc / t; }
+        else                { sa = sas * tc * td / (t * t); }
         pts.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(Math.max(0, sa).toFixed(5)) });
       }
       return pts;
     }
 
-    // Build envelope (max across all site classes at each T step)
     function buildEnvelopeCurve(classParams) {
       const T_MAX = 3.0;
       const N_FINE = 300;
@@ -1452,17 +1651,11 @@ Because only approximate, non-identifying location data is collected, there is g
         let maxSa = 0;
         for (const p of classParams) {
           let sa;
-          if (t === 0) {
-            sa = p.pga;
-          } else if (t < 0.1) {
-            sa = p.pga + (p.sas - p.pga) * (t / 0.1);
-          } else if (t <= p.tc) {
-            sa = p.sas;
-          } else if (t <= p.td) {
-            sa = p.sas * p.tc / t;
-          } else {
-            sa = p.sas * p.tc * p.td / (t * t);
-          }
+          if (t === 0)       { sa = p.pga; }
+          else if (t < 0.1)  { sa = p.pga + (p.sas - p.pga) * (t / 0.1); }
+          else if (t <= p.tc){ sa = p.sas; }
+          else if (t <= p.td){ sa = p.sas * p.tc / t; }
+          else               { sa = p.sas * p.tc * p.td / (t * t); }
           if (sa > maxSa) maxSa = sa;
         }
         pts.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(Math.max(0, maxSa).toFixed(5)) });
@@ -1473,18 +1666,15 @@ Because only approximate, non-identifying location data is collected, there is g
     function destroyChart(id) {
       if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
     }
-
     function destroyAllSpectraCharts() {
       Object.keys(_charts).forEach(id => destroyChart(id));
     }
 
-    // Sort apoe strings numerically: "1/25" first, "1/2500" last
     function apoeToNum(s) {
       const m = String(s).match(/1[\/:](\d+)/);
       return m ? parseInt(m[1], 10) : 99999;
     }
 
-    // Map matchTitle → CSS class suffix for colour theming
     function titleToStyleClass(title) {
       const t = (title || "").trim().toUpperCase();
       if (t === "ULS")  return "uls";
@@ -1493,11 +1683,9 @@ Because only approximate, non-identifying location data is collected, there is g
       return "uls";
     }
 
-    // Build a single Sa(T) chart inside canvasId for one APoE row
-    // ── Design period state ──
-    let designPeriodT = null;  // null = not set
+    /* ── Design period state ── */
+    let designPeriodT = null;
 
-    // Evaluate Sa(T) for given params at a specific T value
     function evalSaT(pga, sas, tc, td, t) {
       if (!Number.isFinite(t) || t < 0) return null;
       if (t === 0)       return pga;
@@ -1512,7 +1700,6 @@ Because only approximate, non-identifying location data is collected, there is g
       const ctx = document.getElementById(canvasId);
       if (!ctx) return;
 
-      // Gather params for all site classes
       const classParams = [];
       SITE_CLASSES_ALL.forEach(cls => {
         const idx = SHEET1_SITECLASS_COLS[cls];
@@ -1528,7 +1715,6 @@ Because only approximate, non-identifying location data is collected, there is g
 
       const datasets = [];
 
-      // Envelope
       if (classParams.length > 1) {
         datasets.push({
           label: "Envelope",
@@ -1544,7 +1730,6 @@ Because only approximate, non-identifying location data is collected, there is g
         });
       }
 
-      // Per-class spectral curves
       classParams.forEach((p, ci) => {
         const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
         const color    = CLASS_COLORS[colorIdx] || "#888";
@@ -1561,9 +1746,7 @@ Because only approximate, non-identifying location data is collected, there is g
         });
       });
 
-      // Sa,s reference line — for selected site class, or envelope max
       if (selectedSiteClass === "Envelope") {
-        // Use the max Sa,s and the max Tc across all classes
         let maxSas = -Infinity, maxTc = -Infinity;
         classParams.forEach(p => {
           if (p.sas > maxSas) maxSas = p.sas;
@@ -1605,19 +1788,15 @@ Because only approximate, non-identifying location data is collected, there is g
         }
       }
 
-      // T* vertical line + horizontal lines + dot markers on each curve
       const tStar = designPeriodT;
       const tStarValid = Number.isFinite(tStar) && tStar >= 0 && tStar <= 4.0;
 
       if (tStarValid) {
-        // Compute max y at T* for the vertical line extent
         let maxY = 0;
         classParams.forEach(p => {
           const v = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
           if (v > maxY) maxY = v;
         });
-
-        // Vertical line from y=0 up to maxY
         datasets.push({
           label: "T* = " + tStar.toFixed(2) + " s",
           data: [{ x: tStar, y: 0 }, { x: tStar, y: maxY * 1.05 }],
@@ -1630,9 +1809,7 @@ Because only approximate, non-identifying location data is collected, there is g
           fill: false,
           order: -2,
         });
-
-        // Horizontal lines from T=0 to T* at each class's Sa(T*) value
-        classParams.forEach((p, ci) => {
+        classParams.forEach((p) => {
           const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
           const color    = CLASS_COLORS[colorIdx] || "#888";
           const sa       = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
@@ -1650,15 +1827,13 @@ Because only approximate, non-identifying location data is collected, there is g
             order: -2,
           });
         });
-
-        // Dot markers at intersection with each class curve
-        classParams.forEach((p, ci) => {
+        classParams.forEach((p) => {
           const colorIdx = SITE_CLASSES_ALL.indexOf(p.cls);
           const color    = CLASS_COLORS[colorIdx] || "#888";
           const sa       = evalSaT(p.pga, p.sas, p.tc, p.td, tStar);
           if (!Number.isFinite(sa)) return;
           datasets.push({
-            label: "_dot_" + p.cls,   // prefixed with _ so tooltip can skip
+            label: "_dot_" + p.cls,
             data: [{ x: tStar, y: sa }],
             borderColor: color,
             backgroundColor: color,
@@ -1704,10 +1879,8 @@ Because only approximate, non-identifying location data is collected, there is g
       });
     }
 
-    // Build the Sa(T*) results table HTML for a given sheet1Row
     function buildSatTable(sheet1Row, tStar, apoe, matchTitle) {
       if (!Number.isFinite(tStar)) return "";
-
       const rows = SITE_CLASSES_ALL.map(cls => {
         const idx = SHEET1_SITECLASS_COLS[cls];
         if (!idx) return null;
@@ -1719,23 +1892,15 @@ Because only approximate, non-identifying location data is collected, there is g
         const sa  = evalSaT(pga, sas, tc, td, tStar);
         return { cls, sa: sa.toFixed(4), tc: tc.toFixed(2), td: td.toFixed(2) };
       }).filter(Boolean);
-
       if (!rows.length) return "";
 
-      // Envelope: max Sa(T*), max Tc, max Td
       const envSa = Math.max(...rows.map(r => parseFloat(r.sa)));
       const envTc = Math.max(...rows.map(r => parseFloat(r.tc)));
       const envTd = Math.max(...rows.map(r => parseFloat(r.td)));
 
-      const isEnvSelected  = selectedSiteClass === "Envelope";
-      const isSelected     = cls => cls === selectedSiteClass;
-
-      const envRowClass    = isEnvSelected ? "sat-envelope-row sat-selected" : "sat-envelope-row";
-      const envNameStyle   = isEnvSelected
-        ? "color:var(--accent); font-weight:700;"
-        : "color:#ffffff; font-weight:700;";
-      const envValStyle    = isEnvSelected ? "color:var(--accent); font-weight:700;" : "color:#ffffff; font-weight:700;";
-      const envMutedStyle  = isEnvSelected ? "color:var(--accent);" : "color:var(--muted);";
+      const isEnvSelected = selectedSiteClass === "Envelope";
+      const isSelected    = cls => cls === selectedSiteClass;
+      const envRowClass   = isEnvSelected ? "sat-envelope-row sat-selected" : "sat-envelope-row";
 
       return `
         <div class="sat-results show">
@@ -1755,10 +1920,10 @@ Because only approximate, non-identifying location data is collected, there is g
               </thead>
               <tbody>
                 <tr class="${envRowClass}">
-                  <td style="${envNameStyle}">Envelope${isEnvSelected ? " ★" : ""}</td>
-                  <td style="${envValStyle}">${envSa.toFixed(4)}</td>
-                  <td style="${envMutedStyle}">${envTc.toFixed(2)}</td>
-                  <td style="${envMutedStyle}">${envTd.toFixed(2)}</td>
+                  <td>Envelope${isEnvSelected ? " ★" : ""}</td>
+                  <td>${envSa.toFixed(4)}</td>
+                  <td>${envTc.toFixed(2)}</td>
+                  <td>${envTd.toFixed(2)}</td>
                 </tr>
                 ${rows.map(r => `
                   <tr class="${isSelected(r.cls) ? "sat-selected" : ""}">
@@ -1773,7 +1938,6 @@ Because only approximate, non-identifying location data is collected, there is g
         </div>`;
     }
 
-    // Track current chart items so T* updates can rebuild charts without re-fetching data
     let _currentChartItems = [];
 
     function rebuildAllSpectraCharts() {
@@ -1781,7 +1945,6 @@ Because only approximate, non-identifying location data is collected, there is g
         const canvasId   = "spectraCanvas_" + idx;
         const satTableId = "satTable_" + idx;
         buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
-        // Update Sa(T*) table
         const satEl = document.getElementById(satTableId);
         if (satEl) {
           satEl.outerHTML = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle)
@@ -1791,21 +1954,16 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     function wireDesignPeriodInput() {
-      const input   = document.getElementById("designPeriodInput");
+      const input    = document.getElementById("designPeriodInput");
       const clearBtn = document.getElementById("clearPeriodBtn");
       if (!input) return;
 
-      // Focus style
       input.addEventListener("focus",  () => input.style.borderColor = "var(--accent)");
       input.addEventListener("blur",   () => input.style.borderColor = "var(--border)");
 
       input.addEventListener("input", () => {
         const v = parseFloat(input.value);
-        if (Number.isFinite(v) && v >= 0 && v <= 3.0) {
-          designPeriodT = v;
-        } else {
-          designPeriodT = null;
-        }
+        designPeriodT = (Number.isFinite(v) && v >= 0 && v <= 3.0) ? v : null;
         rebuildAllSpectraCharts();
       });
 
@@ -1813,17 +1971,9 @@ Because only approximate, non-identifying location data is collected, there is g
         input.value   = "";
         designPeriodT = null;
         rebuildAllSpectraCharts();
-        clearBtn.style.borderColor = "";
-        clearBtn.style.color = "";
       });
-      clearBtn.addEventListener("mouseover", () => {
-        clearBtn.style.borderColor = "var(--accent2)";
-        clearBtn.style.color = "var(--accent2)";
-      });
-      clearBtn.addEventListener("mouseout", () => {
-        clearBtn.style.borderColor = "";
-        clearBtn.style.color = "";
-      });
+      clearBtn.addEventListener("mouseover", () => { clearBtn.style.borderColor = "var(--accent2)"; clearBtn.style.color = "var(--accent2)"; });
+      clearBtn.addEventListener("mouseout",  () => { clearBtn.style.borderColor = ""; clearBtn.style.color = ""; });
     }
 
     function renderCharts(allMatchedRows, filteredRows) {
@@ -1841,14 +1991,12 @@ Because only approximate, non-identifying location data is collected, there is g
         return;
       }
 
-      // Build lookup: apoe → sheet1Row from ALL matched rows
       const apoeRowMap = new Map();
       for (const item of allMatchedRows) {
         const apoe = normalize(item.row[SHEET1_APOE_COL_INDEX]).toLowerCase();
         if (apoe && !apoeRowMap.has(apoe)) apoeRowMap.set(apoe, item.row);
       }
 
-      // De-dup filtered rows and sort by RP
       const seen = new Set();
       const chartItems = [];
       for (const f of filteredRows) {
@@ -1870,21 +2018,16 @@ Because only approximate, non-identifying location data is collected, there is g
       if (section)  section.style.display  = "";
       if (tSection) tSection.style.display = "";
 
-      // ── Build paired row-groups: 2 charts per row, then 2 tables per row ──
-      // Chunk chartItems into pairs
       for (let pairStart = 0; pairStart < chartItems.length; pairStart += 2) {
-        const pair      = chartItems.slice(pairStart, pairStart + 2);
-        const isSingle  = pair.length === 1;
+        const pair     = chartItems.slice(pairStart, pairStart + 2);
+        const isSingle = pair.length === 1;
 
-        // Row-group wrapper
         const rowGroup = document.createElement("div");
         rowGroup.className = "spectra-row-group";
 
-        // ── Chart row ──
         const chartRow = document.createElement("div");
         chartRow.className = "spectra-chart-row" + (isSingle ? " single" : "");
 
-        // ── Table row ──
         const tableRow = document.createElement("div");
         tableRow.className = "spectra-table-row" + (isSingle ? " single" : "");
 
@@ -1894,7 +2037,6 @@ Because only approximate, non-identifying location data is collected, there is g
           const canvasId   = "spectraCanvas_" + globalIdx;
           const satTableId = "satTable_"      + globalIdx;
 
-          // ── Chart card ──
           const card = document.createElement("div");
           card.className = "chart-card cc-" + styleClass;
 
@@ -1912,12 +2054,10 @@ Because only approximate, non-identifying location data is collected, there is g
           card.appendChild(wrap);
           chartRow.appendChild(card);
 
-          // ── Table placeholder ──
           const satWrap = document.createElement("div");
           satWrap.id = satTableId;
           tableRow.appendChild(satWrap);
 
-          // Render chart + table deferred
           requestAnimationFrame(() => {
             buildSpectraChart(canvasId, item.apoe, item.matchTitle, item.row);
             const html = buildSatTable(item.row, designPeriodT, item.apoe, item.matchTitle);
@@ -1936,7 +2076,6 @@ Because only approximate, non-identifying location data is collected, there is g
         grid.appendChild(rowGroup);
       }
 
-      // Wire T input once
       if (!document.getElementById("designPeriodInput")?._wired) {
         wireDesignPeriodInput();
         const inp = document.getElementById("designPeriodInput");
@@ -1954,7 +2093,6 @@ Because only approximate, non-identifying location data is collected, there is g
       document.getElementById("tablesGrid").innerHTML = filtered.map(x =>
         `<div class="table-card">${buildThreeRowTable(x.sheet1Row, x.apoe, x.matchTitle)}</div>`
       ).join("");
-      // Charts — filtered gives the design APoEs (ULS/SLS1/SLS2), allMatchedRows for full data lookup
       renderCharts(matchedSheet1Rows, filtered);
     }
 
@@ -2090,23 +2228,13 @@ Because only approximate, non-identifying location data is collected, there is g
     }
 
     function initMap(){
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: -41.2865, lng: 174.7762 },
         zoom: 6,
-        styles: [
-          { elementType: "geometry",        stylers: [{ color: "#0d1520" }] },
-          { elementType: "labels.text.fill",stylers: [{ color: "#ffffff" }] },
-          { elementType: "labels.text.stroke",stylers:[{ color: "#0a0e14" }] },
-          { featureType: "road",             elementType: "geometry",       stylers: [{ color: "#1e2a3a" }] },
-          { featureType: "road",             elementType: "geometry.stroke",stylers: [{ color: "#0a0e14" }] },
-          { featureType: "water",            elementType: "geometry",       stylers: [{ color: "#060d14" }] },
-          { featureType: "water",            elementType: "labels.text.fill",stylers:[{ color: "#3a5068" }] },
-          { featureType: "administrative",   elementType: "geometry.stroke",stylers:[{ color: "#1e2a3a" }] },
-          { featureType: "landscape",        elementType: "geometry",       stylers: [{ color: "#111820" }] },
-          { featureType: "poi",              elementType: "geometry",       stylers: [{ color: "#111820" }] },
-          { featureType: "transit",          elementType: "geometry",       stylers: [{ color: "#111820" }] },
-        ]
+        styles: isDark ? MAP_STYLES_DARK : MAP_STYLES_DAY
       });
+      window._mapInstance = map;
 
       setupHeightSync();
       syncMapHeightToOptionBlock();
@@ -2163,10 +2291,12 @@ Because only approximate, non-identifying location data is collected, there is g
       showLoading(false);
     }
 
+    /* Init on DOM ready */
     if (document.readyState === "loading"){
-      document.addEventListener("DOMContentLoaded", initConsent);
+      document.addEventListener("DOMContentLoaded", () => { initConsent(); initThemeToggle(); });
     } else {
       initConsent();
+      initThemeToggle();
     }
 
     window.initMap = initMap;
