@@ -562,14 +562,16 @@
     #submitSuggestionBtn:hover { border-color: var(--accent); color: var(--accent); }
     #suggestionMsg { margin-top: 8px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
 
+    /* ── Page views ── */
     .pageviews {
-  text-align: center;
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 0.1em;
-  padding: 10px 0;
-}
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      padding: 10px 0;
+    }
+    .pageviews span { color: var(--accent); }
 
     /* ── Modals ── */
     .modal-backdrop {
@@ -976,7 +978,6 @@
     </details>
 
     <!-- Page Views -->
-   <!--
     <div class="pageviews" id="Counter">
       Views today: <span id="pageViewsToday">—</span> &nbsp;|&nbsp;
       Total views: <span id="pageViewsTotal">—</span>
